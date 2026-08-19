@@ -48,6 +48,13 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
+## Web interface
+
+Launch the Streamlit interface:
+
+```bash
+python -m streamlit run app.py
+
 ## Run
 
 ```bash
