@@ -59,7 +59,7 @@ if expression.empty:
 columns = expression.columns.tolist()
 
 st.subheader("Data preview")
-st.dataframe(expression.head(20), use_container_width=True)
+st.dataframe(expression.head(20), width="stretch")
 
 cluster_index = columns.index("cluster") if "cluster" in columns else 0
 
@@ -161,7 +161,7 @@ if "marker_results" in st.session_state:
         st.dataframe(
             markers,
             hide_index=True,
-            use_container_width=True,
+            width="stretch",
         )
 
         result_csv = markers.to_csv(index=False).encode("utf-8")
