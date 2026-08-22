@@ -54,6 +54,7 @@ Launch the Streamlit interface:
 
 ```bash
 python -m streamlit run app.py
+```
 
 ## Run
 
