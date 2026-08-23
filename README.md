@@ -2,6 +2,8 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
+**Live app:** [Launch the CellCoPilot Marker Gene Finder](https://cellcopilot-marker-finder.streamlit.app/)
+
 The program compares gene expression inside each cluster with all other cells and ranks genes using log2 fold change.
 
 ## Input
