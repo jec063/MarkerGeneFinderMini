@@ -1,9 +1,15 @@
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 
-from src.marker_finder import build_parser, find_markers, run
+from src.marker_finder import (
+    _benjamini_hochberg,
+    build_parser,
+    find_markers,
+    run,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE_DATA = (
@@ -45,6 +51,32 @@ def test_output_contains_expression_prevalence() -> None:
     assert markers["pct_in"].between(0, 1).all()
     assert markers["pct_out"].between(0, 1).all()
     assert (markers["log2FC"] > 0).all()
+
+def test_output_contains_statistical_significance() -> None:
+    expression = pd.read_csv(EXAMPLE_DATA)
+
+    markers = find_markers(
+        expression,
+        top_n=2,
+    )
+
+    assert markers["p_value"].between(0, 1).all()
+    assert markers["p_adj"].between(0, 1).all()
+    assert (
+        markers["p_adj"] >= markers["p_value"]
+    ).all()
+
+
+def test_benjamini_hochberg_adjustment() -> None:
+    p_values = np.array([0.01, 0.04, 0.03])
+
+    adjusted = _benjamini_hochberg(p_values)
+
+    np.testing.assert_allclose(
+        adjusted,
+        np.array([0.03, 0.04, 0.04]),
+    )
+
 
 def test_default_filter_excludes_negative_log2fc() -> None:
     expression = pd.read_csv(EXAMPLE_DATA)

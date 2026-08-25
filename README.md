@@ -23,8 +23,10 @@ For each cluster and gene, the program calculates:
 
 1. Mean expression inside the cluster
 2. Mean expression outside the cluster
-3. Fraction of cells expressing the gene
+3. Fraction of cells expressing the gene inside and outside the cluster
 4. Log2 fold change
+5. One-sided Wilcoxon-Mann-Whitney p-value
+6. Benjamini-Hochberg adjusted p-value
 
 ```text
 log2FC = log2(
@@ -38,7 +40,9 @@ The default pseudocount is `0.1`.
 
 By default, genes with negative log2 fold change are excluded. A higher minimum log2 fold-change threshold can be used to require stronger enrichment.
 
-This is a simple educational method. Fold-change ranking alone is not a statistical significance test. A later version will add Wilcoxon testing and multiple-testing correction.
+Statistical testing uses a one-sided Mann-Whitney U test, which is the Wilcoxon rank-sum test for independent samples. The alternative hypothesis is that expression is higher inside the cluster than outside it. For each cluster, p-values for all genes are adjusted together using the Benjamini-Hochberg false-discovery-rate procedure.
+
+Results are ranked by log2 fold change after applying the expression and fold-change thresholds. The output includes raw p-values in `p_value` and adjusted p-values in `p_adj`.
 
 ## Installation
 
@@ -68,7 +72,7 @@ python src/marker_finder.py \
   --output outputs/top_markers.csv \
   --cluster-column cluster \
   --top-n 2 \
-  --min-pct 0.5\
+  --min-pct 0.5 \
   --min-log2fc 0.0
 ```
 
@@ -87,9 +91,8 @@ pytest -q
 
 ## Next milestone
 
-The next version will add:
+Planned improvements:
 
-- Wilcoxon statistical testing
-- Benjamini-Hochberg adjusted p-values
+- adjusted p-value filtering
 - support for `.h5ad` files
 - Scanpy integration
