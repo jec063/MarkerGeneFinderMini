@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
+from scipy.stats import mannwhitneyu
 
 RESULT_COLUMNS = [
     "cluster",
@@ -17,7 +17,37 @@ RESULT_COLUMNS = [
     "pct_in",
     "pct_out",
     "log2FC",
+    "p_value",
+    "p_adj",
 ]
+
+
+def _benjamini_hochberg(
+    p_values: np.ndarray,
+) -> np.ndarray:
+    """Adjust p-values using Benjamini-Hochberg FDR correction."""
+
+    p_values = np.asarray(p_values, dtype=float)
+
+    if p_values.size == 0:
+        return p_values.copy()
+
+    order = np.argsort(p_values, kind="stable")
+    sorted_p_values = p_values[order]
+    ranks = np.arange(1, p_values.size + 1)
+
+    adjusted_sorted = (
+        sorted_p_values * p_values.size / ranks
+    )
+    adjusted_sorted = np.minimum.accumulate(
+        adjusted_sorted[::-1]
+    )[::-1]
+    adjusted_sorted = np.clip(adjusted_sorted, 0.0, 1.0)
+
+    adjusted = np.empty_like(adjusted_sorted)
+    adjusted[order] = adjusted_sorted
+
+    return adjusted
 
 
 def _gene_columns(
@@ -131,6 +161,20 @@ def find_markers(
             / (other_mean.to_numpy() + pseudocount)
         )
 
+        test_result = mannwhitneyu(
+            cluster_values.to_numpy(),
+            other_values.to_numpy(),
+            alternative="greater",
+            axis=0,
+            method="asymptotic",
+        )
+
+        p_values = np.asarray(
+            test_result.pvalue,
+            dtype=float,
+        )
+        p_adjusted = _benjamini_hochberg(p_values)
+
         cluster_result = pd.DataFrame(
             {
                 "cluster": cluster,
@@ -140,6 +184,8 @@ def find_markers(
                 "pct_in": pct_in.to_numpy(),
                 "pct_out": pct_out.to_numpy(),
                 "log2FC": log2fc,
+                "p_value": p_values,
+                "p_adj": p_adjusted,
             }
         )
 
