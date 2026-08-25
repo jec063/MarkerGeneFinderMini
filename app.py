@@ -123,6 +123,20 @@ with st.sidebar:
         format="%.2f",
     )
 
+    max_p_adj = st.number_input(
+        "Maximum adjusted p-value",
+        min_value=0.0,
+        max_value=1.0,
+        value=1.0,
+        step=0.01,
+        format="%.3f",
+        help=(
+            "Use 0.05 to keep markers with "
+            "Benjamini-Hochberg adjusted p-values "
+            "at or below 0.05."
+        ),
+    )
+
     pseudocount = st.number_input(
         "Pseudocount",
         min_value=0.0001,
@@ -150,6 +164,7 @@ if st.button("Find marker genes", type="primary"):
                 pseudocount=float(pseudocount),
                 min_pct=float(min_pct),
                 min_log2fc=float(min_log2fc),
+                max_p_adj=float(max_p_adj),
             )
 
         st.session_state["marker_results"] = markers
@@ -183,6 +198,7 @@ if "marker_results" in st.session_state:
         )
 
 st.caption(
-    "This MVP ranks genes using log2 fold change. "
-    "It does not yet perform statistical significance testing."
+    "This tool ranks markers using log2 fold change and reports "
+    "one-sided Wilcoxon-Mann-Whitney p-values with "
+    "Benjamini-Hochberg adjustment."
 )

@@ -42,7 +42,9 @@ By default, genes with negative log2 fold change are excluded. A higher minimum 
 
 Statistical testing uses a one-sided Mann-Whitney U test, which is the Wilcoxon rank-sum test for independent samples. The alternative hypothesis is that expression is higher inside the cluster than outside it. For each cluster, p-values for all genes are adjusted together using the Benjamini-Hochberg false-discovery-rate procedure.
 
-Results are ranked by log2 fold change after applying the expression and fold-change thresholds. The output includes raw p-values in `p_value` and adjusted p-values in `p_adj`.
+Results are ranked by log2 fold change after applying the selected thresholds. The output includes raw p-values in `p_value` and adjusted p-values in `p_adj`.
+
+The default maximum adjusted p-value is `1.0`, which preserves all otherwise eligible markers. Set a lower value, such as `0.05`, to retain only markers that pass the selected false-discovery-rate threshold.
 
 ## Installation
 
@@ -73,7 +75,8 @@ python src/marker_finder.py \
   --cluster-column cluster \
   --top-n 2 \
   --min-pct 0.5 \
-  --min-log2fc 0.0
+  --min-log2fc 0.0 \
+  --max-p-adj 0.05
 ```
 
 The example should identify:
@@ -93,6 +96,5 @@ pytest -q
 
 Planned improvements:
 
-- adjusted p-value filtering
 - support for `.h5ad` files
 - Scanpy integration
