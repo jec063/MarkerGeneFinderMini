@@ -131,7 +131,17 @@ def test_parser_accepts_min_log2fc() -> None:
 
     assert args.min_log2fc == pytest.approx(0.5)
 
+def test_negative_min_log2fc_is_rejected() -> None:
+    expression = pd.read_csv(EXAMPLE_DATA)
 
+    with pytest.raises(
+        ValueError,
+        match="min_log2fc must be at least 0",
+    ):
+        find_markers(
+            expression,
+            min_log2fc=-0.1,
+        )
 
 def test_single_cluster_is_rejected() -> None:
     expression = pd.DataFrame(

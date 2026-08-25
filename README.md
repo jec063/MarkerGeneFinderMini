@@ -36,6 +36,8 @@ log2FC = log2(
 
 The default pseudocount is `0.1`.
 
+By default, genes with negative log2 fold change are excluded. A higher minimum log2 fold-change threshold can be used to require stronger enrichment.
+
 This is a simple educational method. Fold-change ranking alone is not a statistical significance test. A later version will add Wilcoxon testing and multiple-testing correction.
 
 ## Installation
@@ -66,7 +68,8 @@ python src/marker_finder.py \
   --output outputs/top_markers.csv \
   --cluster-column cluster \
   --top-n 2 \
-  --min-pct 0.5
+  --min-pct 0.5\
+  --min-log2fc 0.0
 ```
 
 The example should identify:
@@ -88,6 +91,5 @@ The next version will add:
 
 - Wilcoxon statistical testing
 - Benjamini-Hochberg adjusted p-values
-- stronger marker filtering
 - support for `.h5ad` files
 - Scanpy integration
