@@ -149,6 +149,26 @@ def test_run_applies_min_log2fc(
     assert not markers.empty
     assert (markers["log2FC"] >= 5.3).all()
 
+
+def test_run_applies_max_p_adj(
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "significant_markers.csv"
+
+    markers = run(
+        EXAMPLE_DATA,
+        output_path,
+        top_n=100,
+        max_p_adj=0.02,
+    )
+
+    saved = pd.read_csv(output_path)
+
+    assert not markers.empty
+    assert (markers["p_adj"] <= 0.02).all()
+    pd.testing.assert_frame_equal(saved, markers)
+
+
 def test_parser_accepts_min_log2fc() -> None:
     args = build_parser().parse_args(
         [
@@ -163,6 +183,35 @@ def test_parser_accepts_min_log2fc() -> None:
 
     assert args.min_log2fc == pytest.approx(0.5)
 
+
+def test_max_p_adj_filters_nonsignificant_genes() -> None:
+    expression = pd.read_csv(EXAMPLE_DATA)
+
+    markers = find_markers(
+        expression,
+        top_n=100,
+        max_p_adj=0.02,
+    )
+
+    assert not markers.empty
+    assert (markers["p_adj"] <= 0.02).all()
+
+
+def test_parser_accepts_max_p_adj() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input",
+            "input.csv",
+            "--output",
+            "output.csv",
+            "--max-p-adj",
+            "0.05",
+        ]
+    )
+
+    assert args.max_p_adj == pytest.approx(0.05)
+
+
 def test_negative_min_log2fc_is_rejected() -> None:
     expression = pd.read_csv(EXAMPLE_DATA)
 
@@ -174,6 +223,21 @@ def test_negative_min_log2fc_is_rejected() -> None:
             expression,
             min_log2fc=-0.1,
         )
+
+
+def test_invalid_max_p_adj_is_rejected() -> None:
+    expression = pd.read_csv(EXAMPLE_DATA)
+
+    for invalid_value in (-0.01, 1.01):
+        with pytest.raises(
+            ValueError,
+            match="max_p_adj must be between 0 and 1",
+        ):
+            find_markers(
+                expression,
+                max_p_adj=invalid_value,
+            )
+
 
 def test_single_cluster_is_rejected() -> None:
     expression = pd.DataFrame(
