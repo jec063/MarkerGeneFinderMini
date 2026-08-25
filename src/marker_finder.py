@@ -85,6 +85,7 @@ def find_markers(
     top_n: int = 5,
     pseudocount: float = 0.1,
     min_pct: float = 0.0,
+    min_log2fc: float = 0.0,
 ) -> pd.DataFrame:
     """Return the top fold-change-ranked genes for every cluster."""
 
@@ -96,6 +97,9 @@ def find_markers(
 
     if not 0 <= min_pct <= 1:
         raise ValueError("min_pct must be between 0 and 1.")
+
+    if min_log2fc < 0:
+        raise ValueError("min_log2fc must be at least 0.")
 
     genes = _gene_columns(
         expression,
@@ -141,7 +145,10 @@ def find_markers(
 
         cluster_result = (
             cluster_result
-            .loc[cluster_result["pct_in"] >= min_pct]
+                        .loc[
+                (cluster_result["pct_in"] >= min_pct)
+                & (cluster_result["log2FC"] >= min_log2fc)
+            ]
             .sort_values(
                 ["log2FC", "gene"],
                 ascending=[False, True],
@@ -168,6 +175,7 @@ def run(
     top_n: int = 5,
     pseudocount: float = 0.1,
     min_pct: float = 0.0,
+    min_log2fc: float = 0.0,
 ) -> pd.DataFrame:
     """Read an expression CSV, find markers and save the results."""
 
@@ -180,6 +188,7 @@ def run(
         top_n=top_n,
         pseudocount=pseudocount,
         min_pct=min_pct,
+        min_log2fc=min_log2fc,
     )
 
     output_path = Path(output_path)
@@ -237,7 +246,6 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.1,
         help="Positive pseudocount used for log2FC.",
     )
-
     parser.add_argument(
         "--min-pct",
         type=float,
@@ -247,6 +255,17 @@ def build_parser() -> argparse.ArgumentParser:
             "expressing a gene."
         ),
     )
+
+    parser.add_argument(
+        "--min-log2fc",
+        type=float,
+        default=0.0,
+        help=(
+            "Minimum log2 fold change required "
+            "for a marker gene."
+        ),
+    )
+
 
     return parser
 
@@ -264,6 +283,7 @@ def main() -> None:
         top_n=args.top_n,
         pseudocount=args.pseudocount,
         min_pct=args.min_pct,
+        min_log2fc=args.min_log2fc,
     )
 
     print(

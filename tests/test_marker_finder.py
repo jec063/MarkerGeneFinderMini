@@ -3,8 +3,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from src.marker_finder import find_markers, run
-
+from src.marker_finder import build_parser, find_markers, run
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE_DATA = (
@@ -47,6 +46,16 @@ def test_output_contains_expression_prevalence() -> None:
     assert markers["pct_out"].between(0, 1).all()
     assert (markers["log2FC"] > 0).all()
 
+def test_default_filter_excludes_negative_log2fc() -> None:
+    expression = pd.read_csv(EXAMPLE_DATA)
+
+    markers = find_markers(
+        expression,
+        top_n=100,
+    )
+
+    assert not markers.empty
+    assert (markers["log2FC"] >= 0).all()
 
 def test_min_pct_filters_rare_genes() -> None:
     expression = pd.DataFrame(
@@ -92,6 +101,36 @@ def test_run_writes_output_file(
         saved,
         markers,
     )
+
+def test_run_applies_min_log2fc(
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "filtered_markers.csv"
+
+    markers = run(
+        EXAMPLE_DATA,
+        output_path,
+        top_n=100,
+        min_log2fc=5.3,
+    )
+
+    assert not markers.empty
+    assert (markers["log2FC"] >= 5.3).all()
+
+def test_parser_accepts_min_log2fc() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input",
+            "input.csv",
+            "--output",
+            "output.csv",
+            "--min-log2fc",
+            "0.5",
+        ]
+    )
+
+    assert args.min_log2fc == pytest.approx(0.5)
+
 
 
 def test_single_cluster_is_rejected() -> None:
