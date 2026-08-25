@@ -115,6 +115,14 @@ with st.sidebar:
         step=0.05,
     )
 
+    min_log2fc = st.number_input(
+        "Minimum log2 fold change",
+        min_value=0.0,
+        value=0.0,
+        step=0.1,
+        format="%.2f",
+    )
+
     pseudocount = st.number_input(
         "Pseudocount",
         min_value=0.0001,
@@ -141,6 +149,7 @@ if st.button("Find marker genes", type="primary"):
                 top_n=int(top_n),
                 pseudocount=float(pseudocount),
                 min_pct=float(min_pct),
+                min_log2fc=float(min_log2fc),
             )
 
         st.session_state["marker_results"] = markers
