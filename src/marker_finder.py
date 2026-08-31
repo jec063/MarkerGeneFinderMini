@@ -417,6 +417,7 @@ def find_markers_scanpy(
         ignore_index=True,
     )[RESULT_COLUMNS]
 
+
 def run(
     input_path: str | Path,
     output_path: str | Path,
@@ -427,25 +428,50 @@ def run(
     min_pct: float = 0.0,
     min_log2fc: float = 0.0,
     max_p_adj: float = 1.0,
+    engine: str = "native",
 ) -> pd.DataFrame:
     """Read an expression dataset, find markers and save the results."""
 
-    expression = load_expression(
-        input_path,
-        cluster_column=cluster_column,
-        cell_column=cell_column,
-    )
+    if engine not in {"native", "scanpy"}:
+        raise ValueError(
+            "engine must be either 'native' or 'scanpy'."
+        )
 
-    markers = find_markers(
-        expression,
-        cluster_column=cluster_column,
-        cell_column=cell_column,
-        top_n=top_n,
-        pseudocount=pseudocount,
-        min_pct=min_pct,
-        min_log2fc=min_log2fc,
-        max_p_adj=max_p_adj,
-    )
+    input_path = Path(input_path)
+
+    if engine == "scanpy":
+        if input_path.suffix.lower() != ".h5ad":
+            raise ValueError(
+                "Scanpy engine requires a .h5ad input file."
+            )
+
+        adata = ad.read_h5ad(input_path)
+
+        markers = find_markers_scanpy(
+            adata,
+            cluster_column=cluster_column,
+            top_n=top_n,
+            min_pct=min_pct,
+            min_log2fc=min_log2fc,
+            max_p_adj=max_p_adj,
+        )
+    else:
+        expression = load_expression(
+            input_path,
+            cluster_column=cluster_column,
+            cell_column=cell_column,
+        )
+
+        markers = find_markers(
+            expression,
+            cluster_column=cluster_column,
+            cell_column=cell_column,
+            top_n=top_n,
+            pseudocount=pseudocount,
+            min_pct=min_pct,
+            min_log2fc=min_log2fc,
+            max_p_adj=max_p_adj,
+        )
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -453,7 +479,6 @@ def run(
     markers.to_csv(output_path, index=False)
 
     return markers
-
 
 def build_parser() -> argparse.ArgumentParser:
     """Create the command-line argument parser."""
@@ -475,6 +500,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--output",
         required=True,
         help="Output marker CSV path.",
+    )
+
+    parser.add_argument(
+        "--engine",
+        choices=["native", "scanpy"],
+        default="native",
+        help=(
+            "Marker-analysis engine. The Scanpy engine "
+            "requires H5AD input."
+        ),
     )
 
     parser.add_argument(
@@ -550,6 +585,7 @@ def main() -> None:
         min_pct=args.min_pct,
         min_log2fc=args.min_log2fc,
         max_p_adj=args.max_p_adj,
+        engine=args.engine,
     )
 
     print(
