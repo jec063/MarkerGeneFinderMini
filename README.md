@@ -26,9 +26,19 @@ An H5AD file uses:
 - a selected `AnnData.obs` column for cluster labels
 - `AnnData.var_names` for gene names
 
-Dense and sparse `AnnData.X` matrices are supported. The current
-version converts the expression matrix to an in-memory dense table,
-so small or moderate datasets are recommended.
+Dense and sparse `AnnData.X` matrices are supported. The native
+engine converts the expression matrix to an in-memory dense table.
+The Scanpy engine works directly with the AnnData object and preserves
+sparse matrices, so it is recommended for larger sparse H5AD datasets.
+
+## Analysis engines
+
+MarkerGeneFinderMini provides two analysis engines:
+
+- **Native:** the original CellCoPilot implementation for CSV and H5AD input.
+- **Scanpy:** an H5AD-only engine using `scanpy.tl.rank_genes_groups()` with the Wilcoxon method and Benjamini-Hochberg correction.
+
+The native engine remains the default. Scanpy works directly with AnnData and reports its own approximate log2 fold changes.
 
 ## Method
 
@@ -49,7 +59,7 @@ log2FC = log2(
 )
 ```
 
-The default pseudocount is `0.1`.
+The native engine default pseudocount is `0.1`.
 
 By default, genes with negative log2 fold change are excluded. A higher minimum log2 fold-change threshold can be used to require stronger enrichment.
 
@@ -79,6 +89,8 @@ Launch the Streamlit interface:
 python -m streamlit run app.py
 ```
 
+For H5AD uploads, select either **Native** or **Scanpy** from the analysis-engine control. CSV uploads use the native engine.
+
 ## Run
 
 ```bash
@@ -96,7 +108,7 @@ For H5AD input, select the `AnnData.obs` column containing
 cluster labels:
 
 ```bash
-python src/marker_finder.py --input path/to/expression.h5ad --output outputs/top_markers.csv --cluster-column leiden
+python src/marker_finder.py --input path/to/expression.h5ad --output outputs/top_markers.csv --cluster-column leiden --engine scanpy
 ```
 The example should identify:
 
@@ -115,4 +127,6 @@ pytest -q
 
 Planned improvements:
 
-- Scanpy integration
+- Select AnnData layers or raw expression for H5AD analysis
+- Add marker-gene visualizations
+- Improve progress reporting for larger datasets

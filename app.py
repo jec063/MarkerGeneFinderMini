@@ -10,7 +10,11 @@ import anndata as ad
 import pandas as pd
 import streamlit as st
 
-from src.marker_finder import find_markers, load_expression
+from src.marker_finder import (
+    find_markers,
+    find_markers_scanpy,
+    load_expression,
+)
 
 
 st.set_page_config(
@@ -68,6 +72,19 @@ def load_uploaded_h5ad(
             cluster_column=cluster_column,
             cell_column="cell_id",
         )
+
+
+@st.cache_data(show_spinner=False)
+def load_uploaded_anndata(
+    file_contents: bytes,
+    file_name: str,
+) -> ad.AnnData:
+    """Load an uploaded H5AD file without converting it to a table."""
+    with TemporaryDirectory() as directory:
+        input_path = Path(directory) / Path(file_name).name
+        input_path.write_bytes(file_contents)
+
+        return ad.read_h5ad(input_path)
 
 
 uploaded_file = st.file_uploader(
@@ -151,6 +168,20 @@ with st.sidebar:
         index=cluster_index,
     )
 
+    if file_suffix == ".h5ad":
+        engine_label = st.selectbox(
+            "Analysis engine",
+            options=["Native", "Scanpy"],
+            help=(
+                "Native preserves the existing CellCoPilot method. "
+                "Scanpy uses scanpy.tl.rank_genes_groups with the "
+                "Wilcoxon method."
+            ),
+        )
+        analysis_engine = engine_label.lower()
+    else:
+        analysis_engine = "native"
+
     if file_suffix == ".csv":
         cell_options = [
             "None",
@@ -181,25 +212,47 @@ with st.sidebar:
         )
         cell_column = "cell_id"
 
+adata = None
+
 if file_suffix == ".h5ad":
     try:
-        expression = load_uploaded_h5ad(
-            file_contents,
-            uploaded_file.name,
-            cluster_column,
-        )
+        if analysis_engine == "scanpy":
+            adata = load_uploaded_anndata(
+                file_contents,
+                uploaded_file.name,
+            )
+            expression = None
+        else:
+            expression = load_uploaded_h5ad(
+                file_contents,
+                uploaded_file.name,
+                cluster_column,
+            )
     except (KeyError, OSError, ValueError) as error:
         st.error(f"Could not read the uploaded H5AD file: {error}")
         st.stop()
 
-if expression.empty:
-    st.error("The uploaded expression dataset is empty.")
-    st.stop()
-
-columns = expression.columns.tolist()
+if analysis_engine == "scanpy":
+    if adata is None or adata.n_obs == 0:
+        st.error("The uploaded expression dataset is empty.")
+        st.stop()
+else:
+    if expression is None or expression.empty:
+        st.error("The uploaded expression dataset is empty.")
+        st.stop()
 
 st.subheader("Data preview")
-st.dataframe(expression.head(20), width="stretch")
+
+if analysis_engine == "scanpy":
+    preview = adata.obs.head(20).copy()
+    preview.insert(0, "cell_id", preview.index.astype(str))
+    st.caption(
+        "Showing AnnData observations without converting the "
+        "expression matrix to a dense table."
+    )
+    st.dataframe(preview, hide_index=True, width="stretch")
+else:
+    st.dataframe(expression.head(20), width="stretch")
 
 with st.sidebar:
 
@@ -241,35 +294,60 @@ with st.sidebar:
         ),
     )
 
-    pseudocount = st.number_input(
-        "Pseudocount",
-        min_value=0.0001,
-        value=0.1,
-        step=0.1,
-        format="%.4f",
-    )
+    if analysis_engine == "native":
+        pseudocount = st.number_input(
+            "Pseudocount",
+            min_value=0.0001,
+            value=0.1,
+            step=0.1,
+            format="%.4f",
+        )
+    else:
+        pseudocount = 0.1
+        st.caption(
+            "Scanpy calculates its own approximate log2 fold changes."
+        )
 
 metric_columns = st.columns(3)
-metric_columns[0].metric("Cells", len(expression))
-metric_columns[1].metric("Columns", len(expression.columns))
-metric_columns[2].metric(
-    "Clusters",
-    expression[cluster_column].nunique(),
-)
+
+if analysis_engine == "scanpy":
+    metric_columns[0].metric("Cells", adata.n_obs)
+    metric_columns[1].metric("Genes", adata.n_vars)
+    metric_columns[2].metric(
+        "Clusters",
+        adata.obs[cluster_column].nunique(),
+    )
+else:
+    metric_columns[0].metric("Cells", len(expression))
+    metric_columns[1].metric("Columns", len(expression.columns))
+    metric_columns[2].metric(
+        "Clusters",
+        expression[cluster_column].nunique(),
+    )
 
 if st.button("Find marker genes", type="primary"):
     try:
         with st.spinner("Finding marker genes..."):
-            markers = find_markers(
-                expression,
-                cluster_column=cluster_column,
-                cell_column=cell_column,
-                top_n=int(top_n),
-                pseudocount=float(pseudocount),
-                min_pct=float(min_pct),
-                min_log2fc=float(min_log2fc),
-                max_p_adj=float(max_p_adj),
-            )
+            if analysis_engine == "scanpy":
+                markers = find_markers_scanpy(
+                    adata,
+                    cluster_column=cluster_column,
+                    top_n=int(top_n),
+                    min_pct=float(min_pct),
+                    min_log2fc=float(min_log2fc),
+                    max_p_adj=float(max_p_adj),
+                )
+            else:
+                markers = find_markers(
+                    expression,
+                    cluster_column=cluster_column,
+                    cell_column=cell_column,
+                    top_n=int(top_n),
+                    pseudocount=float(pseudocount),
+                    min_pct=float(min_pct),
+                    min_log2fc=float(min_log2fc),
+                    max_p_adj=float(max_p_adj),
+                )
 
         st.session_state["marker_results"] = markers
 
