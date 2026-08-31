@@ -8,6 +8,7 @@ from pathlib import Path
 import anndata as ad
 import numpy as np
 import pandas as pd
+import scanpy as sc
 from scipy.stats import mannwhitneyu
 
 RESULT_COLUMNS = [
@@ -283,6 +284,138 @@ def find_markers(
         ignore_index=True,
     )[RESULT_COLUMNS]
 
+def find_markers_scanpy(
+    adata: ad.AnnData,
+    cluster_column: str = "cluster",
+    top_n: int = 5,
+    min_pct: float = 0.0,
+    min_log2fc: float = 0.0,
+    max_p_adj: float = 1.0,
+) -> pd.DataFrame:
+    """Find marker genes using Scanpy's Wilcoxon implementation."""
+
+    if top_n < 1:
+        raise ValueError("top_n must be at least 1.")
+
+    if not 0 <= min_pct <= 1:
+        raise ValueError("min_pct must be between 0 and 1.")
+
+    if min_log2fc < 0:
+        raise ValueError("min_log2fc must be at least 0.")
+
+    if not 0 <= max_p_adj <= 1:
+        raise ValueError("max_p_adj must be between 0 and 1.")
+
+    if cluster_column not in adata.obs.columns:
+        raise ValueError(
+            f"Missing cluster column in AnnData.obs: "
+            f"{cluster_column!r}."
+        )
+
+    if adata.obs[cluster_column].isna().any():
+        raise ValueError("Cluster labels cannot contain missing values.")
+
+    if adata.obs[cluster_column].nunique() < 2:
+        raise ValueError("At least two clusters are required.")
+
+    if adata.X is None:
+        raise ValueError(
+            "The AnnData object does not contain an "
+            "expression matrix in X."
+        )
+
+    if adata.n_vars == 0:
+        raise ValueError("No genes were found in the AnnData object.")
+
+    if not adata.var_names.is_unique:
+        raise ValueError("AnnData gene names must be unique.")
+
+    working = adata.copy()
+    working.obs[cluster_column] = (
+        working.obs[cluster_column].astype("category")
+    )
+
+    sc.tl.rank_genes_groups(
+        working,
+        groupby=cluster_column,
+        reference="rest",
+        method="wilcoxon",
+        corr_method="benjamini-hochberg",
+        use_raw=False,
+        n_genes=working.n_vars,
+        pts=True,
+        tie_correct=True,
+    )
+
+    ranked = sc.get.rank_genes_groups_df(
+        working,
+        group=None,
+    ).rename(
+        columns={
+            "group": "cluster",
+            "names": "gene",
+            "logfoldchanges": "log2FC",
+            "pvals": "p_value",
+            "pvals_adj": "p_adj",
+            "pct_nz_group": "pct_in",
+            "pct_nz_reference": "pct_out",
+        }
+    )
+
+    gene_positions = pd.Series(
+        np.arange(working.n_vars),
+        index=working.var_names.astype(str),
+    )
+
+    results = []
+
+    for cluster in working.obs[cluster_column].cat.categories:
+        in_cluster = np.asarray(
+            working.obs[cluster_column] == cluster,
+            dtype=bool,
+        )
+
+        cluster_mean = np.asarray(
+            working.X[in_cluster].mean(axis=0)
+        ).ravel()
+        other_mean = np.asarray(
+            working.X[~in_cluster].mean(axis=0)
+        ).ravel()
+
+        cluster_result = ranked.loc[
+            ranked["cluster"].astype(str) == str(cluster)
+        ].copy()
+
+        positions = gene_positions.loc[
+            cluster_result["gene"].astype(str)
+        ].to_numpy()
+
+        cluster_result["cluster"] = cluster
+        cluster_result["cluster_mean"] = cluster_mean[positions]
+        cluster_result["other_mean"] = other_mean[positions]
+
+        cluster_result = (
+            cluster_result.loc[
+                (cluster_result["pct_in"] >= min_pct)
+                & (cluster_result["log2FC"] >= min_log2fc)
+                & (cluster_result["p_adj"] <= max_p_adj)
+            ]
+            .sort_values(
+                ["log2FC", "gene"],
+                ascending=[False, True],
+            )
+            .head(top_n)
+        )
+
+        results.append(cluster_result)
+
+    if not results:
+        return pd.DataFrame(columns=RESULT_COLUMNS)
+
+    return pd.concat(
+        results,
+        ignore_index=True,
+    )[RESULT_COLUMNS]
 
 def run(
     input_path: str | Path,
