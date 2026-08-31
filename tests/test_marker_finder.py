@@ -1,13 +1,16 @@
 from pathlib import Path
 
+import anndata as ad
 import numpy as np
 import pandas as pd
 import pytest
+from scipy import sparse
 
 from src.marker_finder import (
     _benjamini_hochberg,
     build_parser,
     find_markers,
+    load_expression,
     run,
 )
 
@@ -15,6 +18,137 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE_DATA = (
     PROJECT_ROOT / "data" / "example_expression.csv"
 )
+
+
+def test_load_expression_reads_h5ad(
+    tmp_path: Path,
+) -> None:
+    input_path = tmp_path / "expression.h5ad"
+    adata = ad.AnnData(
+        X=np.array(
+            [
+                [5.0, 0.0],
+                [4.0, 0.1],
+                [0.0, 5.0],
+                [0.2, 4.0],
+            ]
+        ),
+        obs=pd.DataFrame(
+            {"cluster": ["A", "A", "B", "B"]},
+            index=["cell_1", "cell_2", "cell_3", "cell_4"],
+        ),
+        var=pd.DataFrame(
+            index=["GENE_A", "GENE_B"],
+        ),
+    )
+    adata.write_h5ad(input_path)
+
+    expression = load_expression(
+        input_path,
+        cluster_column="cluster",
+        cell_column="cell_id",
+    )
+
+    expected = pd.DataFrame(
+        {
+            "cell_id": [
+                "cell_1",
+                "cell_2",
+                "cell_3",
+                "cell_4",
+            ],
+            "cluster": ["A", "A", "B", "B"],
+            "GENE_A": [5.0, 4.0, 0.0, 0.2],
+            "GENE_B": [0.0, 0.1, 5.0, 4.0],
+        }
+    )
+
+    pd.testing.assert_frame_equal(
+        expression,
+        expected,
+        check_dtype=False,
+    )
+
+
+def test_run_reads_sparse_h5ad(
+    tmp_path: Path,
+) -> None:
+    input_path = tmp_path / "sparse_expression.h5ad"
+    output_path = tmp_path / "markers.csv"
+
+    adata = ad.AnnData(
+        X=sparse.csr_matrix(
+            [
+                [5.0, 0.0],
+                [4.0, 0.1],
+                [0.0, 5.0],
+                [0.2, 4.0],
+            ]
+        ),
+        obs=pd.DataFrame(
+            {"cluster": ["A", "A", "B", "B"]},
+            index=["cell_1", "cell_2", "cell_3", "cell_4"],
+        ),
+        var=pd.DataFrame(
+            index=["GENE_A", "GENE_B"],
+        ),
+    )
+    adata.write_h5ad(input_path)
+
+    markers = run(
+        input_path,
+        output_path,
+        top_n=1,
+    )
+    saved = pd.read_csv(output_path)
+
+    observed = dict(
+        zip(markers["cluster"], markers["gene"])
+    )
+    assert observed == {
+        "A": "GENE_A",
+        "B": "GENE_B",
+    }
+    pd.testing.assert_frame_equal(saved, markers)
+
+
+def test_h5ad_missing_cluster_column_is_rejected(
+    tmp_path: Path,
+) -> None:
+    input_path = tmp_path / "missing_cluster.h5ad"
+    adata = ad.AnnData(
+        X=np.array(
+            [
+                [1.0],
+                [2.0],
+            ]
+        ),
+        obs=pd.DataFrame(
+            index=["cell_1", "cell_2"],
+        ),
+        var=pd.DataFrame(
+            index=["GENE_A"],
+        ),
+    )
+    adata.write_h5ad(input_path)
+
+    with pytest.raises(
+        ValueError,
+        match="Missing cluster column in AnnData.obs",
+    ):
+        load_expression(input_path)
+
+
+def test_unsupported_input_format_is_rejected(
+    tmp_path: Path,
+) -> None:
+    input_path = tmp_path / "expression.txt"
+
+    with pytest.raises(
+        ValueError,
+        match="Unsupported input format",
+    ):
+        load_expression(input_path)
 
 
 def test_expected_markers_are_ranked_first() -> None:

@@ -8,14 +8,27 @@ The program compares gene expression inside each cluster with all other cells an
 
 ## Input
 
-The input CSV contains:
+The program accepts `.csv` and `.h5ad` expression files.
+
+A CSV file contains:
 
 - one row per cell
-- a `cell` identifier column
-- a `cluster` label column
+- an optional cell-identifier column
+- a cluster-label column
 - numeric gene-expression columns
 
 See `data/example_expression.csv` for an example.
+
+An H5AD file uses:
+
+- `AnnData.X` for the cell-by-gene expression matrix
+- `AnnData.obs_names` for cell identifiers
+- a selected `AnnData.obs` column for cluster labels
+- `AnnData.var_names` for gene names
+
+Dense and sparse `AnnData.X` matrices are supported. The current
+version converts the expression matrix to an in-memory dense table,
+so small or moderate datasets are recommended.
 
 ## Method
 
@@ -79,6 +92,12 @@ python src/marker_finder.py \
   --max-p-adj 0.05
 ```
 
+For H5AD input, select the `AnnData.obs` column containing
+cluster labels:
+
+```bash
+python src/marker_finder.py --input path/to/expression.h5ad --output outputs/top_markers.csv --cluster-column leiden
+```
 The example should identify:
 
 - Cluster 0: `CD3D`, `CD3E`
@@ -96,5 +115,4 @@ pytest -q
 
 Planned improvements:
 
-- support for `.h5ad` files
 - Scanpy integration
