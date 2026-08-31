@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import anndata as ad
 import numpy as np
 import pandas as pd
 from scipy.stats import mannwhitneyu
@@ -20,6 +21,71 @@ RESULT_COLUMNS = [
     "p_value",
     "p_adj",
 ]
+
+
+
+def load_expression(
+    input_path: str | Path,
+    cluster_column: str = "cluster",
+    cell_column: str | None = "cell_id",
+) -> pd.DataFrame:
+    """Load CSV or AnnData input as an expression table."""
+    input_path = Path(input_path)
+    suffix = input_path.suffix.lower()
+
+    if suffix == ".csv":
+        return pd.read_csv(input_path)
+
+    if suffix != ".h5ad":
+        raise ValueError(
+            "Unsupported input format. Use a .csv or .h5ad file."
+        )
+
+    adata = ad.read_h5ad(input_path)
+
+    if cluster_column not in adata.obs.columns:
+        raise ValueError(
+            f"Missing cluster column in AnnData.obs: "
+            f"{cluster_column!r}."
+        )
+
+    if adata.X is None:
+        raise ValueError(
+            "The AnnData object does not contain an "
+            "expression matrix in X."
+        )
+
+    if not adata.var_names.is_unique:
+        raise ValueError(
+            "AnnData gene names in var_names must be unique."
+        )
+
+    matrix = adata.X
+    if hasattr(matrix, "toarray"):
+        matrix = matrix.toarray()
+
+    expression = pd.DataFrame(
+        np.asarray(matrix),
+        columns=adata.var_names.astype(str),
+    )
+    expression.insert(
+        0,
+        cluster_column,
+        adata.obs[cluster_column].to_numpy(),
+    )
+
+    if cell_column:
+        if cell_column == cluster_column:
+            raise ValueError(
+                "cell_column and cluster_column must be different."
+            )
+        expression.insert(
+            0,
+            cell_column,
+            adata.obs_names.astype(str),
+        )
+
+    return expression
 
 
 def _benjamini_hochberg(
@@ -229,9 +295,13 @@ def run(
     min_log2fc: float = 0.0,
     max_p_adj: float = 1.0,
 ) -> pd.DataFrame:
-    """Read an expression CSV, find markers and save the results."""
+    """Read an expression dataset, find markers and save the results."""
 
-    expression = pd.read_csv(input_path)
+    expression = load_expression(
+        input_path,
+        cluster_column=cluster_column,
+        cell_column=cell_column,
+    )
 
     markers = find_markers(
         expression,
@@ -265,7 +335,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--input",
         required=True,
-        help="Input expression CSV path.",
+        help="Input expression CSV or H5AD path.",
     )
 
     parser.add_argument(

@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import io
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
+import anndata as ad
 import pandas as pd
 import streamlit as st
 
-from src.marker_finder import find_markers
+from src.marker_finder import find_markers, load_expression
 
 
 st.set_page_config(
@@ -23,37 +26,174 @@ st.write(
 )
 
 
-@st.cache_data
+@st.cache_data(show_spinner=False)
 def load_csv(file_contents: bytes) -> pd.DataFrame:
     """Load an uploaded CSV file."""
     return pd.read_csv(io.BytesIO(file_contents))
 
 
+@st.cache_data(show_spinner=False)
+def h5ad_obs_columns(
+    file_contents: bytes,
+    file_name: str,
+) -> list[str]:
+    """Return available observation columns from an h5ad file."""
+    with TemporaryDirectory() as directory:
+        input_path = Path(directory) / Path(file_name).name
+        input_path.write_bytes(file_contents)
+
+        adata = ad.read_h5ad(input_path, backed="r")
+        try:
+            return [
+                str(column)
+                for column in adata.obs.columns
+            ]
+        finally:
+            adata.file.close()
+
+
+@st.cache_data(show_spinner=False)
+def load_uploaded_h5ad(
+    file_contents: bytes,
+    file_name: str,
+    cluster_column: str,
+) -> pd.DataFrame:
+    """Convert an uploaded h5ad file to an expression table."""
+    with TemporaryDirectory() as directory:
+        input_path = Path(directory) / Path(file_name).name
+        input_path.write_bytes(file_contents)
+
+        return load_expression(
+            input_path,
+            cluster_column=cluster_column,
+            cell_column="cell_id",
+        )
+
+
 uploaded_file = st.file_uploader(
-    "Upload an expression CSV",
-    type=["csv"],
+    "Upload an expression CSV or H5AD file",
+    type=["csv", "h5ad"],
     help=(
-        "The file should contain one row per cell, a cluster column, "
-        "an optional cell-ID column, and numeric gene-expression columns."
+        "CSV files should contain one row per cell, a cluster "
+        "column, an optional cell-ID column, and numeric gene "
+        "columns. H5AD files should store expression in AnnData.X "
+        "and cluster labels in AnnData.obs."
     ),
 )
 
 if uploaded_file is None:
-    st.info("Upload a CSV file to begin.")
+    st.info("Upload a CSV or H5AD file to begin.")
     st.stop()
 
-try:
-    expression = load_csv(uploaded_file.getvalue())
-except (
-    pd.errors.ParserError,
-    pd.errors.EmptyDataError,
-    UnicodeDecodeError,
-) as error:
-    st.error(f"Could not read the uploaded CSV: {error}")
-    st.stop()
+file_contents = uploaded_file.getvalue()
+file_suffix = Path(uploaded_file.name).suffix.lower()
+
+if file_suffix == ".csv":
+    try:
+        expression = load_csv(file_contents)
+    except (
+        pd.errors.ParserError,
+        pd.errors.EmptyDataError,
+        UnicodeDecodeError,
+    ) as error:
+        st.error(f"Could not read the uploaded CSV: {error}")
+        st.stop()
+
+    if expression.empty:
+        st.error("The uploaded CSV is empty.")
+        st.stop()
+
+    columns = expression.columns.tolist()
+    cluster_options = columns
+    cluster_index = (
+        columns.index("cluster")
+        if "cluster" in columns
+        else 0
+    )
+else:
+    try:
+        cluster_options = h5ad_obs_columns(
+            file_contents,
+            uploaded_file.name,
+        )
+    except (KeyError, OSError, ValueError) as error:
+        st.error(f"Could not inspect the uploaded H5AD file: {error}")
+        st.stop()
+
+    if not cluster_options:
+        st.error(
+            "The uploaded H5AD file has no columns in AnnData.obs."
+        )
+        st.stop()
+
+    preferred_cluster_columns = [
+        "cluster",
+        "cell_type",
+        "leiden",
+        "customclassif",
+    ]
+    default_cluster = next(
+        (
+            column
+            for column in preferred_cluster_columns
+            if column in cluster_options
+        ),
+        cluster_options[0],
+    )
+    cluster_index = cluster_options.index(default_cluster)
+
+with st.sidebar:
+    st.header("Analysis settings")
+
+    cluster_column = st.selectbox(
+        "Cluster column",
+        options=cluster_options,
+        index=cluster_index,
+    )
+
+    if file_suffix == ".csv":
+        cell_options = [
+            "None",
+            *[
+                column
+                for column in columns
+                if column != cluster_column
+            ],
+        ]
+        cell_index = (
+            cell_options.index("cell")
+            if "cell" in cell_options
+            else 0
+        )
+        selected_cell_column = st.selectbox(
+            "Cell-ID column",
+            options=cell_options,
+            index=cell_index,
+        )
+        cell_column = (
+            None
+            if selected_cell_column == "None"
+            else selected_cell_column
+        )
+    else:
+        st.caption(
+            "Cell IDs are read from AnnData.obs_names."
+        )
+        cell_column = "cell_id"
+
+if file_suffix == ".h5ad":
+    try:
+        expression = load_uploaded_h5ad(
+            file_contents,
+            uploaded_file.name,
+            cluster_column,
+        )
+    except (KeyError, OSError, ValueError) as error:
+        st.error(f"Could not read the uploaded H5AD file: {error}")
+        st.stop()
 
 if expression.empty:
-    st.error("The uploaded CSV is empty.")
+    st.error("The uploaded expression dataset is empty.")
     st.stop()
 
 columns = expression.columns.tolist()
@@ -61,43 +201,7 @@ columns = expression.columns.tolist()
 st.subheader("Data preview")
 st.dataframe(expression.head(20), width="stretch")
 
-cluster_index = columns.index("cluster") if "cluster" in columns else 0
-
 with st.sidebar:
-    st.header("Analysis settings")
-
-    cluster_column = st.selectbox(
-        "Cluster column",
-        options=columns,
-        index=cluster_index,
-    )
-
-    cell_options = [
-        "None",
-        *[
-            column
-            for column in columns
-            if column != cluster_column
-        ],
-    ]
-
-    cell_index = (
-        cell_options.index("cell")
-        if "cell" in cell_options
-        else 0
-    )
-
-    selected_cell_column = st.selectbox(
-        "Cell-ID column",
-        options=cell_options,
-        index=cell_index,
-    )
-
-    cell_column = (
-        None
-        if selected_cell_column == "None"
-        else selected_cell_column
-    )
 
     top_n = st.number_input(
         "Markers per cluster",
