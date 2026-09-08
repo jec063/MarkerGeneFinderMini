@@ -29,12 +29,15 @@ def load_expression(
     input_path: str | Path,
     cluster_column: str = "cluster",
     cell_column: str | None = "cell_id",
+    layer: str | None = None,
 ) -> pd.DataFrame:
     """Load CSV or AnnData input as an expression table."""
     input_path = Path(input_path)
     suffix = input_path.suffix.lower()
 
     if suffix == ".csv":
+        if layer is not None:
+            raise ValueError("Layer selection requires H5AD input.")
         return pd.read_csv(input_path)
 
     if suffix != ".h5ad":
@@ -50,7 +53,10 @@ def load_expression(
             f"{cluster_column!r}."
         )
 
-    if adata.X is None:
+    if layer is not None and layer not in adata.layers:
+        raise ValueError(f"Missing AnnData layer: {layer!r}.")
+
+    if layer is None and adata.X is None:
         raise ValueError(
             "The AnnData object does not contain an "
             "expression matrix in X."
@@ -61,7 +67,7 @@ def load_expression(
             "AnnData gene names in var_names must be unique."
         )
 
-    matrix = adata.X
+    matrix = adata.X if layer is None else adata.layers[layer]
     if hasattr(matrix, "toarray"):
         matrix = matrix.toarray()
 
@@ -291,6 +297,7 @@ def find_markers_scanpy(
     min_pct: float = 0.0,
     min_log2fc: float = 0.0,
     max_p_adj: float = 1.0,
+    layer: str | None = None,
 ) -> pd.DataFrame:
     """Find marker genes using Scanpy's Wilcoxon implementation."""
 
@@ -318,7 +325,10 @@ def find_markers_scanpy(
     if adata.obs[cluster_column].nunique() < 2:
         raise ValueError("At least two clusters are required.")
 
-    if adata.X is None:
+    if layer is not None and layer not in adata.layers:
+        raise ValueError(f"Missing AnnData layer: {layer!r}.")
+
+    if layer is None and adata.X is None:
         raise ValueError(
             "The AnnData object does not contain an "
             "expression matrix in X."
@@ -331,6 +341,8 @@ def find_markers_scanpy(
         raise ValueError("AnnData gene names must be unique.")
 
     working = adata.copy()
+    if layer is not None:
+        working.X = working.layers[layer].copy()
     working.obs[cluster_column] = (
         working.obs[cluster_column].astype("category")
     )
@@ -429,6 +441,7 @@ def run(
     min_log2fc: float = 0.0,
     max_p_adj: float = 1.0,
     engine: str = "native",
+    layer: str | None = None,
 ) -> pd.DataFrame:
     """Read an expression dataset, find markers and save the results."""
 
@@ -449,6 +462,7 @@ def run(
 
         markers = find_markers_scanpy(
             adata,
+            layer=layer,
             cluster_column=cluster_column,
             top_n=top_n,
             min_pct=min_pct,
@@ -458,6 +472,7 @@ def run(
     else:
         expression = load_expression(
             input_path,
+            layer=layer,
             cluster_column=cluster_column,
             cell_column=cell_column,
         )
@@ -567,6 +582,12 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    parser.add_argument(
+        "--layer",
+        default=None,
+        help="H5AD layer name; omit to use AnnData.X.",
+    )
+
     return parser
 
 
@@ -586,6 +607,7 @@ def main() -> None:
         min_log2fc=args.min_log2fc,
         max_p_adj=args.max_p_adj,
         engine=args.engine,
+        layer=args.layer,
     )
 
     print(

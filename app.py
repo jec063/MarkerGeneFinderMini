@@ -61,6 +61,7 @@ def load_uploaded_h5ad(
     file_contents: bytes,
     file_name: str,
     cluster_column: str,
+    layer: str | None = None,
 ) -> pd.DataFrame:
     """Convert an uploaded h5ad file to an expression table."""
     with TemporaryDirectory() as directory:
@@ -71,6 +72,7 @@ def load_uploaded_h5ad(
             input_path,
             cluster_column=cluster_column,
             cell_column="cell_id",
+            layer=layer,
         )
 
 
@@ -85,6 +87,19 @@ def load_uploaded_anndata(
         input_path.write_bytes(file_contents)
 
         return ad.read_h5ad(input_path)
+
+
+@st.cache_data(show_spinner=False)
+def h5ad_layer_names(file_contents: bytes, file_name: str) -> list[str]:
+    """Read available layer names from an uploaded H5AD file."""
+    with TemporaryDirectory() as directory:
+        input_path = Path(directory) / Path(file_name).name
+        input_path.write_bytes(file_contents)
+        adata = ad.read_h5ad(input_path, backed="r")
+        try:
+            return list(adata.layers.keys())
+        finally:
+            adata.file.close()
 
 
 def clear_marker_results() -> None:
@@ -187,8 +202,34 @@ with st.sidebar:
             ),
         )
         analysis_engine = engine_label.lower()
+
+        try:
+            layer_names = h5ad_layer_names(
+                file_contents,
+                uploaded_file.name,
+            )
+        except (KeyError, OSError, ValueError) as error:
+            st.error(f"Could not inspect H5AD layers: {error}")
+            st.stop()
+
+        selected_layer = st.selectbox(
+            "Expression matrix",
+            options=[None, *layer_names],
+            format_func=lambda name: (
+                "AnnData.X (default)"
+                if name is None
+                else f"Layer: {name}"
+            ),
+            on_change=clear_marker_results,
+            help=(
+                "Choose the expression matrix to analyze. "
+                "This does not normalize or log-transform the data. "
+                "For Scanpy, select normalized, log-transformed expression."
+            ),
+        )
     else:
         analysis_engine = "native"
+        selected_layer = None
 
     if file_suffix == ".csv":
         cell_options = [
@@ -236,6 +277,7 @@ if file_suffix == ".h5ad":
                 file_contents,
                 uploaded_file.name,
                 cluster_column,
+                layer=selected_layer,
             )
     except (KeyError, OSError, ValueError) as error:
         st.error(f"Could not read the uploaded H5AD file: {error}")
@@ -345,6 +387,7 @@ if st.button("Find marker genes", type="primary"):
             if analysis_engine == "scanpy":
                 markers = find_markers_scanpy(
                     adata,
+                    layer=selected_layer,
                     cluster_column=cluster_column,
                     top_n=int(top_n),
                     min_pct=float(min_pct),
