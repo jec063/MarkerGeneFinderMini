@@ -87,8 +87,14 @@ def load_uploaded_anndata(
         return ad.read_h5ad(input_path)
 
 
+def clear_marker_results() -> None:
+    """Clear results when the input or analysis settings change."""
+    st.session_state.pop("marker_results", None)
+
+
 uploaded_file = st.file_uploader(
     "Upload an expression CSV or H5AD file",
+    on_change=clear_marker_results,
     type=["csv", "h5ad"],
     help=(
         "CSV files should contain one row per cell, a cluster "
@@ -164,6 +170,7 @@ with st.sidebar:
 
     cluster_column = st.selectbox(
         "Cluster column",
+        on_change=clear_marker_results,
         options=cluster_options,
         index=cluster_index,
     )
@@ -171,6 +178,7 @@ with st.sidebar:
     if file_suffix == ".h5ad":
         engine_label = st.selectbox(
             "Analysis engine",
+            on_change=clear_marker_results,
             options=["Native", "Scanpy"],
             help=(
                 "Native preserves the existing CellCoPilot method. "
@@ -198,6 +206,7 @@ with st.sidebar:
         )
         selected_cell_column = st.selectbox(
             "Cell-ID column",
+            on_change=clear_marker_results,
             options=cell_options,
             index=cell_index,
         )
@@ -258,6 +267,7 @@ with st.sidebar:
 
     top_n = st.number_input(
         "Markers per cluster",
+        on_change=clear_marker_results,
         min_value=1,
         max_value=100,
         value=5,
@@ -266,6 +276,7 @@ with st.sidebar:
 
     min_pct = st.slider(
         "Minimum fraction expressing gene",
+        on_change=clear_marker_results,
         min_value=0.0,
         max_value=1.0,
         value=0.0,
@@ -274,6 +285,7 @@ with st.sidebar:
 
     min_log2fc = st.number_input(
         "Minimum log2 fold change",
+        on_change=clear_marker_results,
         min_value=0.0,
         value=0.0,
         step=0.1,
@@ -282,6 +294,7 @@ with st.sidebar:
 
     max_p_adj = st.number_input(
         "Maximum adjusted p-value",
+        on_change=clear_marker_results,
         min_value=0.0,
         max_value=1.0,
         value=1.0,
@@ -297,6 +310,7 @@ with st.sidebar:
     if analysis_engine == "native":
         pseudocount = st.number_input(
             "Pseudocount",
+            on_change=clear_marker_results,
             min_value=0.0001,
             value=0.1,
             step=0.1,
