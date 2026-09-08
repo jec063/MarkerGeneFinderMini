@@ -21,12 +21,12 @@ See `data/example_expression.csv` for an example.
 
 An H5AD file uses:
 
-- `AnnData.X` for the cell-by-gene expression matrix
+- `AnnData.X` by default, a named layer, or `AnnData.raw.X` for the cell-by-gene expression matrix
 - `AnnData.obs_names` for cell identifiers
 - a selected `AnnData.obs` column for cluster labels
-- `AnnData.var_names` for gene names
+- `AnnData.var_names` for X and layers, or `AnnData.raw.var_names` when selecting raw
 
-Dense and sparse `AnnData.X` matrices are supported. The native
+Dense and sparse expression matrices are supported. The native
 engine converts the expression matrix to an in-memory dense table.
 The Scanpy engine works directly with the AnnData object and preserves
 sparse matrices, so it is recommended for larger sparse H5AD datasets.
@@ -131,12 +131,38 @@ The same option works with `--engine native`. CSV input does not support
 layer selection, and missing layer names produce an error.
 
 In Streamlit, use the **Expression matrix** dropdown after uploading an
-H5AD file. Changing the selected layer clears previous results.
+H5AD file. Changing the selected expression matrix clears previous results.
 
 Layer selection does not normalize or log-transform expression. For
 Scanpy, select appropriately normalized, log-transformed data. Layer
 names alone do not establish how the data were processed.
 
+
+## AnnData.raw expression
+
+Both engines support expression stored in `AnnData.raw`:
+
+```bash
+python src/marker_finder.py --input expression.h5ad --output outputs/raw_markers.csv --cluster-column leiden --engine scanpy --use-raw
+```
+
+The same option works with `--engine native`. Raw selection uses
+`AnnData.raw.X` and its own gene names, which may differ from X.
+Cell identifiers and cluster labels use the current observations.
+The input file is not modified.
+
+`--use-raw` and `--layer` are mutually exclusive. Raw selection
+requires H5AD input and reports an error if raw expression is missing.
+Omitting both options continues to use `AnnData.X`.
+
+In Streamlit, choose **AnnData.raw** from **Expression matrix**.
+This option appears only when raw expression is available.
+Changing the selection clears previous results. For Scanpy,
+the displayed gene count reflects the selected matrix.
+
+Raw selection does not normalize or log-transform expression.
+The name `raw` does not establish how the data were processed.
+For Scanpy, use appropriately normalized, log-transformed expression.
 
 ## Test
 
@@ -148,6 +174,5 @@ pytest -q
 
 Planned improvements:
 
-- Add AnnData.raw expression selection for H5AD analysis
 - Add marker-gene visualizations
 - Improve progress reporting for larger datasets

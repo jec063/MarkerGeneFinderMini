@@ -62,6 +62,7 @@ def load_uploaded_h5ad(
     file_name: str,
     cluster_column: str,
     layer: str | None = None,
+    use_raw: bool = False,
 ) -> pd.DataFrame:
     """Convert an uploaded h5ad file to an expression table."""
     with TemporaryDirectory() as directory:
@@ -73,6 +74,7 @@ def load_uploaded_h5ad(
             cluster_column=cluster_column,
             cell_column="cell_id",
             layer=layer,
+            use_raw=use_raw,
         )
 
 
@@ -90,14 +92,21 @@ def load_uploaded_anndata(
 
 
 @st.cache_data(show_spinner=False)
-def h5ad_layer_names(file_contents: bytes, file_name: str) -> list[str]:
-    """Read available layer names from an uploaded H5AD file."""
+def h5ad_expression_sources(
+    file_contents: bytes,
+    file_name: str,
+) -> list[tuple[str, str | None]]:
+    """List available expression matrices without densifying them."""
     with TemporaryDirectory() as directory:
         input_path = Path(directory) / Path(file_name).name
         input_path.write_bytes(file_contents)
         adata = ad.read_h5ad(input_path, backed="r")
         try:
-            return list(adata.layers.keys())
+            sources = [("X", None)]
+            if adata.raw is not None and adata.raw.X is not None:
+                sources.append(("raw", None))
+            sources.extend(("layer", name) for name in adata.layers.keys())
+            return sources
         finally:
             adata.file.close()
 
@@ -114,7 +123,7 @@ uploaded_file = st.file_uploader(
     help=(
         "CSV files should contain one row per cell, a cluster "
         "column, an optional cell-ID column, and numeric gene "
-        "columns. H5AD files should store expression in AnnData.X "
+        "columns. H5AD expression can come from X, layers, or raw, "
         "and cluster labels in AnnData.obs."
     ),
 )
@@ -204,32 +213,38 @@ with st.sidebar:
         analysis_engine = engine_label.lower()
 
         try:
-            layer_names = h5ad_layer_names(
+            expression_sources = h5ad_expression_sources(
                 file_contents,
                 uploaded_file.name,
             )
         except (KeyError, OSError, ValueError) as error:
-            st.error(f"Could not inspect H5AD layers: {error}")
+            st.error(f"Could not inspect H5AD expression matrices: {error}")
             st.stop()
 
-        selected_layer = st.selectbox(
+        selected_source = st.selectbox(
             "Expression matrix",
-            options=[None, *layer_names],
-            format_func=lambda name: (
-                "AnnData.X (default)"
-                if name is None
-                else f"Layer: {name}"
+            options=expression_sources,
+            format_func=lambda source: (
+                "AnnData.X (default)" if source[0] == "X"
+                else "AnnData.raw" if source[0] == "raw"
+                else f"Layer: {source[1]}"
             ),
             on_change=clear_marker_results,
             help=(
-                "Choose the expression matrix to analyze. "
+                "Choose X, a named layer, or raw when available. "
                 "This does not normalize or log-transform the data. "
-                "For Scanpy, select normalized, log-transformed expression."
+                "For Scanpy, select normalized, log-transformed expression. "
+                "The name raw does not indicate how the data were processed."
             ),
         )
+        selected_layer = (
+            selected_source[1] if selected_source[0] == "layer" else None
+        )
+        use_raw = selected_source[0] == "raw"
     else:
         analysis_engine = "native"
         selected_layer = None
+        use_raw = False
 
     if file_suffix == ".csv":
         cell_options = [
@@ -278,6 +293,7 @@ if file_suffix == ".h5ad":
                 uploaded_file.name,
                 cluster_column,
                 layer=selected_layer,
+                use_raw=use_raw,
             )
     except (KeyError, OSError, ValueError) as error:
         st.error(f"Could not read the uploaded H5AD file: {error}")
@@ -368,7 +384,9 @@ metric_columns = st.columns(3)
 
 if analysis_engine == "scanpy":
     metric_columns[0].metric("Cells", adata.n_obs)
-    metric_columns[1].metric("Genes", adata.n_vars)
+    metric_columns[1].metric(
+        "Genes", adata.raw.n_vars if use_raw else adata.n_vars
+    )
     metric_columns[2].metric(
         "Clusters",
         adata.obs[cluster_column].nunique(),
@@ -388,6 +406,7 @@ if st.button("Find marker genes", type="primary"):
                 markers = find_markers_scanpy(
                     adata,
                     layer=selected_layer,
+                    use_raw=use_raw,
                     cluster_column=cluster_column,
                     top_n=int(top_n),
                     min_pct=float(min_pct),

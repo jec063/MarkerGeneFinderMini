@@ -25,13 +25,33 @@ RESULT_COLUMNS = [
 
 
 
+def _raw_expression(adata: ad.AnnData) -> ad.AnnData:
+    """Copy raw expression with its gene names and current cell metadata."""
+    from copy import deepcopy
+
+    if adata.raw is None or adata.raw.X is None:
+        raise ValueError("The AnnData object does not contain raw expression.")
+    return ad.AnnData(
+        X=adata.raw.X.copy(),
+        obs=adata.obs.copy(),
+        var=adata.raw.var.copy(),
+        uns=deepcopy(adata.uns),
+    )
+
+
 def load_expression(
     input_path: str | Path,
     cluster_column: str = "cluster",
     cell_column: str | None = "cell_id",
     layer: str | None = None,
+    use_raw: bool = False,
 ) -> pd.DataFrame:
     """Load CSV or AnnData input as an expression table."""
+
+    if use_raw and layer is not None:
+        raise ValueError("use_raw and layer are mutually exclusive.")
+    if use_raw and Path(input_path).suffix.lower() != ".h5ad":
+        raise ValueError("Raw selection requires H5AD input.")
     input_path = Path(input_path)
     suffix = input_path.suffix.lower()
 
@@ -46,6 +66,8 @@ def load_expression(
         )
 
     adata = ad.read_h5ad(input_path)
+    if use_raw:
+        adata = _raw_expression(adata)
 
     if cluster_column not in adata.obs.columns:
         raise ValueError(
@@ -298,9 +320,15 @@ def find_markers_scanpy(
     min_log2fc: float = 0.0,
     max_p_adj: float = 1.0,
     layer: str | None = None,
+    use_raw: bool = False,
 ) -> pd.DataFrame:
     """Find marker genes using Scanpy's Wilcoxon implementation."""
 
+    if use_raw and layer is not None:
+        raise ValueError("use_raw and layer are mutually exclusive.")
+
+    if use_raw:
+        adata = _raw_expression(adata)
     if top_n < 1:
         raise ValueError("top_n must be at least 1.")
 
@@ -442,8 +470,14 @@ def run(
     max_p_adj: float = 1.0,
     engine: str = "native",
     layer: str | None = None,
+    use_raw: bool = False,
 ) -> pd.DataFrame:
     """Read an expression dataset, find markers and save the results."""
+
+    if use_raw and layer is not None:
+        raise ValueError("use_raw and layer are mutually exclusive.")
+    if use_raw and Path(input_path).suffix.lower() != ".h5ad":
+        raise ValueError("Raw selection requires H5AD input.")
 
     if engine not in {"native", "scanpy"}:
         raise ValueError(
@@ -463,6 +497,7 @@ def run(
         markers = find_markers_scanpy(
             adata,
             layer=layer,
+            use_raw=use_raw,
             cluster_column=cluster_column,
             top_n=top_n,
             min_pct=min_pct,
@@ -473,6 +508,7 @@ def run(
         expression = load_expression(
             input_path,
             layer=layer,
+            use_raw=use_raw,
             cluster_column=cluster_column,
             cell_column=cell_column,
         )
@@ -582,10 +618,17 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
-    parser.add_argument(
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument(
         "--layer",
         default=None,
         help="H5AD layer name; omit to use AnnData.X.",
+    )
+
+    source.add_argument(
+        "--use-raw",
+        action="store_true",
+        help="Use AnnData.raw expression and gene names (H5AD only).",
     )
 
     return parser
@@ -608,6 +651,7 @@ def main() -> None:
         max_p_adj=args.max_p_adj,
         engine=args.engine,
         layer=args.layer,
+        use_raw=args.use_raw,
     )
 
     print(
