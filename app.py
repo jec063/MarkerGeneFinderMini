@@ -381,6 +381,6 @@ if "marker_results" in st.session_state:
 
 st.caption(
     "This tool ranks markers using log2 fold change and reports "
-    "one-sided Wilcoxon-Mann-Whitney p-values with "
+    "engine-specific Wilcoxon p-values with "
     "Benjamini-Hochberg adjustment."
 )
