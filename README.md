@@ -117,6 +117,27 @@ The example should identify:
 - Cluster 2: `LST1`, `S100A8`
 - Cluster 3: `PECAM1`, `VWF`
 
+## H5AD expression layers
+
+Both Native and Scanpy use `AnnData.X` by default. To analyze a named
+matrix in `AnnData.layers`, pass `--layer`:
+
+```bash
+python src/marker_finder.py --input expression.h5ad --output outputs/markers.csv --cluster-column leiden --engine scanpy --layer lognormalized
+```
+
+Replace `lognormalized` with a layer name present in your file.
+The same option works with `--engine native`. CSV input does not support
+layer selection, and missing layer names produce an error.
+
+In Streamlit, use the **Expression matrix** dropdown after uploading an
+H5AD file. Changing the selected layer clears previous results.
+
+Layer selection does not normalize or log-transform expression. For
+Scanpy, select appropriately normalized, log-transformed data. Layer
+names alone do not establish how the data were processed.
+
+
 ## Test
 
 ```bash
@@ -127,6 +148,6 @@ pytest -q
 
 Planned improvements:
 
-- Select AnnData layers or raw expression for H5AD analysis
+- Add AnnData.raw expression selection for H5AD analysis
 - Add marker-gene visualizations
 - Improve progress reporting for larger datasets
