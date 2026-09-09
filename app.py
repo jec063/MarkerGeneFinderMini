@@ -446,6 +446,44 @@ if "marker_results" in st.session_state:
             width="stretch",
         )
 
+        st.subheader("Marker visualization")
+        chart_cluster = st.selectbox(
+            "Cluster to visualize",
+            options=sorted(markers["cluster"].unique().tolist(), key=str),
+            format_func=str,
+        )
+        chart_data = (
+            markers.loc[
+                markers["cluster"] == chart_cluster,
+                ["gene", "log2FC"],
+            ]
+            .sort_values(
+                ["log2FC", "gene"],
+                ascending=[False, True],
+            )
+            .head(20)
+            .copy()
+        )
+        engine_name = (
+            "Scanpy" if analysis_engine == "scanpy" else "Native"
+        )
+        st.caption(
+            f"{engine_name} engine · Cluster {chart_cluster} · "
+            f"{len(chart_data)} markers shown. "
+            "Shows up to 20 markers from the filtered results. "
+            "Bar length represents log2 fold change, not statistical significance."
+        )
+        st.bar_chart(
+            chart_data,
+            x="gene",
+            y="log2FC",
+            horizontal=True,
+            x_label="Gene",
+            y_label="log2 fold change",
+            color="#2b6ca3",
+            height=max(300, 28 * len(chart_data) + 80),
+        )
+
         result_csv = markers.to_csv(index=False).encode("utf-8")
 
         st.download_button(
