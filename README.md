@@ -91,6 +91,17 @@ python -m streamlit run app.py
 
 For H5AD uploads, select either **Native** or **Scanpy** from the analysis-engine control. CSV uploads use the native engine.
 
+## Marker visualization
+
+After finding markers in Streamlit, use **Cluster to visualize**
+to display a horizontal bar chart for one cluster.
+The chart shows up to 20 markers with the highest log2 fold changes
+from the filtered results and identifies the analysis engine used.
+
+Bar length represents log2 fold change, not statistical significance.
+Switching the displayed cluster does not rerun the analysis.
+The full results table and CSV download remain available.
+
 ## Run
 
 ```bash
@@ -174,5 +185,5 @@ pytest -q
 
 Planned improvements:
 
-- Add marker-gene visualizations
+- Add expression dot plots and heatmaps
 - Improve progress reporting for larger datasets
