@@ -496,7 +496,7 @@ if "marker_results" in st.session_state:
             help="Choose up to 20 genes from the marker results.",
         )
         if not dot_genes:
-            st.info("Select at least one gene to display the dot plot.")
+            st.info("Select at least one gene to display the expression plots.")
         else:
             try:
                 if analysis_engine == "scanpy":
@@ -514,7 +514,7 @@ if "marker_results" in st.session_state:
                         cluster_column=cluster_column,
                     )
             except (ValueError, KeyError) as error:
-                st.error(f"Could not create expression dot plot: {error}")
+                st.error(f"Could not create expression plots: {error}")
             else:
                 dot_data["cluster"] = dot_data["cluster"].astype(str)
                 cluster_order = dot_data["cluster"].drop_duplicates().tolist()
@@ -535,7 +535,7 @@ if "marker_results" in st.session_state:
                     dot_data,
                     spec={
                         "mark": {"type": "circle", "opacity": 1},
-                        "height": max(180, 30 * len(cluster_order)),
+                        "height": max(300, 30 * len(cluster_order)),
                         "encoding": {
                             "x": {
                                 "field": "gene",
@@ -562,7 +562,65 @@ if "marker_results" in st.session_state:
                                 "legend": {
                                     "format": ".0%",
                                     "values": [0.25, 0.5, 0.75, 1],
+                                    "orient": "bottom",
+                                    "direction": "horizontal",
+                                    "columns": 4,
                                 },
+                            },
+                            "color": {
+                                "field": "mean_expression",
+                                "type": "quantitative",
+                                "title": "Mean expression",
+                                "scale": {"scheme": "blues", "zero": True},
+                            },
+                            "tooltip": [
+                                {"field": "cluster", "type": "nominal"},
+                                {"field": "gene", "type": "nominal"},
+                                {
+                                    "field": "mean_expression",
+                                    "type": "quantitative",
+                                    "format": ".3f",
+                                },
+                                {
+                                    "field": "fraction_expressing",
+                                    "type": "quantitative",
+                                    "format": ".1%",
+                                },
+                            ],
+                        },
+                    },
+                    use_container_width=True,
+                )
+
+                st.subheader("Expression heatmap")
+                st.caption(
+                    f"{engine_name} engine · {source_name}. "
+                    "Color shows mean expression across all cells in each cluster, "
+                    "including zeros. Values use the selected matrix's existing "
+                    "scale without additional transformation or gene-wise scaling."
+                )
+                st.vega_lite_chart(
+                    dot_data,
+                    spec={
+                        "mark": {
+                            "type": "rect",
+                            "stroke": "white",
+                            "strokeWidth": 1,
+                        },
+                        "height": max(180, 30 * len(cluster_order)),
+                        "encoding": {
+                            "x": {
+                                "field": "gene",
+                                "type": "nominal",
+                                "sort": dot_genes,
+                                "title": "Gene",
+                                "axis": {"labelAngle": -45},
+                            },
+                            "y": {
+                                "field": "cluster",
+                                "type": "nominal",
+                                "sort": cluster_order,
+                                "title": "Cluster",
                             },
                             "color": {
                                 "field": "mean_expression",
