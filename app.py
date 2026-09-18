@@ -10,6 +10,8 @@ import anndata as ad
 import pandas as pd
 import streamlit as st
 
+from src.expression_summary import summarize_expression
+
 from src.marker_finder import (
     find_markers,
     find_markers_scanpy,
@@ -483,6 +485,109 @@ if "marker_results" in st.session_state:
             color="#2b6ca3",
             height=max(300, 28 * len(chart_data) + 80),
         )
+
+        st.subheader("Expression dot plot")
+        available_genes = list(dict.fromkeys(markers["gene"].tolist()))
+        dot_genes = st.multiselect(
+            "Genes to compare",
+            options=available_genes,
+            default=available_genes[:10],
+            max_selections=20,
+            help="Choose up to 20 genes from the marker results.",
+        )
+        if not dot_genes:
+            st.info("Select at least one gene to display the dot plot.")
+        else:
+            try:
+                if analysis_engine == "scanpy":
+                    dot_data = summarize_expression(
+                        adata,
+                        dot_genes,
+                        cluster_column=cluster_column,
+                        layer=selected_layer,
+                        use_raw=use_raw,
+                    )
+                else:
+                    dot_data = summarize_expression(
+                        expression,
+                        dot_genes,
+                        cluster_column=cluster_column,
+                    )
+            except (ValueError, KeyError) as error:
+                st.error(f"Could not create expression dot plot: {error}")
+            else:
+                dot_data["cluster"] = dot_data["cluster"].astype(str)
+                cluster_order = dot_data["cluster"].drop_duplicates().tolist()
+                source_name = (
+                    "CSV expression" if file_suffix == ".csv"
+                    else "AnnData.raw" if use_raw
+                    else f"Layer: {selected_layer}" if selected_layer is not None
+                    else "AnnData.X"
+                )
+                st.caption(
+                    f"{engine_name} engine · {source_name}. "
+                    "Dot area shows the percentage of cells with expression > 0. "
+                    "Color shows mean expression across all cells in each cluster, "
+                    "including zeros, on the selected matrix's existing scale. "
+                    "A missing dot means 0% expressing."
+                )
+                st.vega_lite_chart(
+                    dot_data,
+                    spec={
+                        "mark": {"type": "circle", "opacity": 1},
+                        "height": max(180, 30 * len(cluster_order)),
+                        "encoding": {
+                            "x": {
+                                "field": "gene",
+                                "type": "nominal",
+                                "sort": dot_genes,
+                                "title": "Gene",
+                                "axis": {"labelAngle": -45},
+                            },
+                            "y": {
+                                "field": "cluster",
+                                "type": "nominal",
+                                "sort": cluster_order,
+                                "title": "Cluster",
+                            },
+                            "size": {
+                                "field": "fraction_expressing",
+                                "type": "quantitative",
+                                "title": "Cells expressing",
+                                "scale": {
+                                    "type": "linear",
+                                    "domain": [0, 1],
+                                    "range": [0, 450],
+                                },
+                                "legend": {
+                                    "format": ".0%",
+                                    "values": [0.25, 0.5, 0.75, 1],
+                                },
+                            },
+                            "color": {
+                                "field": "mean_expression",
+                                "type": "quantitative",
+                                "title": "Mean expression",
+                                "scale": {"scheme": "blues", "zero": True},
+                            },
+                            "tooltip": [
+                                {"field": "cluster", "type": "nominal"},
+                                {"field": "gene", "type": "nominal"},
+                                {
+                                    "field": "mean_expression",
+                                    "type": "quantitative",
+                                    "format": ".3f",
+                                },
+                                {
+                                    "field": "fraction_expressing",
+                                    "type": "quantitative",
+                                    "format": ".1%",
+                                },
+                            ],
+                        },
+                    },
+                    use_container_width=True,
+                )
 
         result_csv = markers.to_csv(index=False).encode("utf-8")
 
