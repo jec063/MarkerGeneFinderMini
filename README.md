@@ -117,6 +117,20 @@ with both Native and Scanpy analysis. It uses the selected expression
 matrix without additional normalization, log transformation, or scaling.
 Changing the gene selection does not rerun marker analysis.
 
+## Expression heatmap
+
+The heatmap shares the **Genes to compare** selection with the dot plot
+and displays mean expression for each selected gene across all clusters.
+
+- Color represents mean expression across all cells in each cluster, including zeros.
+- Hover over a tile to inspect the gene, cluster, mean expression, and fraction expressing.
+- Values use the selected matrix's existing scale without additional normalization,
+  log transformation, or gene-wise scaling.
+
+The heatmap supports CSV input and H5AD X, named layers, and raw expression
+with both Native and Scanpy analysis. Changing the gene selection updates
+both expression plots without rerunning marker analysis.
+
 ## Run
 
 ```bash
@@ -200,5 +214,4 @@ pytest -q
 
 Planned improvements:
 
-- Add expression heatmaps
 - Improve progress reporting for larger datasets
