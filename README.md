@@ -102,6 +102,21 @@ Bar length represents log2 fold change, not statistical significance.
 Switching the displayed cluster does not rerun the analysis.
 The full results table and CSV download remain available.
 
+## Expression dot plot
+
+After finding markers, select up to 20 genes from the results using
+**Genes to compare**. The dot plot compares them across all clusters.
+
+- Dot area represents the fraction of cells with expression greater than zero.
+- Color represents mean expression across all cells in the cluster, including zeros.
+- No dot is drawn when the fraction expressing is zero.
+- Hover over a dot to inspect its expression summary.
+
+The plot supports CSV input and H5AD X, named layers, and raw expression
+with both Native and Scanpy analysis. It uses the selected expression
+matrix without additional normalization, log transformation, or scaling.
+Changing the gene selection does not rerun marker analysis.
+
 ## Run
 
 ```bash
@@ -185,5 +200,5 @@ pytest -q
 
 Planned improvements:
 
-- Add expression dot plots and heatmaps
+- Add expression heatmaps
 - Improve progress reporting for larger datasets
