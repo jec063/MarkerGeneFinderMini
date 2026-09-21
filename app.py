@@ -119,6 +119,13 @@ def clear_marker_results() -> None:
     st.session_state.pop("marker_results", None)
 
 
+use_example_data = st.checkbox(
+    "Use example data",
+    key="use_example_data",
+    on_change=clear_marker_results,
+    help="Try the app with the bundled example CSV.",
+)
+
 uploaded_file = st.file_uploader(
     "Upload an expression CSV or H5AD file",
     on_change=clear_marker_results,
@@ -131,12 +138,26 @@ uploaded_file = st.file_uploader(
     ),
 )
 
-if uploaded_file is None:
-    st.info("Upload a CSV or H5AD file to begin.")
-    st.stop()
+if use_example_data:
+    example_path = Path(__file__).resolve().parent / "data" / "example_expression.csv"
+    try:
+        file_contents = example_path.read_bytes()
+    except OSError as error:
+        st.error(f"Could not load example data: {error}")
+        st.stop()
+    file_name = example_path.name
+    st.info(
+        "Using the bundled example CSV. Uncheck Use example data "
+        "to analyze an uploaded file."
+    )
+else:
+    if uploaded_file is None:
+        st.info("Upload a CSV or H5AD file to begin.")
+        st.stop()
+    file_contents = uploaded_file.getvalue()
+    file_name = uploaded_file.name
 
-file_contents = uploaded_file.getvalue()
-file_suffix = Path(uploaded_file.name).suffix.lower()
+file_suffix = Path(file_name).suffix.lower()
 
 if file_suffix == ".csv":
     try:
@@ -164,7 +185,7 @@ else:
     try:
         cluster_options = h5ad_obs_columns(
             file_contents,
-            uploaded_file.name,
+            file_name,
         )
     except (KeyError, OSError, ValueError) as error:
         st.error(f"Could not inspect the uploaded H5AD file: {error}")
@@ -218,7 +239,7 @@ with st.sidebar:
         try:
             expression_sources = h5ad_expression_sources(
                 file_contents,
-                uploaded_file.name,
+                file_name,
             )
         except (KeyError, OSError, ValueError) as error:
             st.error(f"Could not inspect H5AD expression matrices: {error}")
@@ -287,13 +308,13 @@ if file_suffix == ".h5ad":
         if analysis_engine == "scanpy":
             adata = load_uploaded_anndata(
                 file_contents,
-                uploaded_file.name,
+                file_name,
             )
             expression = None
         else:
             expression = load_uploaded_h5ad(
                 file_contents,
-                uploaded_file.name,
+                file_name,
                 cluster_column,
                 layer=selected_layer,
                 use_raw=use_raw,
