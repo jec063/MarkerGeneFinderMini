@@ -720,6 +720,20 @@ if "marker_results" in st.session_state:
                     use_container_width=True,
                 )
 
+                summary_csv = dot_data.to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    "Download expression summary as CSV",
+                    data=summary_csv,
+                    file_name="expression_summary.csv",
+                    mime="text/csv",
+                    key="expression_summary_download",
+                )
+                st.caption(
+                    "Exports the selected genes across all clusters. "
+                    "fraction_expressing ranges from 0 to 1; "
+                    "mean_expression includes cells with zero expression."
+                )
+
         result_csv = markers.to_csv(index=False).encode("utf-8")
 
         st.download_button(
