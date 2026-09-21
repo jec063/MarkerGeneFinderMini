@@ -151,6 +151,22 @@ The heatmap supports CSV input and H5AD X, named layers, and raw expression
 with both Native and Scanpy analysis. Changing the gene selection updates
 both expression plots without rerunning marker analysis.
 
+## Download expression summaries
+
+After finding markers, choose genes under **Genes to compare**, then click
+**Download expression summary as CSV** below the heatmap.
+
+The CSV contains one row per selected gene and observed cluster:
+
+- `cluster`: cluster label.
+- `gene`: selected gene name.
+- `mean_expression`: mean across all cells in the cluster, including zeros.
+- `fraction_expressing`: fraction of cells with expression greater than zero, from 0 to 1.
+
+The export uses the same expression summary as the dot plot and heatmap,
+on the selected matrix's existing scale. Changing the gene selection
+updates the export. The download is hidden when no genes are selected.
+
 ## Run
 
 ```bash
