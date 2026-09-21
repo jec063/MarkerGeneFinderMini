@@ -17,6 +17,7 @@ from src.marker_finder import (
     find_markers_scanpy,
     load_expression,
 )
+from time import perf_counter
 
 
 st.set_page_config(
@@ -402,35 +403,86 @@ else:
     )
 
 if st.button("Find marker genes", type="primary"):
+    engine_display = analysis_engine.title()
+
+    if analysis_engine == "scanpy":
+        cell_count = int(adata.n_obs)
+        gene_count = int(adata.raw.n_vars if use_raw else adata.n_vars)
+        cluster_count = int(adata.obs[cluster_column].nunique())
+    else:
+        cell_count = int(len(expression))
+        gene_count = int(
+            len(
+                [
+                    column
+                    for column in expression.columns
+                    if column not in {cluster_column, cell_column}
+                ]
+            )
+        )
+        cluster_count = int(expression[cluster_column].nunique())
+
+    analysis_status = st.status(
+        f"Preparing {engine_display} analysis...",
+        expanded=True,
+    )
+    analysis_status.write(
+        f"Input: {cell_count:,} cells, {gene_count:,} genes, "
+        f"{cluster_count:,} clusters."
+    )
+    analysis_status.write(
+        "Testing genes and ranking markers. "
+        "Large datasets may take several minutes."
+    )
+    analysis_status.update(
+        label=f"Running {engine_display} marker analysis...",
+        state="running",
+    )
+
+    started_at = perf_counter()
+
     try:
-        with st.spinner("Finding marker genes..."):
-            if analysis_engine == "scanpy":
-                markers = find_markers_scanpy(
-                    adata,
-                    layer=selected_layer,
-                    use_raw=use_raw,
-                    cluster_column=cluster_column,
-                    top_n=int(top_n),
-                    min_pct=float(min_pct),
-                    min_log2fc=float(min_log2fc),
-                    max_p_adj=float(max_p_adj),
-                )
-            else:
-                markers = find_markers(
-                    expression,
-                    cluster_column=cluster_column,
-                    cell_column=cell_column,
-                    top_n=int(top_n),
-                    pseudocount=float(pseudocount),
-                    min_pct=float(min_pct),
-                    min_log2fc=float(min_log2fc),
-                    max_p_adj=float(max_p_adj),
-                )
-
-        st.session_state["marker_results"] = markers
-
+        if analysis_engine == "scanpy":
+            markers = find_markers_scanpy(
+                adata,
+                layer=selected_layer,
+                use_raw=use_raw,
+                cluster_column=cluster_column,
+                top_n=int(top_n),
+                min_pct=float(min_pct),
+                min_log2fc=float(min_log2fc),
+                max_p_adj=float(max_p_adj),
+            )
+        else:
+            markers = find_markers(
+                expression,
+                cluster_column=cluster_column,
+                cell_column=cell_column,
+                top_n=int(top_n),
+                pseudocount=float(pseudocount),
+                min_pct=float(min_pct),
+                min_log2fc=float(min_log2fc),
+                max_p_adj=float(max_p_adj),
+            )
     except ValueError as error:
+        elapsed = perf_counter() - started_at
+        analysis_status.update(
+            label=f"Analysis failed after {elapsed:.1f} seconds.",
+            state="error",
+            expanded=True,
+        )
         st.error(str(error))
+    else:
+        elapsed = perf_counter() - started_at
+        st.session_state["marker_results"] = markers
+        analysis_status.write(
+            f"Produced {len(markers):,} marker rows after filtering."
+        )
+        analysis_status.update(
+            label=f"Analysis complete in {elapsed:.1f} seconds.",
+            state="complete",
+            expanded=False,
+        )
 
 if "marker_results" in st.session_state:
     markers = st.session_state["marker_results"]
