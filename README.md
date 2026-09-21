@@ -91,6 +91,16 @@ python -m streamlit run app.py
 
 For H5AD uploads, select either **Native** or **Scanpy** from the analysis-engine control. CSV uploads use the native engine.
 
+## Analysis progress
+
+When marker analysis starts, the Streamlit app displays the selected
+engine and the number of cells, genes, and clusters being analyzed.
+The status panel remains active while marker testing is running.
+
+After completion, it reports the elapsed time and the number of marker
+rows retained after filtering. If analysis fails validation, the panel
+changes to an error state and displays the error message.
+
 ## Marker visualization
 
 After finding markers in Streamlit, use **Cluster to visualize**
@@ -209,9 +219,3 @@ For Scanpy, use appropriately normalized, log-transformed expression.
 ```bash
 pytest -q
 ```
-
-## Next milestone
-
-Planned improvements:
-
-- Improve progress reporting for larger datasets
