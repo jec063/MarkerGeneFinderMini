@@ -91,6 +91,16 @@ python -m streamlit run app.py
 
 For H5AD uploads, select either **Native** or **Scanpy** from the analysis-engine control. CSV uploads use the native engine.
 
+## Try example data
+
+Select **Use example data** in the Streamlit app to load the bundled
+example CSV without uploading a file. Click **Find marker genes** to
+explore the results table, marker chart, dot plot, and heatmap.
+
+The example uses the Native engine. Uncheck **Use example data** to
+return to uploaded-file analysis. Switching between example data and
+uploaded data clears previous marker results.
+
 ## Analysis progress
 
 When marker analysis starts, the Streamlit app displays the selected
