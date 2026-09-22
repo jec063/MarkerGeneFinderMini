@@ -37,8 +37,37 @@ def test_example_data_flow():
     assert markers["cluster"].nunique() == 4
     assert {"CD3D", "MS4A1", "LST1", "PECAM1"}.issubset(set(markers["gene"]))
 
+    settings = app.session_state["analysis_settings"]
+    assert settings["input_file"] == "example_expression.csv"
+    assert settings["example_data"] is True
+    assert settings["engine"] == "native"
+    assert settings["expression_source"] == "CSV"
+    assert settings["layer"] is None
+    assert settings["use_raw"] is False
+    assert settings["cluster_column"] == "cluster"
+    assert settings["pseudocount"] == 0.1
+    assert settings["clusters"] == 4
+    assert settings["marker_rows"] == len(markers)
+
+    top_n_widget = next(
+        item for item in app.number_input if item.label == "Markers per cluster"
+    )
+    assert settings["top_n"] == int(top_n_widget.value)
+    top_n_widget.set_value(1).run()
+    assert len(app.exception) == 0
+    assert "marker_results" not in app.session_state
+    assert "analysis_settings" not in app.session_state
+
+    next(
+        item for item in app.button if item.label == "Find marker genes"
+    ).click().run(timeout=30)
+    assert len(app.exception) == 0
+    assert len(app.error) == 0
+    assert app.session_state["analysis_settings"]["top_n"] == 1
+
     app.checkbox(key="use_example_data").uncheck().run()
 
     assert len(app.exception) == 0
     assert "marker_results" not in app.session_state
+    assert "analysis_settings" not in app.session_state
     assert app.info[0].value == "Upload a CSV or H5AD file to begin."
