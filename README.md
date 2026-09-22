@@ -167,6 +167,23 @@ The export uses the same expression summary as the dot plot and heatmap,
 on the selected matrix's existing scale. Changing the gene selection
 updates the export. The download is hidden when no genes are selected.
 
+## Download analysis settings
+
+After a successful analysis, click **Download analysis settings as JSON**
+to save the settings associated with the results.
+
+The export records the input filename, example-data status, analysis
+engine, expression source, layer or raw selection, cluster and cell-ID
+settings, filtering thresholds, dataset dimensions, and marker-row count.
+The pseudocount is recorded for Native analysis and is null for Scanpy.
+
+Settings are captured when analysis succeeds, including runs where no
+markers pass filtering. Changing an input or analysis setting clears
+both the previous results and their settings download.
+
+The JSON records analysis settings; it does not contain the expression
+data or automatically restore a session.
+
 ## Run
 
 ```bash
