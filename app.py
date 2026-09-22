@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -117,6 +118,7 @@ def h5ad_expression_sources(
 def clear_marker_results() -> None:
     """Clear results when the input or analysis settings change."""
     st.session_state.pop("marker_results", None)
+    st.session_state.pop("analysis_settings", None)
 
 
 use_example_data = st.checkbox(
@@ -424,6 +426,7 @@ else:
     )
 
 if st.button("Find marker genes", type="primary"):
+    clear_marker_results()
     engine_display = analysis_engine.title()
 
     if analysis_engine == "scanpy":
@@ -496,6 +499,36 @@ if st.button("Find marker genes", type="primary"):
     else:
         elapsed = perf_counter() - started_at
         st.session_state["marker_results"] = markers
+        st.session_state["analysis_settings"] = {
+            "schema_version": 1,
+            "input_file": Path(file_name).name,
+            "example_data": bool(use_example_data),
+            "engine": analysis_engine,
+            "expression_source": (
+                "CSV" if file_suffix == ".csv"
+                else "AnnData.raw.X" if use_raw
+                else "AnnData.layers" if selected_layer is not None
+                else "AnnData.X"
+            ),
+            "layer": selected_layer,
+            "use_raw": bool(use_raw),
+            "cluster_column": cluster_column,
+            "cell_column": cell_column if file_suffix == ".csv" else None,
+            "cell_id_source": (
+                cell_column if file_suffix == ".csv" else "AnnData.obs_names"
+            ),
+            "top_n": int(top_n),
+            "min_pct": float(min_pct),
+            "min_log2fc": float(min_log2fc),
+            "max_p_adj": float(max_p_adj),
+            "pseudocount": (
+                float(pseudocount) if analysis_engine == "native" else None
+            ),
+            "cells": cell_count,
+            "genes": gene_count,
+            "clusters": cluster_count,
+            "marker_rows": int(len(markers)),
+        }
         analysis_status.write(
             f"Produced {len(markers):,} marker rows after filtering."
         )
@@ -509,6 +542,22 @@ if "marker_results" in st.session_state:
     markers = st.session_state["marker_results"]
 
     st.subheader("Marker-gene results")
+    if "analysis_settings" in st.session_state:
+        settings_json = (
+            json.dumps(
+                st.session_state["analysis_settings"],
+                indent=2,
+                ensure_ascii=False,
+                allow_nan=False,
+            ) + "\n"
+        ).encode("utf-8")
+        st.download_button(
+            "Download analysis settings as JSON",
+            data=settings_json,
+            file_name="analysis_settings.json",
+            mime="application/json",
+            key="analysis_settings_download",
+        )
 
     if markers.empty:
         st.warning(
