@@ -47,6 +47,10 @@ def test_find_markers_scanpy_ranks_expected_genes() -> None:
     )
 
     assert markers.columns.tolist() == RESULT_COLUMNS
+    assert markers.groupby("cluster")["rank"].apply(list).to_dict() == {
+        "A": [1],
+        "B": [1],
+    }
     assert observed == {
         "A": "GENE_A",
         "B": "GENE_B",

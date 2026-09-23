@@ -172,6 +172,25 @@ def test_expected_markers_are_ranked_first() -> None:
     }
 
     assert observed == expected
+    assert markers.groupby("cluster")["rank"].apply(list).to_dict() == {
+        cluster: [1, 2] for cluster in expected
+    }
+
+
+def test_rank_reflects_filtered_marker_order() -> None:
+    expression = pd.read_csv(EXAMPLE_DATA)
+
+    markers = find_markers(
+        expression,
+        top_n=3,
+        min_pct=0.5,
+    )
+
+    for _, cluster_markers in markers.groupby("cluster", sort=False):
+        assert cluster_markers["rank"].tolist() == list(
+            range(1, len(cluster_markers) + 1)
+        )
+        assert cluster_markers["log2FC"].is_monotonic_decreasing
 
 
 def test_output_contains_expression_prevalence() -> None:
@@ -248,6 +267,26 @@ def test_min_pct_filters_rare_genes() -> None:
 
     assert "common" in cluster_zero_genes
     assert "rare" not in cluster_zero_genes
+
+
+def test_min_pct_difference_filters_nonspecific_genes() -> None:
+    expression = pd.DataFrame({
+        "cluster": ["A", "A", "B", "B"],
+        "specific": [2.0, 2.0, 0.0, 0.0],
+        "shared": [2.0, 2.0, 1.0, 1.0],
+    })
+
+    markers = find_markers(expression, cell_column=None, top_n=10,
+                           min_pct_difference=0.5)
+
+    assert set(markers.loc[markers["cluster"] == "A", "gene"]) == {"specific"}
+    assert (markers["pct_difference"] >= 0.5).all()
+
+
+@pytest.mark.parametrize("value", [-0.01, 1.01])
+def test_invalid_min_pct_difference_is_rejected(value) -> None:
+    with pytest.raises(ValueError, match="min_pct_difference"):
+        find_markers(pd.read_csv(EXAMPLE_DATA), min_pct_difference=value)
 
 
 def test_run_writes_output_file(
@@ -387,3 +426,35 @@ def test_single_cluster_is_rejected() -> None:
         match="At least two clusters",
     ):
         find_markers(expression)
+
+
+def test_target_clusters_limit_output_but_compare_with_rest() -> None:
+    expression = pd.read_csv(EXAMPLE_DATA)
+
+    markers = find_markers(expression, top_n=2, target_clusters=[1])
+
+    assert markers["cluster"].unique().tolist() == [1]
+    assert set(markers["gene"]) == {"MS4A1", "CD79A"}
+
+
+def test_unknown_target_cluster_is_rejected() -> None:
+    with pytest.raises(ValueError, match="Unknown target clusters"):
+        find_markers(pd.read_csv(EXAMPLE_DATA), target_clusters=["missing"])
+
+
+def test_gene_and_prefix_exclusions_are_applied() -> None:
+    expression = pd.read_csv(EXAMPLE_DATA)
+
+    markers = find_markers(
+        expression, top_n=100,
+        excluded_genes=["CD3D"], excluded_prefixes=["MS4"],
+    )
+
+    assert "CD3D" not in set(markers["gene"])
+    assert not markers["gene"].str.startswith("MS4").any()
+
+
+def test_excluding_every_gene_is_rejected() -> None:
+    expression = pd.DataFrame({"cluster": ["A", "B"], "G": [1, 0]})
+    with pytest.raises(ValueError, match="removed every gene"):
+        find_markers(expression, cell_column=None, excluded_genes=["G"])
