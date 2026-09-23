@@ -11,13 +11,14 @@ import anndata as ad
 import pandas as pd
 import streamlit as st
 
-from src.expression_summary import summarize_expression
+from src.expression_summary import summarize_clusters, summarize_expression
 
 from src.marker_finder import (
     find_markers,
     find_markers_scanpy,
     load_expression,
 )
+from src.report_bundle import build_analysis_bundle
 from time import perf_counter
 
 
@@ -358,6 +359,39 @@ with st.sidebar:
         step=1,
     )
 
+    observed_clusters = sorted(
+        (
+            adata.obs[cluster_column].unique()
+            if analysis_engine == "scanpy"
+            else expression[cluster_column].unique()
+        ),
+        key=str,
+    )
+    target_clusters = st.multiselect(
+        "Clusters to analyze",
+        options=observed_clusters,
+        default=observed_clusters,
+        format_func=str,
+        on_change=clear_marker_results,
+        help="Each selected cluster is compared with all other cells.",
+    )
+    excluded_gene_text = st.text_input(
+        "Exclude genes",
+        on_change=clear_marker_results,
+        help="Comma-separated exact gene names.",
+    )
+    excluded_prefix_text = st.text_input(
+        "Exclude gene prefixes",
+        on_change=clear_marker_results,
+        help="Comma-separated prefixes, such as MT-, RPL, RPS.",
+    )
+    excluded_genes = [
+        value.strip() for value in excluded_gene_text.split(",") if value.strip()
+    ]
+    excluded_prefixes = [
+        value.strip() for value in excluded_prefix_text.split(",") if value.strip()
+    ]
+
     min_pct = st.slider(
         "Minimum fraction expressing gene",
         on_change=clear_marker_results,
@@ -374,6 +408,16 @@ with st.sidebar:
         value=0.0,
         step=0.1,
         format="%.2f",
+    )
+
+    min_pct_difference = st.slider(
+        "Minimum expression-fraction difference",
+        on_change=clear_marker_results,
+        min_value=0.0,
+        max_value=1.0,
+        value=0.0,
+        step=0.05,
+        help="Minimum pct_in minus pct_out required for a marker.",
     )
 
     max_p_adj = st.number_input(
@@ -425,6 +469,21 @@ else:
         expression[cluster_column].nunique(),
     )
 
+cluster_labels = (
+    adata.obs[cluster_column]
+    if analysis_engine == "scanpy"
+    else expression[cluster_column]
+)
+cluster_summary = summarize_clusters(cluster_labels)
+with st.expander("Cluster sizes"):
+    st.dataframe(cluster_summary, hide_index=True, width="stretch")
+    small_clusters = cluster_summary.loc[cluster_summary["cells"] < 10, "cluster"]
+    if not small_clusters.empty:
+        st.warning(
+            "Clusters with fewer than 10 cells may produce unstable marker "
+            "statistics: " + ", ".join(map(str, small_clusters))
+        )
+
 if st.button("Find marker genes", type="primary"):
     clear_marker_results()
     engine_display = analysis_engine.title()
@@ -466,6 +525,8 @@ if st.button("Find marker genes", type="primary"):
     started_at = perf_counter()
 
     try:
+        if not target_clusters:
+            raise ValueError("Select at least one cluster to analyze.")
         if analysis_engine == "scanpy":
             markers = find_markers_scanpy(
                 adata,
@@ -474,8 +535,12 @@ if st.button("Find marker genes", type="primary"):
                 cluster_column=cluster_column,
                 top_n=int(top_n),
                 min_pct=float(min_pct),
+                min_pct_difference=float(min_pct_difference),
                 min_log2fc=float(min_log2fc),
                 max_p_adj=float(max_p_adj),
+                target_clusters=target_clusters,
+                excluded_genes=excluded_genes,
+                excluded_prefixes=excluded_prefixes,
             )
         else:
             markers = find_markers(
@@ -485,8 +550,12 @@ if st.button("Find marker genes", type="primary"):
                 top_n=int(top_n),
                 pseudocount=float(pseudocount),
                 min_pct=float(min_pct),
+                min_pct_difference=float(min_pct_difference),
                 min_log2fc=float(min_log2fc),
                 max_p_adj=float(max_p_adj),
+                target_clusters=target_clusters,
+                excluded_genes=excluded_genes,
+                excluded_prefixes=excluded_prefixes,
             )
     except ValueError as error:
         elapsed = perf_counter() - started_at
@@ -519,6 +588,7 @@ if st.button("Find marker genes", type="primary"):
             ),
             "top_n": int(top_n),
             "min_pct": float(min_pct),
+            "min_pct_difference": float(min_pct_difference),
             "min_log2fc": float(min_log2fc),
             "max_p_adj": float(max_p_adj),
             "pseudocount": (
@@ -527,6 +597,9 @@ if st.button("Find marker genes", type="primary"):
             "cells": cell_count,
             "genes": gene_count,
             "clusters": cluster_count,
+            "target_clusters": [str(cluster) for cluster in target_clusters],
+            "excluded_genes": excluded_genes,
+            "excluded_prefixes": excluded_prefixes,
             "marker_rows": int(len(markers)),
         }
         analysis_status.write(
@@ -540,6 +613,7 @@ if st.button("Find marker genes", type="primary"):
 
 if "marker_results" in st.session_state:
     markers = st.session_state["marker_results"]
+    expression_summary_for_bundle = None
 
     st.subheader("Marker-gene results")
     if "analysis_settings" in st.session_state:
@@ -770,6 +844,7 @@ if "marker_results" in st.session_state:
                 )
 
                 summary_csv = dot_data.to_csv(index=False).encode("utf-8")
+                expression_summary_for_bundle = dot_data
                 st.download_button(
                     "Download expression summary as CSV",
                     data=summary_csv,
@@ -791,6 +866,20 @@ if "marker_results" in st.session_state:
             file_name="marker_gene_results.csv",
             mime="text/csv",
         )
+
+        if "analysis_settings" in st.session_state:
+            analysis_bundle = build_analysis_bundle(
+                markers,
+                st.session_state["analysis_settings"],
+                expression_summary_for_bundle,
+            )
+            st.download_button(
+                "Download analysis bundle as ZIP",
+                data=analysis_bundle,
+                file_name="marker_gene_analysis.zip",
+                mime="application/zip",
+                key="analysis_bundle_download",
+            )
 
 st.caption(
     "This tool ranks markers using log2 fold change and reports "

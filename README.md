@@ -40,6 +40,17 @@ MarkerGeneFinderMini provides two analysis engines:
 
 The native engine remains the default. Scanpy works directly with AnnData and reports its own approximate log2 fold changes.
 
+Select one or more **Clusters to analyze** in the web interface to limit the
+reported groups. Each selected cluster is still compared with every other cell.
+On the CLI, repeat `--target-cluster`, for example
+`--target-cluster 0 --target-cluster 2`. Omitting it analyzes every cluster.
+
+Exact genes and gene-name prefixes can be excluded before testing. In the web
+interface, enter comma-separated values under **Exclude genes** or **Exclude
+gene prefixes**. On the CLI, repeat `--exclude-gene` or `--exclude-prefix`.
+No exclusions are applied by default; organism-specific naming conventions
+remain under the user's control.
+
 ## Method
 
 For each cluster and gene, the program calculates:
@@ -47,9 +58,10 @@ For each cluster and gene, the program calculates:
 1. Mean expression inside the cluster
 2. Mean expression outside the cluster
 3. Fraction of cells expressing the gene inside and outside the cluster
-4. Log2 fold change
-5. One-sided Wilcoxon-Mann-Whitney p-value
-6. Benjamini-Hochberg adjusted p-value
+4. Difference between the inside and outside expression fractions
+5. Log2 fold change
+6. One-sided Wilcoxon-Mann-Whitney p-value
+7. Benjamini-Hochberg adjusted p-value
 
 ```text
 log2FC = log2(
@@ -66,6 +78,10 @@ By default, genes with negative log2 fold change are excluded. A higher minimum 
 Statistical testing uses a one-sided Mann-Whitney U test, which is the Wilcoxon rank-sum test for independent samples. The alternative hypothesis is that expression is higher inside the cluster than outside it. For each cluster, p-values for all genes are adjusted together using the Benjamini-Hochberg false-discovery-rate procedure.
 
 Results are ranked by log2 fold change after applying the selected thresholds. The output includes raw p-values in `p_value` and adjusted p-values in `p_adj`.
+The one-based `rank` column records each gene's position within its cluster
+after filtering, so ranks restart at 1 for every cluster.
+Use the minimum expression-fraction difference to require markers to be
+expressed in a larger share of target-cluster cells than other cells.
 
 The default maximum adjusted p-value is `1.0`, which preserves all otherwise eligible markers. Set a lower value, such as `0.05`, to retain only markers that pass the selected false-discovery-rate threshold.
 
@@ -89,6 +105,18 @@ Launch the Streamlit interface:
 python -m streamlit run app.py
 ```
 
+To capture a local screenshot, install Playwright and its Chromium browser,
+start Streamlit, and run the screenshot helper from a second terminal:
+
+```bash
+python -m pip install playwright
+python -m playwright install chromium
+python screenshot_app.py --output marker-gene-finder.png
+```
+
+Use `--url` when Streamlit is running somewhere other than
+`http://localhost:8501`.
+
 For H5AD uploads, select either **Native** or **Scanpy** from the analysis-engine control. CSV uploads use the native engine.
 
 ## Try example data
@@ -102,6 +130,10 @@ return to uploaded-file analysis. Switching between example data and
 uploaded data clears previous marker results.
 
 ## Analysis progress
+
+Before running analysis, expand **Cluster sizes** to review each cluster's
+cell count and percentage of the dataset. The app warns when a cluster has
+fewer than 10 cells because marker statistics may be unstable.
 
 When marker analysis starts, the Streamlit app displays the selected
 engine and the number of cells, genes, and clusters being analyzed.
@@ -183,6 +215,14 @@ both the previous results and their settings download.
 
 The JSON records analysis settings; it does not contain the expression
 data or automatically restore a session.
+
+## Download an analysis bundle
+
+After a successful analysis, click **Download analysis bundle as ZIP** to save
+the marker-results CSV, analysis-settings JSON, and a short README together.
+When genes are selected for the expression plots, the bundle also contains the
+current `expression_summary.csv`. The archive does not contain the uploaded
+expression matrix.
 
 ## Run
 
