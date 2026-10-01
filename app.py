@@ -401,6 +401,16 @@ with st.sidebar:
         step=0.05,
     )
 
+    max_pct_out = st.slider(
+        "Maximum outside-cluster fraction expressing gene",
+        on_change=clear_marker_results,
+        min_value=0.0,
+        max_value=1.0,
+        value=1.0,
+        step=0.05,
+        help="Maximum pct_out allowed for a marker.",
+    )
+
     min_log2fc = st.number_input(
         "Minimum log2 fold change",
         on_change=clear_marker_results,
@@ -535,6 +545,7 @@ if st.button("Find marker genes", type="primary"):
                 cluster_column=cluster_column,
                 top_n=int(top_n),
                 min_pct=float(min_pct),
+                max_pct_out=float(max_pct_out),
                 min_pct_difference=float(min_pct_difference),
                 min_log2fc=float(min_log2fc),
                 max_p_adj=float(max_p_adj),
@@ -550,6 +561,7 @@ if st.button("Find marker genes", type="primary"):
                 top_n=int(top_n),
                 pseudocount=float(pseudocount),
                 min_pct=float(min_pct),
+                max_pct_out=float(max_pct_out),
                 min_pct_difference=float(min_pct_difference),
                 min_log2fc=float(min_log2fc),
                 max_p_adj=float(max_p_adj),
@@ -588,6 +600,7 @@ if st.button("Find marker genes", type="primary"):
             ),
             "top_n": int(top_n),
             "min_pct": float(min_pct),
+            "max_pct_out": float(max_pct_out),
             "min_pct_difference": float(min_pct_difference),
             "min_log2fc": float(min_log2fc),
             "max_p_adj": float(max_p_adj),

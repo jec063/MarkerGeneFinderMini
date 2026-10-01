@@ -82,6 +82,9 @@ The one-based `rank` column records each gene's position within its cluster
 after filtering, so ranks restart at 1 for every cluster.
 Use the minimum expression-fraction difference to require markers to be
 expressed in a larger share of target-cluster cells than other cells.
+Use the maximum outside-cluster expression fraction to exclude broadly
+expressed genes even when they are enriched in the target cluster. Its default
+of `1.0` preserves the previous behavior.
 
 The default maximum adjusted p-value is `1.0`, which preserves all otherwise eligible markers. Set a lower value, such as `0.05`, to retain only markers that pass the selected false-discovery-rate threshold.
 
@@ -233,6 +236,7 @@ python src/marker_finder.py \
   --cluster-column cluster \
   --top-n 2 \
   --min-pct 0.5 \
+  --max-pct-out 0.25 \
   --min-log2fc 0.0 \
   --max-p-adj 0.05
 ```

@@ -289,6 +289,33 @@ def test_invalid_min_pct_difference_is_rejected(value) -> None:
         find_markers(pd.read_csv(EXAMPLE_DATA), min_pct_difference=value)
 
 
+def test_max_pct_out_filters_broadly_expressed_genes() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["A", "A", "A", "A", "B", "B", "B", "B"],
+            "specific": [5, 4, 5, 4, 0, 0, 0, 0],
+            "broad": [5, 5, 4, 4, 1, 1, 1, 0],
+        }
+    )
+
+    markers = find_markers(
+        expression,
+        cell_column=None,
+        target_clusters=["A"],
+        top_n=10,
+        max_pct_out=0.5,
+    )
+
+    assert markers["gene"].tolist() == ["specific"]
+    assert (markers["pct_out"] <= 0.5).all()
+
+
+@pytest.mark.parametrize("value", [-0.01, 1.01])
+def test_invalid_max_pct_out_is_rejected(value) -> None:
+    with pytest.raises(ValueError, match="max_pct_out"):
+        find_markers(pd.read_csv(EXAMPLE_DATA), max_pct_out=value)
+
+
 def test_run_writes_output_file(
     tmp_path: Path,
 ) -> None:

@@ -71,6 +71,44 @@ def test_parser_accepts_scanpy_engine() -> None:
     assert args.engine == "scanpy"
 
 
+def test_scanpy_max_pct_out_filters_broadly_expressed_genes() -> None:
+    adata = ad.AnnData(
+        X=np.array(
+            [
+                [5, 5], [4, 5], [5, 4], [4, 4],
+                [0, 1], [0, 1], [0, 1], [0, 0],
+            ],
+            dtype=float,
+        ),
+        obs=pd.DataFrame(
+            {"cluster": pd.Categorical(["A"] * 4 + ["B"] * 4)},
+            index=[f"cell_{index}" for index in range(8)],
+        ),
+        var=pd.DataFrame(index=["specific", "broad"]),
+    )
+
+    markers = find_markers_scanpy(
+        adata,
+        target_clusters=["A"],
+        top_n=10,
+        max_pct_out=0.5,
+    )
+
+    assert markers["gene"].tolist() == ["specific"]
+
+
+def test_parser_accepts_max_pct_out() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--max-pct-out", "0.25",
+        ]
+    )
+
+    assert args.max_pct_out == pytest.approx(0.25)
+
+
 def test_run_uses_scanpy_engine(tmp_path: Path) -> None:
     input_path = tmp_path / "expression.h5ad"
     output_path = tmp_path / "markers.csv"

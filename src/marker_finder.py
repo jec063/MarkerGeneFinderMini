@@ -261,6 +261,7 @@ def find_markers(
     target_clusters: Sequence[object] | None = None,
     excluded_genes: Sequence[str] | None = None,
     excluded_prefixes: Sequence[str] | None = None,
+    max_pct_out: float = 1.0,
 ) -> pd.DataFrame:
     """Return the top fold-change-ranked genes for every cluster."""
 
@@ -272,6 +273,9 @@ def find_markers(
 
     if not 0 <= min_pct <= 1:
         raise ValueError("min_pct must be between 0 and 1.")
+
+    if not 0 <= max_pct_out <= 1:
+        raise ValueError("max_pct_out must be between 0 and 1.")
 
     if not 0 <= min_pct_difference <= 1:
         raise ValueError("min_pct_difference must be between 0 and 1.")
@@ -342,9 +346,9 @@ def find_markers(
         )
 
         cluster_result = (
-            cluster_result
-                        .loc[
+            cluster_result.loc[
                 (cluster_result["pct_in"] >= min_pct)
+                & (cluster_result["pct_out"] <= max_pct_out)
                 & (cluster_result["pct_difference"] >= min_pct_difference)
                 & (cluster_result["log2FC"] >= min_log2fc)
                 & (cluster_result["p_adj"] <= max_p_adj)
@@ -380,6 +384,7 @@ def find_markers_scanpy(
     target_clusters: Sequence[object] | None = None,
     excluded_genes: Sequence[str] | None = None,
     excluded_prefixes: Sequence[str] | None = None,
+    max_pct_out: float = 1.0,
 ) -> pd.DataFrame:
     """Find marker genes using Scanpy's Wilcoxon implementation."""
 
@@ -393,6 +398,9 @@ def find_markers_scanpy(
 
     if not 0 <= min_pct <= 1:
         raise ValueError("min_pct must be between 0 and 1.")
+
+    if not 0 <= max_pct_out <= 1:
+        raise ValueError("max_pct_out must be between 0 and 1.")
 
     if not 0 <= min_pct_difference <= 1:
         raise ValueError("min_pct_difference must be between 0 and 1.")
@@ -507,6 +515,7 @@ def find_markers_scanpy(
         cluster_result = (
             cluster_result.loc[
                 (cluster_result["pct_in"] >= min_pct)
+                & (cluster_result["pct_out"] <= max_pct_out)
                 & (cluster_result["pct_difference"] >= min_pct_difference)
                 & (cluster_result["log2FC"] >= min_log2fc)
                 & (cluster_result["p_adj"] <= max_p_adj)
@@ -547,6 +556,7 @@ def run(
     target_clusters: Sequence[str] | None = None,
     excluded_genes: Sequence[str] | None = None,
     excluded_prefixes: Sequence[str] | None = None,
+    max_pct_out: float = 1.0,
 ) -> pd.DataFrame:
     """Read an expression dataset, find markers and save the results."""
 
@@ -580,6 +590,7 @@ def run(
             cluster_column=cluster_column,
             top_n=top_n,
             min_pct=min_pct,
+            max_pct_out=max_pct_out,
             min_pct_difference=min_pct_difference,
             min_log2fc=min_log2fc,
             max_p_adj=max_p_adj,
@@ -606,6 +617,7 @@ def run(
             top_n=top_n,
             pseudocount=pseudocount,
             min_pct=min_pct,
+            max_pct_out=max_pct_out,
             min_pct_difference=min_pct_difference,
             min_log2fc=min_log2fc,
             max_p_adj=max_p_adj,
@@ -714,6 +726,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        "--max-pct-out",
+        type=float,
+        default=1.0,
+        help="Maximum fraction of non-cluster cells expressing a marker.",
+    )
+
+    parser.add_argument(
         "--min-pct-difference",
         type=float,
         default=0.0,
@@ -759,6 +778,7 @@ def main() -> None:
         top_n=args.top_n,
         pseudocount=args.pseudocount,
         min_pct=args.min_pct,
+        max_pct_out=args.max_pct_out,
         min_pct_difference=args.min_pct_difference,
         min_log2fc=args.min_log2fc,
         max_p_adj=args.max_p_adj,
