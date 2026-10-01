@@ -316,6 +316,36 @@ def test_invalid_max_pct_out_is_rejected(value) -> None:
         find_markers(pd.read_csv(EXAMPLE_DATA), max_pct_out=value)
 
 
+def test_rank_by_pct_difference_changes_marker_order() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["A"] * 4 + ["B"] * 4,
+            "high_fc": [10, 0, 0, 0, 0, 0, 0, 0],
+            "specific": [2, 2, 2, 2, 1, 0, 0, 0],
+        }
+    )
+
+    fold_change = find_markers(
+        expression, cell_column=None, target_clusters=["A"], top_n=2,
+    )
+    specificity = find_markers(
+        expression,
+        cell_column=None,
+        target_clusters=["A"],
+        top_n=2,
+        rank_by="pct_difference",
+    )
+
+    assert fold_change["gene"].tolist() == ["high_fc", "specific"]
+    assert specificity["gene"].tolist() == ["specific", "high_fc"]
+    assert specificity["rank"].tolist() == [1, 2]
+
+
+def test_invalid_rank_by_is_rejected() -> None:
+    with pytest.raises(ValueError, match="rank_by must be one of"):
+        find_markers(pd.read_csv(EXAMPLE_DATA), rank_by="unknown")
+
+
 def test_run_writes_output_file(
     tmp_path: Path,
 ) -> None:

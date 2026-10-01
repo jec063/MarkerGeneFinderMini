@@ -11,6 +11,7 @@ def build_analysis_bundle(
     markers: pd.DataFrame,
     settings: dict,
     expression_summary: pd.DataFrame | None = None,
+    cluster_summary: pd.DataFrame | None = None,
 ) -> bytes:
     """Return a ZIP containing results, settings, and an optional summary."""
     buffer = io.BytesIO()
@@ -23,11 +24,14 @@ def build_analysis_bundle(
             "# Marker Gene Finder analysis bundle\n\n"
             "This archive contains marker results and the settings used to "
             "produce them. If present, `expression_summary.csv` contains the "
-            "genes selected in the expression plots.\n"
+            "genes selected in the expression plots. `cluster_summary.csv` "
+            "contains cluster cell counts and dataset percentages.\n"
         ),
     }
     if expression_summary is not None:
         files["expression_summary.csv"] = expression_summary.to_csv(index=False)
+    if cluster_summary is not None:
+        files["cluster_summary.csv"] = cluster_summary.to_csv(index=False)
 
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for name, contents in files.items():
