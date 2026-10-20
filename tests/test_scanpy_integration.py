@@ -168,6 +168,32 @@ def test_scanpy_min_cells_expressing_filters_rare_markers() -> None:
     assert markers["cells_expressing_in"].tolist() == [3]
 
 
+def test_scanpy_min_cluster_mean_filters_low_expression_markers() -> None:
+    adata = ad.AnnData(
+        X=np.array(
+            [
+                [0.2, 2.0], [0.2, 2.0], [0.2, 2.0], [0.2, 2.0],
+                [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0],
+            ]
+        ),
+        obs=pd.DataFrame(
+            {"cluster": pd.Categorical(["A"] * 4 + ["B"] * 4)},
+            index=[f"cell_{index}" for index in range(8)],
+        ),
+        var=pd.DataFrame(index=["low_mean", "high_mean"]),
+    )
+
+    markers = find_markers_scanpy(
+        adata,
+        target_clusters=["A"],
+        top_n=10,
+        min_cluster_mean=1.0,
+    )
+
+    assert markers["gene"].tolist() == ["high_mean"]
+    assert (markers["cluster_mean"] >= 1.0).all()
+
+
 def test_run_uses_scanpy_engine(tmp_path: Path) -> None:
     input_path = tmp_path / "expression.h5ad"
     output_path = tmp_path / "markers.csv"

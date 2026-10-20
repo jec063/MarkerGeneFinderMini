@@ -103,6 +103,11 @@ a specific number of cells in addition to the fractional expression threshold.
 Set **Minimum target-cluster cells expressing gene** in the web interface or
 use `--min-cells-expressing` on the CLI. Its default of `0` preserves the
 previous behavior.
+Use the minimum target-cluster mean-expression threshold to remove genes whose
+average expression inside the target cluster is too low on the input matrix's
+existing scale. Set **Minimum target-cluster mean expression** in the web
+interface or use `--min-cluster-mean` on the CLI. Its default of `0.0`
+preserves the previous behavior.
 
 The default maximum adjusted p-value is `1.0`, which preserves all otherwise eligible markers. Set a lower value, such as `0.05`, to retain only markers that pass the selected false-discovery-rate threshold.
 
@@ -257,6 +262,7 @@ python src/marker_finder.py \
   --top-n 2 \
   --min-cluster-size 10 \
   --min-cells-expressing 3 \
+  --min-cluster-mean 1.0 \
   --min-pct 0.5 \
   --max-pct-out 0.25 \
   --rank-by pct_difference \

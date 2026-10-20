@@ -272,6 +272,47 @@ def test_parser_accepts_min_cells_expressing() -> None:
 
     assert args.min_cells_expressing == 3
 
+
+def test_min_cluster_mean_filters_low_expression_markers() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["A"] * 4 + ["B"] * 4,
+            "low_mean": [0.2, 0.2, 0.2, 0.2, 0.0, 0.0, 0.0, 0.0],
+            "high_mean": [2.0, 2.0, 2.0, 2.0, 0.0, 0.0, 0.0, 0.0],
+        }
+    )
+
+    markers = find_markers(
+        expression,
+        cell_column=None,
+        target_clusters=["A"],
+        top_n=10,
+        min_cluster_mean=1.0,
+    )
+
+    assert markers["gene"].tolist() == ["high_mean"]
+    assert (markers["cluster_mean"] >= 1.0).all()
+
+
+def test_negative_min_cluster_mean_is_rejected() -> None:
+    with pytest.raises(ValueError, match="min_cluster_mean"):
+        find_markers(
+            pd.read_csv(EXAMPLE_DATA),
+            min_cluster_mean=-0.1,
+        )
+
+
+def test_parser_accepts_min_cluster_mean() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--min-cluster-mean", "1.5",
+        ]
+    )
+
+    assert args.min_cluster_mean == pytest.approx(1.5)
+
 def test_output_contains_statistical_significance() -> None:
     expression = pd.read_csv(EXAMPLE_DATA)
 
