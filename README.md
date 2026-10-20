@@ -115,6 +115,11 @@ genes with excessive average expression in the reference population. Enable
 **Limit outside-cluster mean expression** in the web interface or pass
 `--max-other-mean` on the CLI. The value uses the input matrix's existing
 scale, and omitting it preserves the previous behavior.
+Use the optional maximum outside-cluster expressing-cell count to cap the
+absolute number of reference cells in which a marker is detected. Enable
+**Limit outside-cluster cells expressing gene** in the web interface or pass
+`--max-cells-expressing-out` on the CLI. Omitting it preserves the previous
+behavior.
 Use the minimum mean-expression difference to require a marker's target-cluster
 mean to exceed its reference mean by a chosen absolute amount on the input
 matrix's existing scale. The `mean_difference` output column records this
@@ -278,6 +283,7 @@ python src/marker_finder.py \
   --min-cluster-mean 1.0 \
   --min-mean-difference 0.5 \
   --max-other-mean 0.5 \
+  --max-cells-expressing-out 5 \
   --min-pct 0.5 \
   --max-pct-out 0.25 \
   --rank-by pct_difference \

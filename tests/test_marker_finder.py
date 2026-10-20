@@ -360,6 +360,36 @@ def test_negative_max_other_mean_is_rejected() -> None:
         )
 
 
+def test_max_reference_expressing_cells_filters_broad_markers() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["A"] * 4 + ["B"] * 4,
+            "specific": [3.0] * 4 + [1.0, 0.0, 0.0, 0.0],
+            "broad": [5.0] * 4 + [1.0, 1.0, 1.0, 0.0],
+        }
+    )
+
+    markers = find_markers(
+        expression,
+        cell_column=None,
+        target_clusters=["A"],
+        top_n=10,
+        max_cells_expressing_out=1,
+    )
+
+    assert markers["gene"].tolist() == ["specific"]
+    assert markers["cells_expressing_out"].tolist() == [1]
+
+
+@pytest.mark.parametrize("value", [-1, 1.5, True])
+def test_invalid_max_reference_expressing_cells_is_rejected(value) -> None:
+    with pytest.raises(ValueError, match="max_cells_expressing_out"):
+        find_markers(
+            pd.read_csv(EXAMPLE_DATA),
+            max_cells_expressing_out=value,
+        )
+
+
 def test_parser_accepts_min_cluster_mean() -> None:
     args = build_parser().parse_args(
         [
@@ -394,6 +424,18 @@ def test_parser_accepts_max_other_mean() -> None:
     )
 
     assert args.max_other_mean == pytest.approx(0.5)
+
+
+def test_parser_accepts_max_reference_expressing_cells() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--max-cells-expressing-out", "3",
+        ]
+    )
+
+    assert args.max_cells_expressing_out == 3
 
 def test_output_contains_statistical_significance() -> None:
     expression = pd.read_csv(EXAMPLE_DATA)

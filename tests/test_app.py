@@ -52,6 +52,7 @@ def test_example_data_flow():
     assert settings["min_cluster_mean"] == 0.0
     assert settings["min_mean_difference"] == 0.0
     assert settings["max_other_mean"] is None
+    assert settings["max_cells_expressing_out"] is None
     assert settings["marker_rows"] == len(markers)
 
     top_n_widget = next(
