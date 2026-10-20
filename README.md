@@ -59,14 +59,15 @@ remain under the user's control.
 
 For each cluster and gene, the program calculates:
 
-1. Mean expression inside the cluster
-2. Mean expression outside the cluster
-3. Fraction of cells expressing the gene inside and outside the cluster
-4. Number of cells expressing the gene inside and outside the cluster
-5. Difference between the inside and outside expression fractions
-6. Log2 fold change
-7. One-sided Wilcoxon-Mann-Whitney p-value
-8. Benjamini-Hochberg adjusted p-value
+1. Number of cells inside the target cluster and in the reference population
+2. Mean expression inside the cluster
+3. Mean expression outside the cluster
+4. Fraction of cells expressing the gene inside and outside the cluster
+5. Number of cells expressing the gene inside and outside the cluster
+6. Difference between the inside and outside expression fractions
+7. Log2 fold change
+8. One-sided Wilcoxon-Mann-Whitney p-value
+9. Benjamini-Hochberg adjusted p-value
 
 ```text
 log2FC = log2(
@@ -77,6 +78,10 @@ log2FC = log2(
 ```
 
 The native engine default pseudocount is `0.1`.
+
+The `cluster_size` and `reference_size` result columns record the sample sizes
+used for each one-versus-rest comparison. They are included in the results CSV
+and analysis bundle so statistical context remains attached to every marker.
 
 By default, genes with negative log2 fold change are excluded. A higher minimum log2 fold-change threshold can be used to require stronger enrichment.
 
