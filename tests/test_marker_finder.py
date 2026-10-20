@@ -632,6 +632,28 @@ def test_invalid_rank_by_is_rejected() -> None:
         find_markers(pd.read_csv(EXAMPLE_DATA), rank_by="unknown")
 
 
+def test_rank_by_cells_expressing_in_changes_marker_order() -> None:
+    expression = pd.DataFrame(
+        {
+            "cell": ["a1", "a2", "a3", "b1", "b2", "b3"],
+            "cluster": ["A", "A", "A", "B", "B", "B"],
+            "broad": [1.0, 1.0, 1.0, 0.8, 0.8, 0.8],
+            "sparse": [8.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        }
+    )
+
+    markers = find_markers(
+        expression,
+        target_clusters=["A"],
+        top_n=2,
+        rank_by="cells_expressing_in",
+    )
+
+    assert markers["gene"].tolist() == ["broad", "sparse"]
+    assert markers["cells_expressing_in"].tolist() == [3, 1]
+    assert markers["rank"].tolist() == [1, 2]
+
+
 def test_run_writes_output_file(
     tmp_path: Path,
 ) -> None:

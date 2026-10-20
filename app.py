@@ -364,6 +364,7 @@ with st.sidebar:
         options=[
             "log2FC",
             "cluster_mean",
+            "cells_expressing_in",
             "mean_difference",
             "pct_difference",
             "p_adj",
@@ -371,6 +372,7 @@ with st.sidebar:
         format_func=lambda value: {
             "log2FC": "Log2 fold change",
             "cluster_mean": "Target-cluster mean expression",
+            "cells_expressing_in": "Target-cluster cells expressing gene",
             "mean_difference": "Mean-expression difference",
             "pct_difference": "Expression-fraction difference",
             "p_adj": "Adjusted p-value",
