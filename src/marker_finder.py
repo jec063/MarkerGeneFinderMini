@@ -20,6 +20,7 @@ RESULT_COLUMNS = [
     "reference_size",
     "cluster_mean",
     "other_mean",
+    "mean_difference",
     "pct_in",
     "pct_out",
     "cells_expressing_in",
@@ -312,6 +313,7 @@ def find_markers(
     min_cluster_size: int = 1,
     min_cells_expressing: int = 0,
     min_cluster_mean: float = 0.0,
+    min_mean_difference: float = 0.0,
 ) -> pd.DataFrame:
     """Return the top fold-change-ranked genes for every cluster."""
 
@@ -332,6 +334,9 @@ def find_markers(
 
     if min_cluster_mean < 0:
         raise ValueError("min_cluster_mean must be at least 0.")
+
+    if min_mean_difference < 0:
+        raise ValueError("min_mean_difference must be at least 0.")
 
     if not 0 <= min_pct <= 1:
         raise ValueError("min_pct must be between 0 and 1.")
@@ -408,6 +413,7 @@ def find_markers(
                 "reference_size": reference_size,
                 "cluster_mean": cluster_mean.to_numpy(),
                 "other_mean": other_mean.to_numpy(),
+                "mean_difference": (cluster_mean - other_mean).to_numpy(),
                 "pct_in": pct_in.to_numpy(),
                 "pct_out": pct_out.to_numpy(),
                 "cells_expressing_in": cells_expressing_in.to_numpy(),
@@ -424,6 +430,7 @@ def find_markers(
                 (cluster_result["pct_in"] >= min_pct)
                 & (cluster_result["cells_expressing_in"] >= min_cells_expressing)
                 & (cluster_result["cluster_mean"] >= min_cluster_mean)
+                & (cluster_result["mean_difference"] >= min_mean_difference)
                 & (cluster_result["pct_out"] <= max_pct_out)
                 & (cluster_result["pct_difference"] >= min_pct_difference)
                 & (cluster_result["log2FC"] >= min_log2fc)
@@ -461,6 +468,7 @@ def find_markers_scanpy(
     min_cluster_size: int = 1,
     min_cells_expressing: int = 0,
     min_cluster_mean: float = 0.0,
+    min_mean_difference: float = 0.0,
 ) -> pd.DataFrame:
     """Find marker genes using Scanpy's Wilcoxon implementation."""
 
@@ -486,6 +494,9 @@ def find_markers_scanpy(
 
     if min_cluster_mean < 0:
         raise ValueError("min_cluster_mean must be at least 0.")
+
+    if min_mean_difference < 0:
+        raise ValueError("min_mean_difference must be at least 0.")
 
     if not 0 <= max_pct_out <= 1:
         raise ValueError("max_pct_out must be between 0 and 1.")
@@ -616,6 +627,9 @@ def find_markers_scanpy(
         cluster_result["reference_size"] = reference_size
         cluster_result["cluster_mean"] = cluster_mean[positions]
         cluster_result["other_mean"] = other_mean[positions]
+        cluster_result["mean_difference"] = (
+            cluster_result["cluster_mean"] - cluster_result["other_mean"]
+        )
         cluster_result["cells_expressing_in"] = cells_expressing_in[positions]
         cluster_result["cells_expressing_out"] = cells_expressing_out[positions]
         cluster_result["pct_difference"] = (
@@ -627,6 +641,7 @@ def find_markers_scanpy(
                 (cluster_result["pct_in"] >= min_pct)
                 & (cluster_result["cells_expressing_in"] >= min_cells_expressing)
                 & (cluster_result["cluster_mean"] >= min_cluster_mean)
+                & (cluster_result["mean_difference"] >= min_mean_difference)
                 & (cluster_result["pct_out"] <= max_pct_out)
                 & (cluster_result["pct_difference"] >= min_pct_difference)
                 & (cluster_result["log2FC"] >= min_log2fc)
@@ -669,6 +684,7 @@ def run(
     min_cluster_size: int = 1,
     min_cells_expressing: int = 0,
     min_cluster_mean: float = 0.0,
+    min_mean_difference: float = 0.0,
 ) -> pd.DataFrame:
     """Read an expression dataset, find markers and save the results."""
 
@@ -713,6 +729,7 @@ def run(
             min_cluster_size=min_cluster_size,
             min_cells_expressing=min_cells_expressing,
             min_cluster_mean=min_cluster_mean,
+            min_mean_difference=min_mean_difference,
         )
     else:
         expression = load_expression(
@@ -744,6 +761,7 @@ def run(
             min_cluster_size=min_cluster_size,
             min_cells_expressing=min_cells_expressing,
             min_cluster_mean=min_cluster_mean,
+            min_mean_difference=min_mean_difference,
         )
 
     output_path = Path(output_path)
@@ -852,6 +870,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.0,
         help="Minimum mean expression required inside the target cluster.",
     )
+    parser.add_argument(
+        "--min-mean-difference",
+        type=float,
+        default=0.0,
+        help="Minimum target-minus-reference mean-expression difference.",
+    )
 
     parser.add_argument(
         "--min-log2fc",
@@ -925,6 +949,7 @@ def main() -> None:
         min_pct=args.min_pct,
         min_cells_expressing=args.min_cells_expressing,
         min_cluster_mean=args.min_cluster_mean,
+        min_mean_difference=args.min_mean_difference,
         max_pct_out=args.max_pct_out,
         rank_by=args.rank_by,
         min_pct_difference=args.min_pct_difference,

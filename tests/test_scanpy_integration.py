@@ -194,6 +194,32 @@ def test_scanpy_min_cluster_mean_filters_low_expression_markers() -> None:
     assert (markers["cluster_mean"] >= 1.0).all()
 
 
+def test_scanpy_min_mean_difference_filters_weak_markers() -> None:
+    adata = ad.AnnData(
+        X=np.array(
+            [
+                [1.5, 3.0], [1.5, 3.0], [1.5, 3.0], [1.5, 3.0],
+                [1.0, 1.0], [1.0, 1.0], [1.0, 1.0], [1.0, 1.0],
+            ]
+        ),
+        obs=pd.DataFrame(
+            {"cluster": pd.Categorical(["A"] * 4 + ["B"] * 4)},
+            index=[f"cell_{index}" for index in range(8)],
+        ),
+        var=pd.DataFrame(index=["weak", "strong"]),
+    )
+
+    markers = find_markers_scanpy(
+        adata,
+        target_clusters=["A"],
+        top_n=10,
+        min_mean_difference=1.0,
+    )
+
+    assert markers["gene"].tolist() == ["strong"]
+    assert markers["mean_difference"].tolist() == pytest.approx([2.0])
+
+
 def test_run_uses_scanpy_engine(tmp_path: Path) -> None:
     input_path = tmp_path / "expression.h5ad"
     output_path = tmp_path / "markers.csv"
