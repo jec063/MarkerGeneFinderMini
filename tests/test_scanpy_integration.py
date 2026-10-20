@@ -109,6 +109,18 @@ def test_parser_accepts_max_pct_out() -> None:
     assert args.max_pct_out == pytest.approx(0.25)
 
 
+def test_parser_accepts_rank_by() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--rank-by", "pct_difference",
+        ]
+    )
+
+    assert args.rank_by == "pct_difference"
+
+
 def test_run_uses_scanpy_engine(tmp_path: Path) -> None:
     input_path = tmp_path / "expression.h5ad"
     output_path = tmp_path / "markers.csv"

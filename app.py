@@ -359,6 +359,18 @@ with st.sidebar:
         step=1,
     )
 
+    rank_by = st.selectbox(
+        "Rank markers by",
+        options=["log2FC", "pct_difference", "p_adj"],
+        format_func=lambda value: {
+            "log2FC": "Log2 fold change",
+            "pct_difference": "Expression-fraction difference",
+            "p_adj": "Adjusted p-value",
+        }[value],
+        on_change=clear_marker_results,
+        help="Ranking is applied after all marker filters.",
+    )
+
     observed_clusters = sorted(
         (
             adata.obs[cluster_column].unique()
@@ -487,6 +499,12 @@ cluster_labels = (
 cluster_summary = summarize_clusters(cluster_labels)
 with st.expander("Cluster sizes"):
     st.dataframe(cluster_summary, hide_index=True, width="stretch")
+    st.download_button(
+        "Download cluster summary as CSV",
+        data=cluster_summary.to_csv(index=False).encode("utf-8"),
+        file_name="cluster_summary.csv",
+        mime="text/csv",
+    )
     small_clusters = cluster_summary.loc[cluster_summary["cells"] < 10, "cluster"]
     if not small_clusters.empty:
         st.warning(
@@ -546,6 +564,7 @@ if st.button("Find marker genes", type="primary"):
                 top_n=int(top_n),
                 min_pct=float(min_pct),
                 max_pct_out=float(max_pct_out),
+                rank_by=rank_by,
                 min_pct_difference=float(min_pct_difference),
                 min_log2fc=float(min_log2fc),
                 max_p_adj=float(max_p_adj),
@@ -562,6 +581,7 @@ if st.button("Find marker genes", type="primary"):
                 pseudocount=float(pseudocount),
                 min_pct=float(min_pct),
                 max_pct_out=float(max_pct_out),
+                rank_by=rank_by,
                 min_pct_difference=float(min_pct_difference),
                 min_log2fc=float(min_log2fc),
                 max_p_adj=float(max_p_adj),
@@ -599,6 +619,7 @@ if st.button("Find marker genes", type="primary"):
                 cell_column if file_suffix == ".csv" else "AnnData.obs_names"
             ),
             "top_n": int(top_n),
+            "rank_by": rank_by,
             "min_pct": float(min_pct),
             "max_pct_out": float(max_pct_out),
             "min_pct_difference": float(min_pct_difference),
@@ -885,6 +906,7 @@ if "marker_results" in st.session_state:
                 markers,
                 st.session_state["analysis_settings"],
                 expression_summary_for_bundle,
+                cluster_summary,
             )
             st.download_button(
                 "Download analysis bundle as ZIP",

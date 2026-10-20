@@ -77,7 +77,10 @@ By default, genes with negative log2 fold change are excluded. A higher minimum 
 
 Statistical testing uses a one-sided Mann-Whitney U test, which is the Wilcoxon rank-sum test for independent samples. The alternative hypothesis is that expression is higher inside the cluster than outside it. For each cluster, p-values for all genes are adjusted together using the Benjamini-Hochberg false-discovery-rate procedure.
 
-Results are ranked by log2 fold change after applying the selected thresholds. The output includes raw p-values in `p_value` and adjusted p-values in `p_adj`.
+Results are ranked after applying the selected thresholds. Choose log2 fold
+change (the default), expression-fraction difference, or adjusted p-value in
+the web interface or with `--rank-by`. The output includes raw p-values in
+`p_value` and adjusted p-values in `p_adj`.
 The one-based `rank` column records each gene's position within its cluster
 after filtering, so ranks restart at 1 for every cluster.
 Use the minimum expression-fraction difference to require markers to be
@@ -136,7 +139,8 @@ uploaded data clears previous marker results.
 
 Before running analysis, expand **Cluster sizes** to review each cluster's
 cell count and percentage of the dataset. The app warns when a cluster has
-fewer than 10 cells because marker statistics may be unstable.
+fewer than 10 cells because marker statistics may be unstable. Use **Download
+cluster summary as CSV** to save this table before or after analysis.
 
 When marker analysis starts, the Streamlit app displays the selected
 engine and the number of cells, genes, and clusters being analyzed.
@@ -223,9 +227,10 @@ data or automatically restore a session.
 
 After a successful analysis, click **Download analysis bundle as ZIP** to save
 the marker-results CSV, analysis-settings JSON, and a short README together.
-When genes are selected for the expression plots, the bundle also contains the
-current `expression_summary.csv`. The archive does not contain the uploaded
-expression matrix.
+The bundle includes `cluster_summary.csv` with cluster counts and percentages.
+When genes are selected for the expression plots, it also contains the current
+`expression_summary.csv`. The archive does not contain the uploaded expression
+matrix.
 
 ## Run
 
@@ -237,6 +242,7 @@ python src/marker_finder.py \
   --top-n 2 \
   --min-pct 0.5 \
   --max-pct-out 0.25 \
+  --rank-by pct_difference \
   --min-log2fc 0.0 \
   --max-p-adj 0.05
 ```

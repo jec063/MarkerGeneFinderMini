@@ -25,6 +25,25 @@ RESULT_COLUMNS = [
     "p_value",
     "p_adj",
 ]
+RANK_BY_CHOICES = ("log2FC", "pct_difference", "p_adj")
+
+
+def _rank_markers(markers: pd.DataFrame, rank_by: str, top_n: int) -> pd.DataFrame:
+    """Sort filtered markers and assign stable one-based ranks."""
+    if rank_by not in RANK_BY_CHOICES:
+        choices = ", ".join(RANK_BY_CHOICES)
+        raise ValueError(f"rank_by must be one of: {choices}.")
+
+    if rank_by == "p_adj":
+        columns = ["p_adj", "log2FC", "gene"]
+        ascending = [True, False, True]
+    else:
+        columns = [rank_by, "log2FC", "gene"]
+        ascending = [False, False, True]
+
+    ranked = markers.sort_values(columns, ascending=ascending).head(top_n).copy()
+    ranked["rank"] = np.arange(1, len(ranked) + 1)
+    return ranked
 
 
 
@@ -262,6 +281,7 @@ def find_markers(
     excluded_genes: Sequence[str] | None = None,
     excluded_prefixes: Sequence[str] | None = None,
     max_pct_out: float = 1.0,
+    rank_by: str = "log2FC",
 ) -> pd.DataFrame:
     """Return the top fold-change-ranked genes for every cluster."""
 
@@ -285,6 +305,10 @@ def find_markers(
 
     if not 0 <= max_p_adj <= 1:
         raise ValueError("max_p_adj must be between 0 and 1.")
+
+    if rank_by not in RANK_BY_CHOICES:
+        choices = ", ".join(RANK_BY_CHOICES)
+        raise ValueError(f"rank_by must be one of: {choices}.")
 
     genes = _gene_columns(
         expression,
@@ -345,21 +369,17 @@ def find_markers(
             }
         )
 
-        cluster_result = (
+        cluster_result = _rank_markers(
             cluster_result.loc[
                 (cluster_result["pct_in"] >= min_pct)
                 & (cluster_result["pct_out"] <= max_pct_out)
                 & (cluster_result["pct_difference"] >= min_pct_difference)
                 & (cluster_result["log2FC"] >= min_log2fc)
                 & (cluster_result["p_adj"] <= max_p_adj)
-            ]
-            .sort_values(
-                ["log2FC", "gene"],
-                ascending=[False, True],
-            )
-            .head(top_n)
+            ],
+            rank_by,
+            top_n,
         )
-        cluster_result["rank"] = np.arange(1, len(cluster_result) + 1)
 
         results.append(cluster_result)
 
@@ -385,6 +405,7 @@ def find_markers_scanpy(
     excluded_genes: Sequence[str] | None = None,
     excluded_prefixes: Sequence[str] | None = None,
     max_pct_out: float = 1.0,
+    rank_by: str = "log2FC",
 ) -> pd.DataFrame:
     """Find marker genes using Scanpy's Wilcoxon implementation."""
 
@@ -410,6 +431,10 @@ def find_markers_scanpy(
 
     if not 0 <= max_p_adj <= 1:
         raise ValueError("max_p_adj must be between 0 and 1.")
+
+    if rank_by not in RANK_BY_CHOICES:
+        choices = ", ".join(RANK_BY_CHOICES)
+        raise ValueError(f"rank_by must be one of: {choices}.")
 
     if cluster_column not in adata.obs.columns:
         raise ValueError(
@@ -512,21 +537,17 @@ def find_markers_scanpy(
             cluster_result["pct_in"] - cluster_result["pct_out"]
         )
 
-        cluster_result = (
+        cluster_result = _rank_markers(
             cluster_result.loc[
                 (cluster_result["pct_in"] >= min_pct)
                 & (cluster_result["pct_out"] <= max_pct_out)
                 & (cluster_result["pct_difference"] >= min_pct_difference)
                 & (cluster_result["log2FC"] >= min_log2fc)
                 & (cluster_result["p_adj"] <= max_p_adj)
-            ]
-            .sort_values(
-                ["log2FC", "gene"],
-                ascending=[False, True],
-            )
-            .head(top_n)
+            ],
+            rank_by,
+            top_n,
         )
-        cluster_result["rank"] = np.arange(1, len(cluster_result) + 1)
 
         results.append(cluster_result)
 
@@ -557,6 +578,7 @@ def run(
     excluded_genes: Sequence[str] | None = None,
     excluded_prefixes: Sequence[str] | None = None,
     max_pct_out: float = 1.0,
+    rank_by: str = "log2FC",
 ) -> pd.DataFrame:
     """Read an expression dataset, find markers and save the results."""
 
@@ -591,6 +613,7 @@ def run(
             top_n=top_n,
             min_pct=min_pct,
             max_pct_out=max_pct_out,
+            rank_by=rank_by,
             min_pct_difference=min_pct_difference,
             min_log2fc=min_log2fc,
             max_p_adj=max_p_adj,
@@ -618,6 +641,7 @@ def run(
             pseudocount=pseudocount,
             min_pct=min_pct,
             max_pct_out=max_pct_out,
+            rank_by=rank_by,
             min_pct_difference=min_pct_difference,
             min_log2fc=min_log2fc,
             max_p_adj=max_p_adj,
@@ -733,6 +757,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        "--rank-by",
+        choices=RANK_BY_CHOICES,
+        default="log2FC",
+        help="Column used to rank filtered markers within each cluster.",
+    )
+
+    parser.add_argument(
         "--min-pct-difference",
         type=float,
         default=0.0,
@@ -779,6 +810,7 @@ def main() -> None:
         pseudocount=args.pseudocount,
         min_pct=args.min_pct,
         max_pct_out=args.max_pct_out,
+        rank_by=args.rank_by,
         min_pct_difference=args.min_pct_difference,
         min_log2fc=args.min_log2fc,
         max_p_adj=args.max_p_adj,
