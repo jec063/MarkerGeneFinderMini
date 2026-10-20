@@ -490,6 +490,34 @@ def test_rank_by_pct_difference_changes_marker_order() -> None:
     assert specificity["rank"].tolist() == [1, 2]
 
 
+def test_rank_by_mean_difference_changes_marker_order() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["A", "A", "B", "B"],
+            "high_ratio": [2.0, 2.0, 0.0, 0.0],
+            "large_difference": [10.0, 10.0, 7.0, 7.0],
+        }
+    )
+
+    fold_change = find_markers(
+        expression, cell_column=None, target_clusters=["A"], top_n=2,
+    )
+    mean_difference = find_markers(
+        expression,
+        cell_column=None,
+        target_clusters=["A"],
+        top_n=2,
+        rank_by="mean_difference",
+    )
+
+    assert fold_change["gene"].tolist() == ["high_ratio", "large_difference"]
+    assert mean_difference["gene"].tolist() == [
+        "large_difference", "high_ratio",
+    ]
+    assert mean_difference["mean_difference"].tolist() == [3.0, 2.0]
+    assert mean_difference["rank"].tolist() == [1, 2]
+
+
 def test_invalid_rank_by_is_rejected() -> None:
     with pytest.raises(ValueError, match="rank_by must be one of"):
         find_markers(pd.read_csv(EXAMPLE_DATA), rank_by="unknown")

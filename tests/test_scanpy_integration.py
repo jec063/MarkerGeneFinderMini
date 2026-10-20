@@ -123,6 +123,18 @@ def test_parser_accepts_rank_by() -> None:
     assert args.rank_by == "pct_difference"
 
 
+def test_parser_accepts_mean_difference_ranking() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--rank-by", "mean_difference",
+        ]
+    )
+
+    assert args.rank_by == "mean_difference"
+
+
 def test_scanpy_min_cluster_size_skips_small_targets() -> None:
     adata = ad.AnnData(
         X=np.array([[5.0, 0.0], [0.0, 4.0], [0.0, 5.0]]),
@@ -218,6 +230,33 @@ def test_scanpy_min_mean_difference_filters_weak_markers() -> None:
 
     assert markers["gene"].tolist() == ["strong"]
     assert markers["mean_difference"].tolist() == pytest.approx([2.0])
+
+
+def test_scanpy_can_rank_by_mean_difference() -> None:
+    adata = ad.AnnData(
+        X=np.array(
+            [
+                [2.0, 10.0], [2.0, 10.0], [2.0, 10.0], [2.0, 10.0],
+                [0.0, 7.0], [0.0, 7.0], [0.0, 7.0], [0.0, 7.0],
+            ]
+        ),
+        obs=pd.DataFrame(
+            {"cluster": pd.Categorical(["A"] * 4 + ["B"] * 4)},
+            index=[f"cell_{index}" for index in range(8)],
+        ),
+        var=pd.DataFrame(index=["high_ratio", "large_difference"]),
+    )
+
+    markers = find_markers_scanpy(
+        adata,
+        target_clusters=["A"],
+        top_n=2,
+        rank_by="mean_difference",
+    )
+
+    assert markers["gene"].tolist() == ["large_difference", "high_ratio"]
+    assert markers["mean_difference"].tolist() == pytest.approx([3.0, 2.0])
+    assert markers["rank"].tolist() == [1, 2]
 
 
 def test_run_uses_scanpy_engine(tmp_path: Path) -> None:
