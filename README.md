@@ -90,12 +90,14 @@ Statistical testing uses a one-sided Mann-Whitney U test, which is the Wilcoxon 
 
 Results are ranked after applying the selected thresholds. Choose log2 fold
 change (the default), target-cluster mean expression, target-cluster expressing
-cell count, mean-expression difference, expression-fraction difference, or
-adjusted p-value in the web interface or with `--rank-by`. Ranking by
+cell count, outside-cluster expressing-cell count, mean-expression difference,
+expression-fraction difference, or adjusted p-value in the web interface or
+with `--rank-by`. Ranking by
 `cells_expressing_in` prioritizes markers supported by the largest absolute
-number of target cells; the existing fold-change and gene-name tie-breakers
-keep the ordering deterministic. The output includes raw p-values in
-`p_value` and adjusted p-values in `p_adj`.
+number of target cells. Ranking by `cells_expressing_out` prioritizes genes
+detected in the fewest reference-population cells. The existing fold-change
+and gene-name tie-breakers keep both orderings deterministic. The output
+includes raw p-values in `p_value` and adjusted p-values in `p_adj`.
 The one-based `rank` column records each gene's position within its cluster
 after filtering, so ranks restart at 1 for every cluster.
 Use the minimum expression-fraction difference to require markers to be
