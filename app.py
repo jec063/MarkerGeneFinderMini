@@ -482,6 +482,26 @@ with st.sidebar:
         ),
     )
 
+    limit_other_mean = st.checkbox(
+        "Limit outside-cluster mean expression",
+        value=False,
+        on_change=clear_marker_results,
+        help="Enable an absolute upper limit for reference mean expression.",
+    )
+    max_other_mean = st.number_input(
+        "Maximum outside-cluster mean expression",
+        on_change=clear_marker_results,
+        min_value=0.0,
+        value=0.0,
+        step=0.1,
+        format="%.2f",
+        disabled=not limit_other_mean,
+        help=(
+            "Exclude genes whose reference-population mean exceeds this "
+            "value on the input matrix's existing scale."
+        ),
+    )
+
     max_pct_out = st.slider(
         "Maximum outside-cluster fraction expressing gene",
         on_change=clear_marker_results,
@@ -635,6 +655,9 @@ if st.button("Find marker genes", type="primary"):
                 min_cells_expressing=int(min_cells_expressing),
                 min_cluster_mean=float(min_cluster_mean),
                 min_mean_difference=float(min_mean_difference),
+                max_other_mean=(
+                    float(max_other_mean) if limit_other_mean else None
+                ),
                 max_pct_out=float(max_pct_out),
                 rank_by=rank_by,
                 min_pct_difference=float(min_pct_difference),
@@ -656,6 +679,9 @@ if st.button("Find marker genes", type="primary"):
                 min_cells_expressing=int(min_cells_expressing),
                 min_cluster_mean=float(min_cluster_mean),
                 min_mean_difference=float(min_mean_difference),
+                max_other_mean=(
+                    float(max_other_mean) if limit_other_mean else None
+                ),
                 max_pct_out=float(max_pct_out),
                 rank_by=rank_by,
                 min_pct_difference=float(min_pct_difference),
@@ -701,6 +727,9 @@ if st.button("Find marker genes", type="primary"):
             "min_cells_expressing": int(min_cells_expressing),
             "min_cluster_mean": float(min_cluster_mean),
             "min_mean_difference": float(min_mean_difference),
+            "max_other_mean": (
+                float(max_other_mean) if limit_other_mean else None
+            ),
             "max_pct_out": float(max_pct_out),
             "min_pct_difference": float(min_pct_difference),
             "min_log2fc": float(min_log2fc),
