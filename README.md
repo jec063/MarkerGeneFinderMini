@@ -62,10 +62,11 @@ For each cluster and gene, the program calculates:
 1. Mean expression inside the cluster
 2. Mean expression outside the cluster
 3. Fraction of cells expressing the gene inside and outside the cluster
-4. Difference between the inside and outside expression fractions
-5. Log2 fold change
-6. One-sided Wilcoxon-Mann-Whitney p-value
-7. Benjamini-Hochberg adjusted p-value
+4. Number of cells expressing the gene inside and outside the cluster
+5. Difference between the inside and outside expression fractions
+6. Log2 fold change
+7. One-sided Wilcoxon-Mann-Whitney p-value
+8. Benjamini-Hochberg adjusted p-value
 
 ```text
 log2FC = log2(
@@ -92,6 +93,11 @@ expressed in a larger share of target-cluster cells than other cells.
 Use the maximum outside-cluster expression fraction to exclude broadly
 expressed genes even when they are enriched in the target cluster. Its default
 of `1.0` preserves the previous behavior.
+Use the minimum target-cluster expressing-cell count to require evidence from
+a specific number of cells in addition to the fractional expression threshold.
+Set **Minimum target-cluster cells expressing gene** in the web interface or
+use `--min-cells-expressing` on the CLI. Its default of `0` preserves the
+previous behavior.
 
 The default maximum adjusted p-value is `1.0`, which preserves all otherwise eligible markers. Set a lower value, such as `0.05`, to retain only markers that pass the selected false-discovery-rate threshold.
 
@@ -245,6 +251,7 @@ python src/marker_finder.py \
   --cluster-column cluster \
   --top-n 2 \
   --min-cluster-size 10 \
+  --min-cells-expressing 3 \
   --min-pct 0.5 \
   --max-pct-out 0.25 \
   --rank-by pct_difference \

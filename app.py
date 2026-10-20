@@ -435,6 +435,19 @@ with st.sidebar:
         step=0.05,
     )
 
+    min_cells_expressing = st.number_input(
+        "Minimum target-cluster cells expressing gene",
+        on_change=clear_marker_results,
+        min_value=0,
+        max_value=int(len(cluster_labels_for_controls)),
+        value=0,
+        step=1,
+        help=(
+            "Require a marker to be detected in at least this many cells "
+            "inside its target cluster."
+        ),
+    )
+
     max_pct_out = st.slider(
         "Maximum outside-cluster fraction expressing gene",
         on_change=clear_marker_results,
@@ -585,6 +598,7 @@ if st.button("Find marker genes", type="primary"):
                 cluster_column=cluster_column,
                 top_n=int(top_n),
                 min_pct=float(min_pct),
+                min_cells_expressing=int(min_cells_expressing),
                 max_pct_out=float(max_pct_out),
                 rank_by=rank_by,
                 min_pct_difference=float(min_pct_difference),
@@ -603,6 +617,7 @@ if st.button("Find marker genes", type="primary"):
                 top_n=int(top_n),
                 pseudocount=float(pseudocount),
                 min_pct=float(min_pct),
+                min_cells_expressing=int(min_cells_expressing),
                 max_pct_out=float(max_pct_out),
                 rank_by=rank_by,
                 min_pct_difference=float(min_pct_difference),
@@ -645,6 +660,7 @@ if st.button("Find marker genes", type="primary"):
             "top_n": int(top_n),
             "rank_by": rank_by,
             "min_pct": float(min_pct),
+            "min_cells_expressing": int(min_cells_expressing),
             "max_pct_out": float(max_pct_out),
             "min_pct_difference": float(min_pct_difference),
             "min_log2fc": float(min_log2fc),

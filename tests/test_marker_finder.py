@@ -203,7 +203,53 @@ def test_output_contains_expression_prevalence() -> None:
 
     assert markers["pct_in"].between(0, 1).all()
     assert markers["pct_out"].between(0, 1).all()
+    assert (markers["cells_expressing_in"] >= 0).all()
+    assert (markers["cells_expressing_out"] >= 0).all()
+    assert pd.api.types.is_integer_dtype(markers["cells_expressing_in"])
+    assert pd.api.types.is_integer_dtype(markers["cells_expressing_out"])
     assert (markers["log2FC"] > 0).all()
+
+
+def test_min_cells_expressing_filters_rare_markers() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["A"] * 4 + ["B"] * 4,
+            "rare": [10, 0, 0, 0, 0, 0, 0, 0],
+            "supported": [2, 2, 2, 0, 0, 0, 0, 0],
+        }
+    )
+
+    markers = find_markers(
+        expression,
+        cell_column=None,
+        target_clusters=["A"],
+        top_n=10,
+        min_cells_expressing=2,
+    )
+
+    assert markers["gene"].tolist() == ["supported"]
+    assert markers["cells_expressing_in"].tolist() == [3]
+
+
+@pytest.mark.parametrize("value", [-1, 1.5, True])
+def test_invalid_min_cells_expressing_is_rejected(value) -> None:
+    with pytest.raises(ValueError, match="min_cells_expressing"):
+        find_markers(
+            pd.read_csv(EXAMPLE_DATA),
+            min_cells_expressing=value,
+        )
+
+
+def test_parser_accepts_min_cells_expressing() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--min-cells-expressing", "3",
+        ]
+    )
+
+    assert args.min_cells_expressing == 3
 
 def test_output_contains_statistical_significance() -> None:
     expression = pd.read_csv(EXAMPLE_DATA)

@@ -20,6 +20,8 @@ RESULT_COLUMNS = [
     "other_mean",
     "pct_in",
     "pct_out",
+    "cells_expressing_in",
+    "cells_expressing_out",
     "pct_difference",
     "log2FC",
     "p_value",
@@ -306,11 +308,21 @@ def find_markers(
     max_pct_out: float = 1.0,
     rank_by: str = "log2FC",
     min_cluster_size: int = 1,
+    min_cells_expressing: int = 0,
 ) -> pd.DataFrame:
     """Return the top fold-change-ranked genes for every cluster."""
 
     if top_n < 1:
         raise ValueError("top_n must be at least 1.")
+
+    if (
+        isinstance(min_cells_expressing, bool)
+        or not isinstance(min_cells_expressing, (int, np.integer))
+        or min_cells_expressing < 0
+    ):
+        raise ValueError(
+            "min_cells_expressing must be a non-negative integer."
+        )
 
     if pseudocount <= 0:
         raise ValueError("pseudocount must be greater than 0.")
@@ -358,6 +370,8 @@ def find_markers(
 
         pct_in = cluster_values.gt(0).mean(axis=0)
         pct_out = other_values.gt(0).mean(axis=0)
+        cells_expressing_in = cluster_values.gt(0).sum(axis=0)
+        cells_expressing_out = other_values.gt(0).sum(axis=0)
 
         log2fc = np.log2(
             (cluster_mean.to_numpy() + pseudocount)
@@ -386,6 +400,8 @@ def find_markers(
                 "other_mean": other_mean.to_numpy(),
                 "pct_in": pct_in.to_numpy(),
                 "pct_out": pct_out.to_numpy(),
+                "cells_expressing_in": cells_expressing_in.to_numpy(),
+                "cells_expressing_out": cells_expressing_out.to_numpy(),
                 "pct_difference": (pct_in - pct_out).to_numpy(),
                 "log2FC": log2fc,
                 "p_value": p_values,
@@ -396,6 +412,7 @@ def find_markers(
         cluster_result = _rank_markers(
             cluster_result.loc[
                 (cluster_result["pct_in"] >= min_pct)
+                & (cluster_result["cells_expressing_in"] >= min_cells_expressing)
                 & (cluster_result["pct_out"] <= max_pct_out)
                 & (cluster_result["pct_difference"] >= min_pct_difference)
                 & (cluster_result["log2FC"] >= min_log2fc)
@@ -431,6 +448,7 @@ def find_markers_scanpy(
     max_pct_out: float = 1.0,
     rank_by: str = "log2FC",
     min_cluster_size: int = 1,
+    min_cells_expressing: int = 0,
 ) -> pd.DataFrame:
     """Find marker genes using Scanpy's Wilcoxon implementation."""
 
@@ -441,6 +459,15 @@ def find_markers_scanpy(
         adata = _raw_expression(adata)
     if top_n < 1:
         raise ValueError("top_n must be at least 1.")
+
+    if (
+        isinstance(min_cells_expressing, bool)
+        or not isinstance(min_cells_expressing, (int, np.integer))
+        or min_cells_expressing < 0
+    ):
+        raise ValueError(
+            "min_cells_expressing must be a non-negative integer."
+        )
 
     if not 0 <= min_pct <= 1:
         raise ValueError("min_pct must be between 0 and 1.")
@@ -552,6 +579,12 @@ def find_markers_scanpy(
         other_mean = np.asarray(
             working.X[~in_cluster].mean(axis=0)
         ).ravel()
+        cells_expressing_in = np.asarray(
+            (working.X[in_cluster] > 0).sum(axis=0)
+        ).ravel().astype(int)
+        cells_expressing_out = np.asarray(
+            (working.X[~in_cluster] > 0).sum(axis=0)
+        ).ravel().astype(int)
 
         cluster_result = ranked.loc[
             ranked["cluster"].astype(str) == str(cluster)
@@ -564,6 +597,8 @@ def find_markers_scanpy(
         cluster_result["cluster"] = cluster
         cluster_result["cluster_mean"] = cluster_mean[positions]
         cluster_result["other_mean"] = other_mean[positions]
+        cluster_result["cells_expressing_in"] = cells_expressing_in[positions]
+        cluster_result["cells_expressing_out"] = cells_expressing_out[positions]
         cluster_result["pct_difference"] = (
             cluster_result["pct_in"] - cluster_result["pct_out"]
         )
@@ -571,6 +606,7 @@ def find_markers_scanpy(
         cluster_result = _rank_markers(
             cluster_result.loc[
                 (cluster_result["pct_in"] >= min_pct)
+                & (cluster_result["cells_expressing_in"] >= min_cells_expressing)
                 & (cluster_result["pct_out"] <= max_pct_out)
                 & (cluster_result["pct_difference"] >= min_pct_difference)
                 & (cluster_result["log2FC"] >= min_log2fc)
@@ -611,6 +647,7 @@ def run(
     max_pct_out: float = 1.0,
     rank_by: str = "log2FC",
     min_cluster_size: int = 1,
+    min_cells_expressing: int = 0,
 ) -> pd.DataFrame:
     """Read an expression dataset, find markers and save the results."""
 
@@ -653,6 +690,7 @@ def run(
             excluded_genes=excluded_genes,
             excluded_prefixes=excluded_prefixes,
             min_cluster_size=min_cluster_size,
+            min_cells_expressing=min_cells_expressing,
         )
     else:
         expression = load_expression(
@@ -682,6 +720,7 @@ def run(
             excluded_genes=excluded_genes,
             excluded_prefixes=excluded_prefixes,
             min_cluster_size=min_cluster_size,
+            min_cells_expressing=min_cells_expressing,
         )
 
     output_path = Path(output_path)
@@ -778,6 +817,12 @@ def build_parser() -> argparse.ArgumentParser:
             "expressing a gene."
         ),
     )
+    parser.add_argument(
+        "--min-cells-expressing",
+        type=int,
+        default=0,
+        help="Minimum target-cluster cells expressing a marker gene.",
+    )
 
     parser.add_argument(
         "--min-log2fc",
@@ -849,6 +894,7 @@ def main() -> None:
         top_n=args.top_n,
         pseudocount=args.pseudocount,
         min_pct=args.min_pct,
+        min_cells_expressing=args.min_cells_expressing,
         max_pct_out=args.max_pct_out,
         rank_by=args.rank_by,
         min_pct_difference=args.min_pct_difference,
