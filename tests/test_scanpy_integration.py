@@ -140,6 +140,32 @@ def test_scanpy_min_cluster_size_skips_small_targets() -> None:
     assert markers["cluster"].unique().tolist() == ["large"]
 
 
+def test_scanpy_min_cells_expressing_filters_rare_markers() -> None:
+    adata = ad.AnnData(
+        X=np.array(
+            [
+                [10.0, 2.0], [0.0, 2.0], [0.0, 2.0], [0.0, 0.0],
+                [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0],
+            ]
+        ),
+        obs=pd.DataFrame(
+            {"cluster": pd.Categorical(["A"] * 4 + ["B"] * 4)},
+            index=[f"cell_{index}" for index in range(8)],
+        ),
+        var=pd.DataFrame(index=["rare", "supported"]),
+    )
+
+    markers = find_markers_scanpy(
+        adata,
+        target_clusters=["A"],
+        top_n=10,
+        min_cells_expressing=2,
+    )
+
+    assert markers["gene"].tolist() == ["supported"]
+    assert markers["cells_expressing_in"].tolist() == [3]
+
+
 def test_run_uses_scanpy_engine(tmp_path: Path) -> None:
     input_path = tmp_path / "expression.h5ad"
     output_path = tmp_path / "markers.csv"
