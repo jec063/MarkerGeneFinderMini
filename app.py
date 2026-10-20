@@ -379,10 +379,32 @@ with st.sidebar:
         ),
         key=str,
     )
+    cluster_labels_for_controls = (
+        adata.obs[cluster_column]
+        if analysis_engine == "scanpy"
+        else expression[cluster_column]
+    )
+    cluster_sizes_for_controls = cluster_labels_for_controls.value_counts()
+    min_cluster_size = st.number_input(
+        "Minimum cells per target cluster",
+        on_change=clear_marker_results,
+        min_value=1,
+        max_value=int(cluster_sizes_for_controls.max()),
+        value=1,
+        step=1,
+        help=(
+            "Clusters smaller than this remain in the one-versus-rest "
+            "reference population but are not analyzed as targets."
+        ),
+    )
+    eligible_clusters = [
+        cluster for cluster in observed_clusters
+        if int(cluster_sizes_for_controls.loc[cluster]) >= min_cluster_size
+    ]
     target_clusters = st.multiselect(
         "Clusters to analyze",
-        options=observed_clusters,
-        default=observed_clusters,
+        options=eligible_clusters,
+        default=eligible_clusters,
         format_func=str,
         on_change=clear_marker_results,
         help="Each selected cluster is compared with all other cells.",
@@ -571,6 +593,7 @@ if st.button("Find marker genes", type="primary"):
                 target_clusters=target_clusters,
                 excluded_genes=excluded_genes,
                 excluded_prefixes=excluded_prefixes,
+                min_cluster_size=int(min_cluster_size),
             )
         else:
             markers = find_markers(
@@ -588,6 +611,7 @@ if st.button("Find marker genes", type="primary"):
                 target_clusters=target_clusters,
                 excluded_genes=excluded_genes,
                 excluded_prefixes=excluded_prefixes,
+                min_cluster_size=int(min_cluster_size),
             )
     except ValueError as error:
         elapsed = perf_counter() - started_at
@@ -632,6 +656,7 @@ if st.button("Find marker genes", type="primary"):
             "genes": gene_count,
             "clusters": cluster_count,
             "target_clusters": [str(cluster) for cluster in target_clusters],
+            "min_cluster_size": int(min_cluster_size),
             "excluded_genes": excluded_genes,
             "excluded_prefixes": excluded_prefixes,
             "marker_rows": int(len(markers)),

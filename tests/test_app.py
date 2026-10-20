@@ -47,6 +47,7 @@ def test_example_data_flow():
     assert settings["cluster_column"] == "cluster"
     assert settings["pseudocount"] == 0.1
     assert settings["clusters"] == 4
+    assert settings["min_cluster_size"] == 1
     assert settings["marker_rows"] == len(markers)
 
     top_n_widget = next(
