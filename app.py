@@ -461,6 +461,19 @@ with st.sidebar:
         ),
     )
 
+    min_mean_difference = st.number_input(
+        "Minimum mean-expression difference",
+        on_change=clear_marker_results,
+        min_value=0.0,
+        value=0.0,
+        step=0.1,
+        format="%.2f",
+        help=(
+            "Require target-cluster mean expression minus reference mean "
+            "expression to meet this threshold on the input matrix's scale."
+        ),
+    )
+
     max_pct_out = st.slider(
         "Maximum outside-cluster fraction expressing gene",
         on_change=clear_marker_results,
@@ -613,6 +626,7 @@ if st.button("Find marker genes", type="primary"):
                 min_pct=float(min_pct),
                 min_cells_expressing=int(min_cells_expressing),
                 min_cluster_mean=float(min_cluster_mean),
+                min_mean_difference=float(min_mean_difference),
                 max_pct_out=float(max_pct_out),
                 rank_by=rank_by,
                 min_pct_difference=float(min_pct_difference),
@@ -633,6 +647,7 @@ if st.button("Find marker genes", type="primary"):
                 min_pct=float(min_pct),
                 min_cells_expressing=int(min_cells_expressing),
                 min_cluster_mean=float(min_cluster_mean),
+                min_mean_difference=float(min_mean_difference),
                 max_pct_out=float(max_pct_out),
                 rank_by=rank_by,
                 min_pct_difference=float(min_pct_difference),
@@ -677,6 +692,7 @@ if st.button("Find marker genes", type="primary"):
             "min_pct": float(min_pct),
             "min_cells_expressing": int(min_cells_expressing),
             "min_cluster_mean": float(min_cluster_mean),
+            "min_mean_difference": float(min_mean_difference),
             "max_pct_out": float(max_pct_out),
             "min_pct_difference": float(min_pct_difference),
             "min_log2fc": float(min_log2fc),

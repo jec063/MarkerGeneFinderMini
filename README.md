@@ -62,12 +62,13 @@ For each cluster and gene, the program calculates:
 1. Number of cells inside the target cluster and in the reference population
 2. Mean expression inside the cluster
 3. Mean expression outside the cluster
-4. Fraction of cells expressing the gene inside and outside the cluster
-5. Number of cells expressing the gene inside and outside the cluster
-6. Difference between the inside and outside expression fractions
-7. Log2 fold change
-8. One-sided Wilcoxon-Mann-Whitney p-value
-9. Benjamini-Hochberg adjusted p-value
+4. Difference between target-cluster and reference mean expression
+5. Fraction of cells expressing the gene inside and outside the cluster
+6. Number of cells expressing the gene inside and outside the cluster
+7. Difference between the inside and outside expression fractions
+8. Log2 fold change
+9. One-sided Wilcoxon-Mann-Whitney p-value
+10. Benjamini-Hochberg adjusted p-value
 
 ```text
 log2FC = log2(
@@ -107,6 +108,12 @@ Use the minimum target-cluster mean-expression threshold to remove genes whose
 average expression inside the target cluster is too low on the input matrix's
 existing scale. Set **Minimum target-cluster mean expression** in the web
 interface or use `--min-cluster-mean` on the CLI. Its default of `0.0`
+preserves the previous behavior.
+Use the minimum mean-expression difference to require a marker's target-cluster
+mean to exceed its reference mean by a chosen absolute amount on the input
+matrix's existing scale. The `mean_difference` output column records this
+target-minus-reference value. Set **Minimum mean-expression difference** in the
+web interface or use `--min-mean-difference` on the CLI. Its default of `0.0`
 preserves the previous behavior.
 
 The default maximum adjusted p-value is `1.0`, which preserves all otherwise eligible markers. Set a lower value, such as `0.05`, to retain only markers that pass the selected false-discovery-rate threshold.
@@ -263,6 +270,7 @@ python src/marker_finder.py \
   --min-cluster-size 10 \
   --min-cells-expressing 3 \
   --min-cluster-mean 1.0 \
+  --min-mean-difference 0.5 \
   --min-pct 0.5 \
   --max-pct-out 0.25 \
   --rank-by pct_difference \

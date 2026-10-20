@@ -302,6 +302,35 @@ def test_negative_min_cluster_mean_is_rejected() -> None:
         )
 
 
+def test_min_mean_difference_filters_weakly_enriched_markers() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["A", "A", "B", "B"],
+            "weak": [1.5, 1.5, 1.0, 1.0],
+            "strong": [3.0, 3.0, 1.0, 1.0],
+        }
+    )
+
+    markers = find_markers(
+        expression,
+        cell_column=None,
+        target_clusters=["A"],
+        top_n=10,
+        min_mean_difference=1.0,
+    )
+
+    assert markers["gene"].tolist() == ["strong"]
+    assert markers["mean_difference"].tolist() == pytest.approx([2.0])
+
+
+def test_negative_min_mean_difference_is_rejected() -> None:
+    with pytest.raises(ValueError, match="min_mean_difference"):
+        find_markers(
+            pd.read_csv(EXAMPLE_DATA),
+            min_mean_difference=-0.1,
+        )
+
+
 def test_parser_accepts_min_cluster_mean() -> None:
     args = build_parser().parse_args(
         [
@@ -312,6 +341,18 @@ def test_parser_accepts_min_cluster_mean() -> None:
     )
 
     assert args.min_cluster_mean == pytest.approx(1.5)
+
+
+def test_parser_accepts_min_mean_difference() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--min-mean-difference", "0.75",
+        ]
+    )
+
+    assert args.min_mean_difference == pytest.approx(0.75)
 
 def test_output_contains_statistical_significance() -> None:
     expression = pd.read_csv(EXAMPLE_DATA)
