@@ -331,6 +331,35 @@ def test_negative_min_mean_difference_is_rejected() -> None:
         )
 
 
+def test_max_other_mean_filters_broad_reference_expression() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["A", "A", "B", "B"],
+            "specific": [3.0, 3.0, 0.2, 0.2],
+            "broad": [5.0, 5.0, 2.0, 2.0],
+        }
+    )
+
+    markers = find_markers(
+        expression,
+        cell_column=None,
+        target_clusters=["A"],
+        top_n=10,
+        max_other_mean=0.5,
+    )
+
+    assert markers["gene"].tolist() == ["specific"]
+    assert markers["other_mean"].tolist() == pytest.approx([0.2])
+
+
+def test_negative_max_other_mean_is_rejected() -> None:
+    with pytest.raises(ValueError, match="max_other_mean"):
+        find_markers(
+            pd.read_csv(EXAMPLE_DATA),
+            max_other_mean=-0.1,
+        )
+
+
 def test_parser_accepts_min_cluster_mean() -> None:
     args = build_parser().parse_args(
         [
@@ -353,6 +382,18 @@ def test_parser_accepts_min_mean_difference() -> None:
     )
 
     assert args.min_mean_difference == pytest.approx(0.75)
+
+
+def test_parser_accepts_max_other_mean() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--max-other-mean", "0.5",
+        ]
+    )
+
+    assert args.max_other_mean == pytest.approx(0.5)
 
 def test_output_contains_statistical_significance() -> None:
     expression = pd.read_csv(EXAMPLE_DATA)

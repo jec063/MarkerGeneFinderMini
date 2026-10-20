@@ -320,6 +320,7 @@ def find_markers(
     min_cells_expressing: int = 0,
     min_cluster_mean: float = 0.0,
     min_mean_difference: float = 0.0,
+    max_other_mean: float | None = None,
 ) -> pd.DataFrame:
     """Return the top fold-change-ranked genes for every cluster."""
 
@@ -343,6 +344,9 @@ def find_markers(
 
     if min_mean_difference < 0:
         raise ValueError("min_mean_difference must be at least 0.")
+
+    if max_other_mean is not None and max_other_mean < 0:
+        raise ValueError("max_other_mean must be at least 0 when provided.")
 
     if not 0 <= min_pct <= 1:
         raise ValueError("min_pct must be between 0 and 1.")
@@ -431,12 +435,18 @@ def find_markers(
             }
         )
 
+        other_mean_passes = (
+            True if max_other_mean is None
+            else cluster_result["other_mean"] <= max_other_mean
+        )
+
         cluster_result = _rank_markers(
             cluster_result.loc[
                 (cluster_result["pct_in"] >= min_pct)
                 & (cluster_result["cells_expressing_in"] >= min_cells_expressing)
                 & (cluster_result["cluster_mean"] >= min_cluster_mean)
                 & (cluster_result["mean_difference"] >= min_mean_difference)
+                & other_mean_passes
                 & (cluster_result["pct_out"] <= max_pct_out)
                 & (cluster_result["pct_difference"] >= min_pct_difference)
                 & (cluster_result["log2FC"] >= min_log2fc)
@@ -475,6 +485,7 @@ def find_markers_scanpy(
     min_cells_expressing: int = 0,
     min_cluster_mean: float = 0.0,
     min_mean_difference: float = 0.0,
+    max_other_mean: float | None = None,
 ) -> pd.DataFrame:
     """Find marker genes using Scanpy's Wilcoxon implementation."""
 
@@ -503,6 +514,9 @@ def find_markers_scanpy(
 
     if min_mean_difference < 0:
         raise ValueError("min_mean_difference must be at least 0.")
+
+    if max_other_mean is not None and max_other_mean < 0:
+        raise ValueError("max_other_mean must be at least 0 when provided.")
 
     if not 0 <= max_pct_out <= 1:
         raise ValueError("max_pct_out must be between 0 and 1.")
@@ -642,12 +656,18 @@ def find_markers_scanpy(
             cluster_result["pct_in"] - cluster_result["pct_out"]
         )
 
+        other_mean_passes = (
+            True if max_other_mean is None
+            else cluster_result["other_mean"] <= max_other_mean
+        )
+
         cluster_result = _rank_markers(
             cluster_result.loc[
                 (cluster_result["pct_in"] >= min_pct)
                 & (cluster_result["cells_expressing_in"] >= min_cells_expressing)
                 & (cluster_result["cluster_mean"] >= min_cluster_mean)
                 & (cluster_result["mean_difference"] >= min_mean_difference)
+                & other_mean_passes
                 & (cluster_result["pct_out"] <= max_pct_out)
                 & (cluster_result["pct_difference"] >= min_pct_difference)
                 & (cluster_result["log2FC"] >= min_log2fc)
@@ -691,6 +711,7 @@ def run(
     min_cells_expressing: int = 0,
     min_cluster_mean: float = 0.0,
     min_mean_difference: float = 0.0,
+    max_other_mean: float | None = None,
 ) -> pd.DataFrame:
     """Read an expression dataset, find markers and save the results."""
 
@@ -736,6 +757,7 @@ def run(
             min_cells_expressing=min_cells_expressing,
             min_cluster_mean=min_cluster_mean,
             min_mean_difference=min_mean_difference,
+            max_other_mean=max_other_mean,
         )
     else:
         expression = load_expression(
@@ -768,6 +790,7 @@ def run(
             min_cells_expressing=min_cells_expressing,
             min_cluster_mean=min_cluster_mean,
             min_mean_difference=min_mean_difference,
+            max_other_mean=max_other_mean,
         )
 
     output_path = Path(output_path)
@@ -882,6 +905,15 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.0,
         help="Minimum target-minus-reference mean-expression difference.",
     )
+    parser.add_argument(
+        "--max-other-mean",
+        type=float,
+        default=None,
+        help=(
+            "Maximum mean expression allowed outside the target cluster; "
+            "omit to disable this filter."
+        ),
+    )
 
     parser.add_argument(
         "--min-log2fc",
@@ -956,6 +988,7 @@ def main() -> None:
         min_cells_expressing=args.min_cells_expressing,
         min_cluster_mean=args.min_cluster_mean,
         min_mean_difference=args.min_mean_difference,
+        max_other_mean=args.max_other_mean,
         max_pct_out=args.max_pct_out,
         rank_by=args.rank_by,
         min_pct_difference=args.min_pct_difference,

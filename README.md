@@ -110,6 +110,11 @@ average expression inside the target cluster is too low on the input matrix's
 existing scale. Set **Minimum target-cluster mean expression** in the web
 interface or use `--min-cluster-mean` on the CLI. Its default of `0.0`
 preserves the previous behavior.
+Use the optional maximum outside-cluster mean-expression threshold to exclude
+genes with excessive average expression in the reference population. Enable
+**Limit outside-cluster mean expression** in the web interface or pass
+`--max-other-mean` on the CLI. The value uses the input matrix's existing
+scale, and omitting it preserves the previous behavior.
 Use the minimum mean-expression difference to require a marker's target-cluster
 mean to exceed its reference mean by a chosen absolute amount on the input
 matrix's existing scale. The `mean_difference` output column records this
@@ -272,6 +277,7 @@ python src/marker_finder.py \
   --min-cells-expressing 3 \
   --min-cluster-mean 1.0 \
   --min-mean-difference 0.5 \
+  --max-other-mean 0.5 \
   --min-pct 0.5 \
   --max-pct-out 0.25 \
   --rank-by pct_difference \
