@@ -121,6 +121,25 @@ def test_parser_accepts_rank_by() -> None:
     assert args.rank_by == "pct_difference"
 
 
+def test_scanpy_min_cluster_size_skips_small_targets() -> None:
+    adata = ad.AnnData(
+        X=np.array([[5.0, 0.0], [0.0, 4.0], [0.0, 5.0]]),
+        obs=pd.DataFrame(
+            {"cluster": pd.Categorical(["small", "large", "large"])},
+            index=["cell_1", "cell_2", "cell_3"],
+        ),
+        var=pd.DataFrame(index=["SMALL_GENE", "LARGE_GENE"]),
+    )
+
+    markers = find_markers_scanpy(
+        adata,
+        top_n=1,
+        min_cluster_size=2,
+    )
+
+    assert markers["cluster"].unique().tolist() == ["large"]
+
+
 def test_run_uses_scanpy_engine(tmp_path: Path) -> None:
     input_path = tmp_path / "expression.h5ad"
     output_path = tmp_path / "markers.csv"

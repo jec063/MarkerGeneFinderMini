@@ -44,6 +44,10 @@ Select one or more **Clusters to analyze** in the web interface to limit the
 reported groups. Each selected cluster is still compared with every other cell.
 On the CLI, repeat `--target-cluster`, for example
 `--target-cluster 0 --target-cluster 2`. Omitting it analyzes every cluster.
+Set **Minimum cells per target cluster** or use `--min-cluster-size` to avoid
+testing undersized groups. Small clusters remain part of the one-versus-rest
+reference population; they are only excluded as analysis targets. The default
+of `1` preserves the previous behavior.
 
 Exact genes and gene-name prefixes can be excluded before testing. In the web
 interface, enter comma-separated values under **Exclude genes** or **Exclude
@@ -240,6 +244,7 @@ python src/marker_finder.py \
   --output outputs/top_markers.csv \
   --cluster-column cluster \
   --top-n 2 \
+  --min-cluster-size 10 \
   --min-pct 0.5 \
   --max-pct-out 0.25 \
   --rank-by pct_difference \

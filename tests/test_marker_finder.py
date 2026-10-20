@@ -499,6 +499,62 @@ def test_unknown_target_cluster_is_rejected() -> None:
         find_markers(pd.read_csv(EXAMPLE_DATA), target_clusters=["missing"])
 
 
+def test_min_cluster_size_skips_small_target_clusters() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["small", "large", "large", "large"],
+            "small_gene": [5.0, 0.0, 0.0, 0.0],
+            "large_gene": [0.0, 5.0, 4.0, 5.0],
+        }
+    )
+
+    markers = find_markers(
+        expression,
+        cell_column=None,
+        min_cluster_size=2,
+    )
+
+    assert markers["cluster"].unique().tolist() == ["large"]
+
+
+def test_selected_cluster_below_minimum_size_is_rejected() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["small", "large", "large"],
+            "gene": [5.0, 0.0, 0.0],
+        }
+    )
+
+    with pytest.raises(ValueError, match="below the minimum cluster size"):
+        find_markers(
+            expression,
+            cell_column=None,
+            target_clusters=["small"],
+            min_cluster_size=2,
+        )
+
+
+@pytest.mark.parametrize("value", [0, -1, 1.5, True])
+def test_invalid_min_cluster_size_is_rejected(value) -> None:
+    with pytest.raises(ValueError, match="min_cluster_size"):
+        find_markers(
+            pd.read_csv(EXAMPLE_DATA),
+            min_cluster_size=value,
+        )
+
+
+def test_parser_accepts_min_cluster_size() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--min-cluster-size", "10",
+        ]
+    )
+
+    assert args.min_cluster_size == 10
+
+
 def test_gene_and_prefix_exclusions_are_applied() -> None:
     expression = pd.read_csv(EXAMPLE_DATA)
 

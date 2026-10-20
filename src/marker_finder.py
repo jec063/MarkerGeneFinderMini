@@ -167,17 +167,40 @@ def _benjamini_hochberg(
     return adjusted
 
 
-def _selected_clusters(labels, target_clusters):
+def _selected_clusters(labels, target_clusters, min_cluster_size=1):
     """Validate and return clusters selected for one-versus-rest analysis."""
+    if (
+        isinstance(min_cluster_size, bool)
+        or not isinstance(min_cluster_size, (int, np.integer))
+        or min_cluster_size < 1
+    ):
+        raise ValueError("min_cluster_size must be an integer of at least 1.")
+
     available = sorted(pd.unique(labels), key=str)
+    cluster_sizes = pd.Series(labels).value_counts(dropna=False)
+    eligible = [
+        cluster for cluster in available
+        if int(cluster_sizes.loc[cluster]) >= min_cluster_size
+    ]
     if target_clusters is None:
-        return available
+        if not eligible:
+            raise ValueError(
+                "No clusters meet the minimum cluster size of "
+                f"{min_cluster_size}."
+            )
+        return eligible
     selected = list(dict.fromkeys(target_clusters))
     if not selected:
         raise ValueError("At least one target cluster must be selected.")
     missing = [cluster for cluster in selected if cluster not in available]
     if missing:
         raise ValueError(f"Unknown target clusters: {missing}.")
+    undersized = [cluster for cluster in selected if cluster not in eligible]
+    if undersized:
+        raise ValueError(
+            "Target clusters below the minimum cluster size of "
+            f"{min_cluster_size}: {undersized}."
+        )
     return selected
 
 
@@ -282,6 +305,7 @@ def find_markers(
     excluded_prefixes: Sequence[str] | None = None,
     max_pct_out: float = 1.0,
     rank_by: str = "log2FC",
+    min_cluster_size: int = 1,
 ) -> pd.DataFrame:
     """Return the top fold-change-ranked genes for every cluster."""
 
@@ -320,7 +344,7 @@ def find_markers(
     results = []
 
     clusters = _selected_clusters(
-        expression[cluster_column], target_clusters,
+        expression[cluster_column], target_clusters, min_cluster_size,
     )
 
     for cluster in clusters:
@@ -406,6 +430,7 @@ def find_markers_scanpy(
     excluded_prefixes: Sequence[str] | None = None,
     max_pct_out: float = 1.0,
     rank_by: str = "log2FC",
+    min_cluster_size: int = 1,
 ) -> pd.DataFrame:
     """Find marker genes using Scanpy's Wilcoxon implementation."""
 
@@ -474,9 +499,14 @@ def find_markers_scanpy(
         working.obs[cluster_column].astype("category")
     )
 
+    clusters = _selected_clusters(
+        working.obs[cluster_column], target_clusters, min_cluster_size
+    )
+
     sc.tl.rank_genes_groups(
         working,
         groupby=cluster_column,
+        groups=clusters,
         reference="rest",
         method="wilcoxon",
         corr_method="benjamini-hochberg",
@@ -500,6 +530,8 @@ def find_markers_scanpy(
             "pct_nz_reference": "pct_out",
         }
     )
+    if "cluster" not in ranked.columns:
+        ranked["cluster"] = clusters[0]
 
     gene_positions = pd.Series(
         np.arange(working.n_vars),
@@ -508,7 +540,6 @@ def find_markers_scanpy(
 
     results = []
 
-    clusters = _selected_clusters(working.obs[cluster_column], target_clusters)
     for cluster in clusters:
         in_cluster = np.asarray(
             working.obs[cluster_column] == cluster,
@@ -579,6 +610,7 @@ def run(
     excluded_prefixes: Sequence[str] | None = None,
     max_pct_out: float = 1.0,
     rank_by: str = "log2FC",
+    min_cluster_size: int = 1,
 ) -> pd.DataFrame:
     """Read an expression dataset, find markers and save the results."""
 
@@ -620,6 +652,7 @@ def run(
             target_clusters=selected_clusters,
             excluded_genes=excluded_genes,
             excluded_prefixes=excluded_prefixes,
+            min_cluster_size=min_cluster_size,
         )
     else:
         expression = load_expression(
@@ -648,6 +681,7 @@ def run(
             target_clusters=selected_clusters,
             excluded_genes=excluded_genes,
             excluded_prefixes=excluded_prefixes,
+            min_cluster_size=min_cluster_size,
         )
 
     output_path = Path(output_path)
@@ -706,6 +740,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         dest="target_clusters",
         help="Cluster to analyze; repeat to select multiple clusters.",
+    )
+    parser.add_argument(
+        "--min-cluster-size",
+        type=int,
+        default=1,
+        help="Minimum cell count required for each target cluster.",
     )
     parser.add_argument(
         "--exclude-gene", action="append", default=[],
@@ -818,6 +858,7 @@ def main() -> None:
         layer=args.layer,
         use_raw=args.use_raw,
         target_clusters=args.target_clusters,
+        min_cluster_size=args.min_cluster_size,
         excluded_genes=args.exclude_gene,
         excluded_prefixes=args.exclude_prefix,
     )
