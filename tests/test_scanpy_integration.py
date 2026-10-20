@@ -159,6 +159,18 @@ def test_parser_accepts_expressing_cell_count_ranking() -> None:
     assert args.rank_by == "cells_expressing_in"
 
 
+def test_parser_accepts_reference_expressing_cell_count_ranking() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "input.h5ad",
+            "--output", "markers.csv",
+            "--rank-by", "cells_expressing_out",
+        ]
+    )
+
+    assert args.rank_by == "cells_expressing_out"
+
+
 def test_scanpy_min_cluster_size_skips_small_targets() -> None:
     adata = ad.AnnData(
         X=np.array([[5.0, 0.0], [0.0, 4.0], [0.0, 5.0]]),
@@ -390,6 +402,37 @@ def test_scanpy_can_rank_by_expressing_cell_count() -> None:
 
     assert markers["gene"].tolist() == ["broad", "sparse"]
     assert markers["cells_expressing_in"].tolist() == [3, 1]
+    assert markers["rank"].tolist() == [1, 2]
+
+
+def test_scanpy_can_rank_by_reference_expressing_cell_count() -> None:
+    adata = ad.AnnData(
+        X=np.array(
+            [
+                [1.0, 10.0],
+                [1.0, 10.0],
+                [1.0, 10.0],
+                [0.0, 0.01],
+                [0.0, 0.0],
+                [0.0, 0.0],
+            ]
+        ),
+        obs=pd.DataFrame(
+            {"cluster": ["A", "A", "A", "B", "B", "B"]},
+            index=[f"cell-{index}" for index in range(6)],
+        ),
+        var=pd.DataFrame(index=["absent_out", "rare_out"]),
+    )
+
+    markers = find_markers_scanpy(
+        adata,
+        target_clusters=["A"],
+        top_n=2,
+        rank_by="cells_expressing_out",
+    )
+
+    assert markers["gene"].tolist() == ["absent_out", "rare_out"]
+    assert markers["cells_expressing_out"].tolist() == [0, 1]
     assert markers["rank"].tolist() == [1, 2]
 
 

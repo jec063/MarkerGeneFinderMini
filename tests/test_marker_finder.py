@@ -654,6 +654,28 @@ def test_rank_by_cells_expressing_in_changes_marker_order() -> None:
     assert markers["rank"].tolist() == [1, 2]
 
 
+def test_rank_by_cells_expressing_out_prefers_fewer_reference_cells() -> None:
+    expression = pd.DataFrame(
+        {
+            "cell": ["a1", "a2", "a3", "b1", "b2", "b3"],
+            "cluster": ["A", "A", "A", "B", "B", "B"],
+            "absent_out": [1.0, 1.0, 1.0, 0.0, 0.0, 0.0],
+            "rare_out": [10.0, 10.0, 10.0, 0.01, 0.0, 0.0],
+        }
+    )
+
+    markers = find_markers(
+        expression,
+        target_clusters=["A"],
+        top_n=2,
+        rank_by="cells_expressing_out",
+    )
+
+    assert markers["gene"].tolist() == ["absent_out", "rare_out"]
+    assert markers["cells_expressing_out"].tolist() == [0, 1]
+    assert markers["rank"].tolist() == [1, 2]
+
+
 def test_run_writes_output_file(
     tmp_path: Path,
 ) -> None:

@@ -34,6 +34,7 @@ RANK_BY_CHOICES = (
     "log2FC",
     "cluster_mean",
     "cells_expressing_in",
+    "cells_expressing_out",
     "mean_difference",
     "pct_difference",
     "p_adj",
@@ -48,6 +49,9 @@ def _rank_markers(markers: pd.DataFrame, rank_by: str, top_n: int) -> pd.DataFra
 
     if rank_by == "p_adj":
         columns = ["p_adj", "log2FC", "gene"]
+        ascending = [True, False, True]
+    elif rank_by == "cells_expressing_out":
+        columns = ["cells_expressing_out", "log2FC", "gene"]
         ascending = [True, False, True]
     else:
         columns = [rank_by, "log2FC", "gene"]
