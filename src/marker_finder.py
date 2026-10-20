@@ -30,7 +30,12 @@ RESULT_COLUMNS = [
     "p_value",
     "p_adj",
 ]
-RANK_BY_CHOICES = ("log2FC", "pct_difference", "p_adj")
+RANK_BY_CHOICES = (
+    "log2FC",
+    "mean_difference",
+    "pct_difference",
+    "p_adj",
+)
 
 
 def _rank_markers(markers: pd.DataFrame, rank_by: str, top_n: int) -> pd.DataFrame:
