@@ -361,9 +361,16 @@ with st.sidebar:
 
     rank_by = st.selectbox(
         "Rank markers by",
-        options=["log2FC", "mean_difference", "pct_difference", "p_adj"],
+        options=[
+            "log2FC",
+            "cluster_mean",
+            "mean_difference",
+            "pct_difference",
+            "p_adj",
+        ],
         format_func=lambda value: {
             "log2FC": "Log2 fold change",
+            "cluster_mean": "Target-cluster mean expression",
             "mean_difference": "Mean-expression difference",
             "pct_difference": "Expression-fraction difference",
             "p_adj": "Adjusted p-value",

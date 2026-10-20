@@ -32,6 +32,7 @@ RESULT_COLUMNS = [
 ]
 RANK_BY_CHOICES = (
     "log2FC",
+    "cluster_mean",
     "mean_difference",
     "pct_difference",
     "p_adj",
