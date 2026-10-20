@@ -502,6 +502,26 @@ with st.sidebar:
         ),
     )
 
+    limit_cells_expressing_out = st.checkbox(
+        "Limit outside-cluster cells expressing gene",
+        value=False,
+        on_change=clear_marker_results,
+        help="Enable an absolute upper limit for reference expressing cells.",
+    )
+    max_cells_expressing_out = st.number_input(
+        "Maximum outside-cluster cells expressing gene",
+        on_change=clear_marker_results,
+        min_value=0,
+        max_value=int(len(cluster_labels_for_controls)),
+        value=0,
+        step=1,
+        disabled=not limit_cells_expressing_out,
+        help=(
+            "Exclude genes detected in more than this many cells outside "
+            "their target cluster."
+        ),
+    )
+
     max_pct_out = st.slider(
         "Maximum outside-cluster fraction expressing gene",
         on_change=clear_marker_results,
@@ -658,6 +678,10 @@ if st.button("Find marker genes", type="primary"):
                 max_other_mean=(
                     float(max_other_mean) if limit_other_mean else None
                 ),
+                max_cells_expressing_out=(
+                    int(max_cells_expressing_out)
+                    if limit_cells_expressing_out else None
+                ),
                 max_pct_out=float(max_pct_out),
                 rank_by=rank_by,
                 min_pct_difference=float(min_pct_difference),
@@ -681,6 +705,10 @@ if st.button("Find marker genes", type="primary"):
                 min_mean_difference=float(min_mean_difference),
                 max_other_mean=(
                     float(max_other_mean) if limit_other_mean else None
+                ),
+                max_cells_expressing_out=(
+                    int(max_cells_expressing_out)
+                    if limit_cells_expressing_out else None
                 ),
                 max_pct_out=float(max_pct_out),
                 rank_by=rank_by,
@@ -729,6 +757,10 @@ if st.button("Find marker genes", type="primary"):
             "min_mean_difference": float(min_mean_difference),
             "max_other_mean": (
                 float(max_other_mean) if limit_other_mean else None
+            ),
+            "max_cells_expressing_out": (
+                int(max_cells_expressing_out)
+                if limit_cells_expressing_out else None
             ),
             "max_pct_out": float(max_pct_out),
             "min_pct_difference": float(min_pct_difference),

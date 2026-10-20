@@ -270,6 +270,32 @@ def test_scanpy_max_other_mean_filters_broad_reference_expression() -> None:
     assert markers["other_mean"].tolist() == pytest.approx([0.2])
 
 
+def test_scanpy_max_reference_expressing_cells_filters_broad_markers() -> None:
+    adata = ad.AnnData(
+        X=np.array(
+            [
+                [3.0, 5.0], [3.0, 5.0], [3.0, 5.0], [3.0, 5.0],
+                [1.0, 1.0], [0.0, 1.0], [0.0, 1.0], [0.0, 0.0],
+            ]
+        ),
+        obs=pd.DataFrame(
+            {"cluster": pd.Categorical(["A"] * 4 + ["B"] * 4)},
+            index=[f"cell_{index}" for index in range(8)],
+        ),
+        var=pd.DataFrame(index=["specific", "broad"]),
+    )
+
+    markers = find_markers_scanpy(
+        adata,
+        target_clusters=["A"],
+        top_n=10,
+        max_cells_expressing_out=1,
+    )
+
+    assert markers["gene"].tolist() == ["specific"]
+    assert markers["cells_expressing_out"].tolist() == [1]
+
+
 def test_scanpy_can_rank_by_mean_difference() -> None:
     adata = ad.AnnData(
         X=np.array(
