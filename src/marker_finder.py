@@ -16,6 +16,8 @@ RESULT_COLUMNS = [
     "cluster",
     "gene",
     "rank",
+    "cluster_size",
+    "reference_size",
     "cluster_mean",
     "other_mean",
     "pct_in",
@@ -361,6 +363,8 @@ def find_markers(
 
     for cluster in clusters:
         in_cluster = expression[cluster_column] == cluster
+        cluster_size = int(in_cluster.sum())
+        reference_size = int((~in_cluster).sum())
 
         cluster_values = expression.loc[in_cluster, genes]
         other_values = expression.loc[~in_cluster, genes]
@@ -396,6 +400,8 @@ def find_markers(
             {
                 "cluster": cluster,
                 "gene": genes,
+                "cluster_size": cluster_size,
+                "reference_size": reference_size,
                 "cluster_mean": cluster_mean.to_numpy(),
                 "other_mean": other_mean.to_numpy(),
                 "pct_in": pct_in.to_numpy(),
@@ -572,6 +578,8 @@ def find_markers_scanpy(
             working.obs[cluster_column] == cluster,
             dtype=bool,
         )
+        cluster_size = int(in_cluster.sum())
+        reference_size = int((~in_cluster).sum())
 
         cluster_mean = np.asarray(
             working.X[in_cluster].mean(axis=0)
@@ -595,6 +603,8 @@ def find_markers_scanpy(
         ].to_numpy()
 
         cluster_result["cluster"] = cluster
+        cluster_result["cluster_size"] = cluster_size
+        cluster_result["reference_size"] = reference_size
         cluster_result["cluster_mean"] = cluster_mean[positions]
         cluster_result["other_mean"] = other_mean[positions]
         cluster_result["cells_expressing_in"] = cells_expressing_in[positions]

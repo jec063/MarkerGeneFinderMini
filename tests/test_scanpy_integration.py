@@ -55,6 +55,8 @@ def test_find_markers_scanpy_ranks_expected_genes() -> None:
         "A": "GENE_A",
         "B": "GENE_B",
     }
+    assert markers["cluster_size"].tolist() == [4, 4]
+    assert markers["reference_size"].tolist() == [4, 4]
 
 def test_parser_accepts_scanpy_engine() -> None:
     args = build_parser().parse_args(

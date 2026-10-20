@@ -210,6 +210,27 @@ def test_output_contains_expression_prevalence() -> None:
     assert (markers["log2FC"] > 0).all()
 
 
+def test_output_contains_comparison_group_sizes() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["A", "A", "B", "B", "B"],
+            "gene": [5.0, 4.0, 0.0, 0.0, 0.0],
+        }
+    )
+
+    markers = find_markers(
+        expression,
+        cell_column=None,
+        target_clusters=["A"],
+        top_n=1,
+    )
+
+    assert markers["cluster_size"].tolist() == [2]
+    assert markers["reference_size"].tolist() == [3]
+    assert pd.api.types.is_integer_dtype(markers["cluster_size"])
+    assert pd.api.types.is_integer_dtype(markers["reference_size"])
+
+
 def test_min_cells_expressing_filters_rare_markers() -> None:
     expression = pd.DataFrame(
         {
