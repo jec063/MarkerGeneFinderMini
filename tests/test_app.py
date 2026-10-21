@@ -94,3 +94,17 @@ def test_filter_preset_updates_core_controls() -> None:
     assert app.session_state["min_log2fc"] == 0.5
     assert app.session_state["min_pct_difference"] == 0.1
     assert app.session_state["max_p_adj"] == 0.05
+
+
+def test_settings_import_controls_are_available() -> None:
+    """The app should expose settings upload and application controls."""
+    app = AppTest.from_file(APP_PATH).run()
+    app.checkbox(key="use_example_data").check().run()
+
+    assert any(
+        item.label == "Import analysis settings" for item in app.file_uploader
+    )
+    apply_button = next(
+        item for item in app.button if item.label == "Apply imported settings"
+    )
+    assert apply_button.disabled is True
