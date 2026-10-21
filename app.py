@@ -20,6 +20,7 @@ from src.marker_finder import (
     load_expression,
 )
 from src.report_bundle import build_analysis_bundle
+from src.settings_import import load_analysis_settings
 from time import perf_counter
 
 
@@ -233,6 +234,51 @@ else:
 
 with st.sidebar:
 
+    widget_defaults = {
+        "top_n": 5,
+        "rank_by": "log2FC",
+        "min_cluster_size": 1,
+        "min_cells_expressing": 0,
+        "min_cluster_mean": 0.0,
+        "min_mean_difference": 0.0,
+        "limit_other_mean": False,
+        "max_other_mean": 0.0,
+        "limit_cells_expressing_out": False,
+        "max_cells_expressing_out": 0,
+        "pseudocount": 0.1,
+        "excluded_gene_text": "",
+        "excluded_prefix_text": "",
+        **FILTER_DEFAULTS,
+    }
+    for setting_name, default_value in widget_defaults.items():
+        st.session_state.setdefault(setting_name, default_value)
+
+    uploaded_settings = st.file_uploader(
+        "Import analysis settings",
+        type=["json"],
+        key="imported_analysis_settings",
+        help=(
+            "Restore portable analysis thresholds, ranking, exclusions, and "
+            "preset selection from a previously exported settings file."
+        ),
+    )
+    if st.button(
+        "Apply imported settings",
+        disabled=uploaded_settings is None,
+        key="apply_imported_settings",
+    ):
+        try:
+            restored_settings = load_analysis_settings(uploaded_settings.getvalue())
+        except ValueError as error:
+            st.error(f"Could not import analysis settings: {error}")
+        else:
+            st.session_state.update(restored_settings)
+            clear_marker_results()
+            st.success(
+                "Imported portable analysis settings. Dataset-specific input, "
+                "cluster, and expression-source selections were left unchanged."
+            )
+
     filter_preset = st.selectbox(
         "Filter preset",
         options=[*FILTER_PRESETS, "Custom"],
@@ -244,8 +290,6 @@ with st.sidebar:
         ),
     )
 
-    for filter_name, default_value in FILTER_DEFAULTS.items():
-        st.session_state.setdefault(filter_name, default_value)
     st.header("Analysis settings")
 
     cluster_column = st.selectbox(
@@ -381,15 +425,16 @@ with st.sidebar:
 
     top_n = st.number_input(
         "Markers per cluster",
+        key="top_n",
         on_change=clear_marker_results,
         min_value=1,
         max_value=100,
-        value=5,
         step=1,
     )
 
     rank_by = st.selectbox(
         "Rank markers by",
+        key="rank_by",
         options=[
             "log2FC",
             "cluster_mean",
@@ -428,10 +473,9 @@ with st.sidebar:
     cluster_sizes_for_controls = cluster_labels_for_controls.value_counts()
     min_cluster_size = st.number_input(
         "Minimum cells per target cluster",
+        key="min_cluster_size",
         on_change=clear_marker_results,
         min_value=1,
-        max_value=int(cluster_sizes_for_controls.max()),
-        value=1,
         step=1,
         help=(
             "Clusters smaller than this remain in the one-versus-rest "
@@ -452,11 +496,13 @@ with st.sidebar:
     )
     excluded_gene_text = st.text_input(
         "Exclude genes",
+        key="excluded_gene_text",
         on_change=clear_marker_results,
         help="Comma-separated exact gene names.",
     )
     excluded_prefix_text = st.text_input(
         "Exclude gene prefixes",
+        key="excluded_prefix_text",
         on_change=clear_marker_results,
         help="Comma-separated prefixes, such as MT-, RPL, RPS.",
     )
@@ -478,10 +524,9 @@ with st.sidebar:
 
     min_cells_expressing = st.number_input(
         "Minimum target-cluster cells expressing gene",
+        key="min_cells_expressing",
         on_change=clear_marker_results,
         min_value=0,
-        max_value=int(len(cluster_labels_for_controls)),
-        value=0,
         step=1,
         help=(
             "Require a marker to be detected in at least this many cells "
@@ -491,9 +536,9 @@ with st.sidebar:
 
     min_cluster_mean = st.number_input(
         "Minimum target-cluster mean expression",
+        key="min_cluster_mean",
         on_change=clear_marker_results,
         min_value=0.0,
-        value=0.0,
         step=0.1,
         format="%.2f",
         help=(
@@ -504,9 +549,9 @@ with st.sidebar:
 
     min_mean_difference = st.number_input(
         "Minimum mean-expression difference",
+        key="min_mean_difference",
         on_change=clear_marker_results,
         min_value=0.0,
-        value=0.0,
         step=0.1,
         format="%.2f",
         help=(
@@ -517,15 +562,15 @@ with st.sidebar:
 
     limit_other_mean = st.checkbox(
         "Limit outside-cluster mean expression",
-        value=False,
+        key="limit_other_mean",
         on_change=clear_marker_results,
         help="Enable an absolute upper limit for reference mean expression.",
     )
     max_other_mean = st.number_input(
         "Maximum outside-cluster mean expression",
+        key="max_other_mean",
         on_change=clear_marker_results,
         min_value=0.0,
-        value=0.0,
         step=0.1,
         format="%.2f",
         disabled=not limit_other_mean,
@@ -537,16 +582,15 @@ with st.sidebar:
 
     limit_cells_expressing_out = st.checkbox(
         "Limit outside-cluster cells expressing gene",
-        value=False,
+        key="limit_cells_expressing_out",
         on_change=clear_marker_results,
         help="Enable an absolute upper limit for reference expressing cells.",
     )
     max_cells_expressing_out = st.number_input(
         "Maximum outside-cluster cells expressing gene",
+        key="max_cells_expressing_out",
         on_change=clear_marker_results,
         min_value=0,
-        max_value=int(len(cluster_labels_for_controls)),
-        value=0,
         step=1,
         disabled=not limit_cells_expressing_out,
         help=(
@@ -602,9 +646,9 @@ with st.sidebar:
     if analysis_engine == "native":
         pseudocount = st.number_input(
             "Pseudocount",
+            key="pseudocount",
             on_change=clear_marker_results,
             min_value=0.0001,
-            value=0.1,
             step=0.1,
             format="%.4f",
         )

@@ -272,7 +272,12 @@ markers pass filtering. Changing an input or analysis setting clears
 both the previous results and their settings download.
 
 The JSON records analysis settings; it does not contain the expression
-data or automatically restore a session.
+data. Use **Import analysis settings** in the Streamlit sidebar to restore
+portable thresholds, ranking, exclusions, and preset selection from this file.
+Dataset-specific choices—including the input file, expression source, cluster
+column, target clusters, and cell-ID column—are intentionally left unchanged
+and must match the current dataset. Review the restored controls before running
+the analysis.
 
 ## Download an analysis bundle
 
