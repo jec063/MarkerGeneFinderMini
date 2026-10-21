@@ -4,9 +4,48 @@ from __future__ import annotations
 
 import json
 import math
+from io import BytesIO
+from pathlib import Path
+from zipfile import BadZipFile, ZipFile
 
 from src.filter_presets import FILTER_PRESETS
 from src.marker_finder import RANK_BY_CHOICES
+
+
+MAX_SETTINGS_BYTES = 1_000_000
+SETTINGS_BUNDLE_PATH = "analysis_settings.json"
+
+
+def load_analysis_settings_upload(contents: bytes, filename: str) -> dict[str, object]:
+    """Load settings from an exported JSON file or analysis-bundle ZIP."""
+    suffix = Path(filename).suffix.lower()
+    if suffix == ".json":
+        if len(contents) > MAX_SETTINGS_BYTES:
+            raise ValueError("Analysis settings JSON must be no larger than 1 MB.")
+        return load_analysis_settings(contents)
+    if suffix != ".zip":
+        raise ValueError("Analysis settings must be uploaded as JSON or ZIP.")
+
+    try:
+        with ZipFile(BytesIO(contents)) as archive:
+            try:
+                entry = archive.getinfo(SETTINGS_BUNDLE_PATH)
+            except KeyError as error:
+                raise ValueError(
+                    "Analysis bundle does not contain analysis_settings.json."
+                ) from error
+            if entry.flag_bits & 0x1:
+                raise ValueError("Encrypted analysis settings are not supported.")
+            if entry.file_size > MAX_SETTINGS_BYTES:
+                raise ValueError("Analysis settings JSON must be no larger than 1 MB.")
+            with archive.open(entry) as settings_file:
+                settings_contents = settings_file.read(MAX_SETTINGS_BYTES + 1)
+    except BadZipFile as error:
+        raise ValueError("Analysis settings ZIP is invalid.") from error
+
+    if len(settings_contents) > MAX_SETTINGS_BYTES:
+        raise ValueError("Analysis settings JSON must be no larger than 1 MB.")
+    return load_analysis_settings(settings_contents)
 
 
 def _number(settings: dict, name: str, minimum: float = 0.0) -> float | None:

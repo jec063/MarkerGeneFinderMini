@@ -273,7 +273,8 @@ both the previous results and their settings download.
 
 The JSON records analysis settings; it does not contain the expression
 data. Use **Import analysis settings** in the Streamlit sidebar to restore
-portable thresholds, ranking, exclusions, and preset selection from this file.
+portable thresholds, ranking, exclusions, and preset selection from either the
+standalone JSON file or a previously downloaded analysis-bundle ZIP.
 Dataset-specific choices—including the input file, expression source, cluster
 column, target clusters, and cell-ID column—are intentionally left unchanged
 and must match the current dataset. Review the restored controls before running
