@@ -4,6 +4,8 @@ from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
+from src.version import APP_VERSION
+
 
 APP_PATH = Path(__file__).resolve().parents[1] / "app.py"
 
@@ -14,6 +16,7 @@ def test_app_loads_without_errors():
 
     assert len(app.exception) == 0
     assert "CellCoPilot Marker Gene Finder" in app.title[0].value
+    assert any(f"Version {APP_VERSION}" in item.value for item in app.caption)
     assert app.info[0].value == "Upload a CSV or H5AD file to begin."
 
 def test_example_data_flow():
@@ -39,6 +42,7 @@ def test_example_data_flow():
 
     settings = app.session_state["analysis_settings"]
     assert settings["input_file"] == "example_expression.csv"
+    assert settings["app_version"] == APP_VERSION
     assert settings["example_data"] is True
     assert settings["engine"] == "native"
     assert settings["expression_source"] == "CSV"

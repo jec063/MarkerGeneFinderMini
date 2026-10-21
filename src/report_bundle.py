@@ -15,6 +15,7 @@ def build_analysis_bundle(
 ) -> bytes:
     """Return a ZIP containing results, settings, and an optional summary."""
     buffer = io.BytesIO()
+    app_version = settings.get("app_version", "unknown")
     files = {
         "marker_gene_results.csv": markers.to_csv(index=False),
         "analysis_settings.json": json.dumps(
@@ -22,6 +23,7 @@ def build_analysis_bundle(
         ) + "\n",
         "README.md": (
             "# Marker Gene Finder analysis bundle\n\n"
+            f"Application version: {app_version}\n\n"
             "This archive contains marker results and the settings used to "
             "produce them. If present, `expression_summary.csv` contains the "
             "genes selected in the expression plots. `cluster_summary.csv` "

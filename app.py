@@ -21,6 +21,7 @@ from src.marker_finder import (
 )
 from src.report_bundle import build_analysis_bundle
 from src.settings_import import load_analysis_settings_upload
+from src.version import APP_VERSION
 from time import perf_counter
 
 
@@ -31,6 +32,7 @@ st.set_page_config(
 )
 
 st.title("🧬 CellCoPilot Marker Gene Finder")
+st.caption(f"Version {APP_VERSION}")
 st.write(
     "Upload clustered gene-expression data and identify candidate "
     "marker genes for each cluster."
@@ -812,6 +814,7 @@ if st.button("Find marker genes", type="primary"):
         st.session_state["marker_results"] = markers
         st.session_state["analysis_settings"] = {
             "schema_version": 1,
+            "app_version": APP_VERSION,
             "input_file": Path(file_name).name,
             "example_data": bool(use_example_data),
             "engine": analysis_engine,

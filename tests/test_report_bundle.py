@@ -5,6 +5,7 @@ import zipfile
 import pandas as pd
 
 from src.report_bundle import build_analysis_bundle
+from src.version import APP_VERSION
 
 
 def test_bundle_contains_results_settings_and_optional_summary():
@@ -16,7 +17,10 @@ def test_bundle_contains_results_settings_and_optional_summary():
         {"cluster": ["A"], "cells": [4], "percent_of_cells": [100.0]}
     )
     contents = build_analysis_bundle(
-        markers, {"engine": "native"}, summary, clusters
+        markers,
+        {"engine": "native", "app_version": APP_VERSION},
+        summary,
+        clusters,
     )
 
     with zipfile.ZipFile(io.BytesIO(contents)) as archive:
@@ -27,8 +31,13 @@ def test_bundle_contains_results_settings_and_optional_summary():
         saved_markers = pd.read_csv(archive.open("marker_gene_results.csv"))
         pd.testing.assert_frame_equal(saved_markers, markers)
         assert json.load(archive.open("analysis_settings.json")) == {
-            "engine": "native"
+            "engine": "native",
+            "app_version": APP_VERSION,
         }
+        assert (
+            f"Application version: {APP_VERSION}"
+            in archive.read("README.md").decode("utf-8")
+        )
         saved_clusters = pd.read_csv(archive.open("cluster_summary.csv"))
         pd.testing.assert_frame_equal(saved_clusters, clusters)
 
