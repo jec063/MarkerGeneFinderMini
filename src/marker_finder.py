@@ -12,6 +12,11 @@ import pandas as pd
 import scanpy as sc
 from scipy.stats import mannwhitneyu
 
+if __package__:
+    from .version import APP_VERSION
+else:
+    from version import APP_VERSION
+
 RESULT_COLUMNS = [
     "cluster",
     "gene",
@@ -848,6 +853,12 @@ def build_parser() -> argparse.ArgumentParser:
             "Rank marker genes for each cluster "
             "using log2 fold change."
         )
+    )
+
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {APP_VERSION}",
     )
 
     parser.add_argument(

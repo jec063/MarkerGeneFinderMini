@@ -13,11 +13,19 @@ from src.marker_finder import (
     load_expression,
     run,
 )
+from src.version import APP_VERSION
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE_DATA = (
     PROJECT_ROOT / "data" / "example_expression.csv"
 )
+
+
+def test_parser_reports_application_version(capsys) -> None:
+    with pytest.raises(SystemExit, match="0"):
+        build_parser().parse_args(["--version"])
+
+    assert capsys.readouterr().out.strip().endswith(APP_VERSION)
 
 
 def test_load_expression_reads_h5ad(
