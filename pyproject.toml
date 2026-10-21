@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "marker-gene-finder-mini"
+dynamic = ["version"]
+description = "Identify candidate marker genes from clustered expression data."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "anndata>=0.10,<0.13",
+    "scanpy>=1.10,<2.0",
+    "numpy>=1.24,<3.0",
+    "scipy>=1.10,<2.0",
+    "pandas>=2.0,<3.0",
+]
+
+[project.optional-dependencies]
+web = ["streamlit>=1.40,<2.0"]
+test = ["pytest>=7.0,<9.0"]
+
+[project.scripts]
+marker-gene-finder = "src.marker_finder:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "src.version.APP_VERSION"}
+
+[tool.setuptools.packages.find]
+include = ["src", "src.*"]
