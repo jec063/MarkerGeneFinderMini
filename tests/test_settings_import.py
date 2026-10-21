@@ -1,10 +1,16 @@
 """Tests for importing exported analysis settings."""
 
 import json
+from io import BytesIO
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 
-from src.settings_import import load_analysis_settings
+from src.settings_import import (
+    MAX_SETTINGS_BYTES,
+    load_analysis_settings,
+    load_analysis_settings_upload,
+)
 
 
 def encode(settings: dict) -> bytes:
@@ -84,3 +90,38 @@ def test_invalid_analysis_settings_are_rejected(settings: dict, message: str) ->
 def test_invalid_json_is_rejected() -> None:
     with pytest.raises(ValueError, match="valid UTF-8 JSON"):
         load_analysis_settings(b"not-json")
+
+
+def make_bundle(files: dict[str, bytes]) -> bytes:
+    """Build an in-memory analysis bundle for upload tests."""
+    output = BytesIO()
+    with ZipFile(output, "w", ZIP_DEFLATED) as archive:
+        for name, contents in files.items():
+            archive.writestr(name, contents)
+    return output.getvalue()
+
+
+def test_load_analysis_settings_from_bundle() -> None:
+    contents = make_bundle(
+        {"analysis_settings.json": encode({"schema_version": 1, "top_n": 9})}
+    )
+
+    restored = load_analysis_settings_upload(contents, "analysis_bundle.ZIP")
+
+    assert restored["top_n"] == 9
+
+
+@pytest.mark.parametrize(
+    ("contents", "filename", "message"),
+    [
+        (b"not-a-zip", "settings.zip", "ZIP is invalid"),
+        (make_bundle({"README.md": b"missing"}), "settings.zip", "does not contain"),
+        (b"{}", "settings.txt", "JSON or ZIP"),
+        (b"x" * (MAX_SETTINGS_BYTES + 1), "settings.json", "no larger"),
+    ],
+)
+def test_invalid_settings_uploads_are_rejected(
+    contents: bytes, filename: str, message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        load_analysis_settings_upload(contents, filename)

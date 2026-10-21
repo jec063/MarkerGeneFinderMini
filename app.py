@@ -20,7 +20,7 @@ from src.marker_finder import (
     load_expression,
 )
 from src.report_bundle import build_analysis_bundle
-from src.settings_import import load_analysis_settings
+from src.settings_import import load_analysis_settings_upload
 from time import perf_counter
 
 
@@ -255,11 +255,11 @@ with st.sidebar:
 
     uploaded_settings = st.file_uploader(
         "Import analysis settings",
-        type=["json"],
+        type=["json", "zip"],
         key="imported_analysis_settings",
         help=(
             "Restore portable analysis thresholds, ranking, exclusions, and "
-            "preset selection from a previously exported settings file."
+            "preset selection from an exported settings JSON or analysis bundle."
         ),
     )
     if st.button(
@@ -268,7 +268,9 @@ with st.sidebar:
         key="apply_imported_settings",
     ):
         try:
-            restored_settings = load_analysis_settings(uploaded_settings.getvalue())
+            restored_settings = load_analysis_settings_upload(
+                uploaded_settings.getvalue(), uploaded_settings.name
+            )
         except ValueError as error:
             st.error(f"Could not import analysis settings: {error}")
         else:
