@@ -55,6 +55,14 @@ gene prefixes**. On the CLI, repeat `--exclude-gene` or `--exclude-prefix`.
 No exclusions are applied by default; organism-specific naming conventions
 remain under the user's control.
 
+The web interface provides **Permissive**, **Balanced**, and **High
+specificity** filter presets. A preset supplies starting values for the core
+expression-fraction, fold-change, and adjusted-p-value filters without changing
+cluster selection, gene exclusions, or the remaining advanced controls. Editing
+one of those core thresholds marks the configuration as **Custom**. The selected
+preset name and the resulting individual thresholds are retained in exported
+analysis settings.
+
 ## Method
 
 For each cluster and gene, the program calculates:

@@ -59,6 +59,7 @@ def test_example_data_flow():
         item for item in app.number_input if item.label == "Markers per cluster"
     )
     assert settings["top_n"] == int(top_n_widget.value)
+    assert settings["filter_preset"] == "Permissive"
     top_n_widget.set_value(1).run()
     assert len(app.exception) == 0
     assert "marker_results" not in app.session_state
@@ -77,3 +78,19 @@ def test_example_data_flow():
     assert "marker_results" not in app.session_state
     assert "analysis_settings" not in app.session_state
     assert app.info[0].value == "Upload a CSV or H5AD file to begin."
+
+
+def test_filter_preset_updates_core_controls() -> None:
+    """Selecting a preset updates its filters before analysis."""
+    app = AppTest.from_file(APP_PATH).run()
+    app.checkbox(key="use_example_data").check().run()
+
+    preset = next(item for item in app.selectbox if item.label == "Filter preset")
+    preset.select("Balanced").run()
+
+    assert app.session_state["filter_preset"] == "Balanced"
+    assert app.session_state["min_pct"] == 0.25
+    assert app.session_state["max_pct_out"] == 0.5
+    assert app.session_state["min_log2fc"] == 0.5
+    assert app.session_state["min_pct_difference"] == 0.1
+    assert app.session_state["max_p_adj"] == 0.05

@@ -12,6 +12,7 @@ import pandas as pd
 import streamlit as st
 
 from src.expression_summary import summarize_clusters, summarize_expression
+from src.filter_presets import FILTER_DEFAULTS, FILTER_PRESETS, get_filter_preset
 
 from src.marker_finder import (
     find_markers,
@@ -122,6 +123,20 @@ def clear_marker_results() -> None:
     st.session_state.pop("analysis_settings", None)
 
 
+def apply_filter_preset() -> None:
+    """Apply the selected named preset and clear stale analysis results."""
+    preset = st.session_state["filter_preset"]
+    if preset != "Custom":
+        st.session_state.update(get_filter_preset(preset))
+    clear_marker_results()
+
+
+def mark_filter_preset_custom() -> None:
+    """Mark manually changed core filters as a custom configuration."""
+    st.session_state["filter_preset"] = "Custom"
+    clear_marker_results()
+
+
 use_example_data = st.checkbox(
     "Use example data",
     key="use_example_data",
@@ -217,6 +232,20 @@ else:
     cluster_index = cluster_options.index(default_cluster)
 
 with st.sidebar:
+
+    filter_preset = st.selectbox(
+        "Filter preset",
+        options=[*FILTER_PRESETS, "Custom"],
+        key="filter_preset",
+        on_change=apply_filter_preset,
+        help=(
+            "Apply a starting configuration to the core prevalence, fold-change, "
+            "and adjusted-p-value filters. Other controls are unchanged."
+        ),
+    )
+
+    for filter_name, default_value in FILTER_DEFAULTS.items():
+        st.session_state.setdefault(filter_name, default_value)
     st.header("Analysis settings")
 
     cluster_column = st.selectbox(
@@ -440,10 +469,10 @@ with st.sidebar:
 
     min_pct = st.slider(
         "Minimum fraction expressing gene",
-        on_change=clear_marker_results,
+        key="min_pct",
+        on_change=mark_filter_preset_custom,
         min_value=0.0,
         max_value=1.0,
-        value=0.0,
         step=0.05,
     )
 
@@ -528,39 +557,39 @@ with st.sidebar:
 
     max_pct_out = st.slider(
         "Maximum outside-cluster fraction expressing gene",
-        on_change=clear_marker_results,
+        key="max_pct_out",
+        on_change=mark_filter_preset_custom,
         min_value=0.0,
         max_value=1.0,
-        value=1.0,
         step=0.05,
         help="Maximum pct_out allowed for a marker.",
     )
 
     min_log2fc = st.number_input(
         "Minimum log2 fold change",
-        on_change=clear_marker_results,
+        key="min_log2fc",
+        on_change=mark_filter_preset_custom,
         min_value=0.0,
-        value=0.0,
         step=0.1,
         format="%.2f",
     )
 
     min_pct_difference = st.slider(
         "Minimum expression-fraction difference",
-        on_change=clear_marker_results,
+        key="min_pct_difference",
+        on_change=mark_filter_preset_custom,
         min_value=0.0,
         max_value=1.0,
-        value=0.0,
         step=0.05,
         help="Minimum pct_in minus pct_out required for a marker.",
     )
 
     max_p_adj = st.number_input(
         "Maximum adjusted p-value",
-        on_change=clear_marker_results,
+        key="max_p_adj",
+        on_change=mark_filter_preset_custom,
         min_value=0.0,
         max_value=1.0,
-        value=1.0,
         step=0.01,
         format="%.3f",
         help=(
@@ -754,6 +783,7 @@ if st.button("Find marker genes", type="primary"):
                 cell_column if file_suffix == ".csv" else "AnnData.obs_names"
             ),
             "top_n": int(top_n),
+            "filter_preset": filter_preset,
             "rank_by": rank_by,
             "min_pct": float(min_pct),
             "min_cells_expressing": int(min_cells_expressing),
