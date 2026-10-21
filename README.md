@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **1.0.0**. The version is shown in the web
+Current application version: **1.0.1**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -157,6 +157,17 @@ source .venv/bin/activate
 
 python -m pip install -r requirements.txt
 ```
+
+To install the analysis library and command-line entry point directly from the
+repository, use:
+
+```bash
+python -m pip install .
+marker-gene-finder --version
+```
+
+Install the optional Streamlit interface with `python -m pip install '.[web]'`
+or the test dependencies with `python -m pip install '.[test]'`.
 
 ## Web interface
 
