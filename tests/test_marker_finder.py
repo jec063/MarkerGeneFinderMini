@@ -10,6 +10,7 @@ from scipy import sparse
 from src.marker_finder import (
     _benjamini_hochberg,
     build_parser,
+    estimate_dense_expression_bytes,
     find_markers,
     load_expression,
     run,
@@ -142,6 +143,46 @@ def test_load_expression_reads_h5ad(
         expected,
         check_dtype=False,
     )
+
+
+def test_dense_memory_estimate_uses_shape_and_dtype(tmp_path: Path) -> None:
+    input_path = tmp_path / "expression.h5ad"
+    ad.AnnData(X=np.ones((4, 3), dtype=np.float32)).write_h5ad(input_path)
+
+    assert estimate_dense_expression_bytes(input_path) == 48
+
+
+def test_native_h5ad_rejects_dense_conversion_above_limit(
+    tmp_path: Path,
+) -> None:
+    input_path = tmp_path / "expression.h5ad"
+    adata = ad.AnnData(
+        X=sparse.csr_matrix(np.ones((4, 3), dtype=np.float64)),
+        obs=pd.DataFrame(
+            {"cluster": ["A", "A", "B", "B"]},
+            index=[f"cell_{index}" for index in range(4)],
+        ),
+        var=pd.DataFrame(index=["G1", "G2", "G3"]),
+    )
+    adata.write_h5ad(input_path)
+
+    with pytest.raises(ValueError, match="dense conversion requires"):
+        load_expression(input_path, max_dense_memory_mb=0.00001)
+
+    loaded = load_expression(input_path, max_dense_memory_mb=0)
+    assert loaded.shape == (4, 5)
+
+
+def test_parser_accepts_dense_memory_limit() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.h5ad",
+            "--output", "markers.csv",
+            "--max-dense-memory-mb", "512",
+        ]
+    )
+
+    assert args.max_dense_memory_mb == 512
 
 
 def test_run_reads_sparse_h5ad(
