@@ -43,6 +43,12 @@ limit with `--max-dense-memory-mb`, or explicitly pass `0` to disable the
 guard. CSV inputs and Scanpy analysis are not subject to this dense-conversion
 limit. Negative, non-finite, Boolean, and non-numeric limits are rejected.
 
+The Native engine also calculates gene statistics in chunks of 1,000 genes to
+limit temporary per-cluster arrays. Use `--gene-chunk-size` to tune this for
+the available memory. Benjamini-Hochberg correction is still applied across
+all tested genes in a cluster, so changing the chunk size does not change
+marker values, ordering, or adjusted p-values.
+
 ## Analysis engines
 
 MarkerGeneFinderMini provides two analysis engines:
@@ -208,13 +214,15 @@ to write the same runtime and dataset metadata to a standalone JSON file:
 marker-gene-finder \
   --input expression.h5ad \
   --output markers.csv \
-  --engine scanpy \
+  --engine native \
   --cluster-column leiden \
+  --gene-chunk-size 500 \
   --diagnostics-json diagnostics.json
 ```
 
 Durations use a monotonic high-resolution clock and are intended for runtime
-comparison and troubleshooting, not as stable performance assertions.
+comparison and troubleshooting, not as stable performance assertions. Native
+diagnostics also record the resolved gene chunk size.
 
 ## Web interface
 

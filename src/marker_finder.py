@@ -47,6 +47,17 @@ RANK_BY_CHOICES = (
     "p_adj",
 )
 DEFAULT_MAX_DENSE_MEMORY_MB = 2048.0
+DEFAULT_GENE_CHUNK_SIZE = 1000
+
+
+def _validate_gene_chunk_size(gene_chunk_size: int) -> None:
+    """Require a positive, non-Boolean Native gene chunk size."""
+    if (
+        isinstance(gene_chunk_size, bool)
+        or not isinstance(gene_chunk_size, (int, np.integer))
+        or gene_chunk_size < 1
+    ):
+        raise ValueError("gene_chunk_size must be a positive integer.")
 
 
 def _rank_markers(markers: pd.DataFrame, rank_by: str, top_n: int) -> pd.DataFrame:
@@ -381,15 +392,16 @@ def _gene_columns(
             + ", ".join(non_numeric)
         )
 
-    if expression[genes].isna().any().any():
-        raise ValueError(
-            "Gene-expression values cannot contain missing values."
-        )
-
-    if (expression[genes] < 0).any().any():
-        raise ValueError(
-            "Gene-expression values cannot be negative."
-        )
+    for start in range(0, len(genes), DEFAULT_GENE_CHUNK_SIZE):
+        values = expression[genes[start:start + DEFAULT_GENE_CHUNK_SIZE]]
+        if values.isna().any().any():
+            raise ValueError(
+                "Gene-expression values cannot contain missing values."
+            )
+        if (values < 0).any().any():
+            raise ValueError(
+                "Gene-expression values cannot be negative."
+            )
 
     return genes
 
@@ -415,11 +427,14 @@ def find_markers(
     min_mean_difference: float = 0.0,
     max_other_mean: float | None = None,
     max_cells_expressing_out: int | None = None,
+    gene_chunk_size: int = DEFAULT_GENE_CHUNK_SIZE,
 ) -> pd.DataFrame:
-    """Return the top fold-change-ranked genes for every cluster."""
+    """Return top markers while processing Native gene statistics in chunks."""
 
     if top_n < 1:
         raise ValueError("top_n must be at least 1.")
+
+    _validate_gene_chunk_size(gene_chunk_size)
 
     if (
         isinstance(min_cells_expressing, bool)
@@ -489,54 +504,57 @@ def find_markers(
         cluster_size = int(in_cluster.sum())
         reference_size = int((~in_cluster).sum())
 
-        cluster_values = expression.loc[in_cluster, genes]
-        other_values = expression.loc[~in_cluster, genes]
+        chunk_results = []
+        for start in range(0, len(genes), gene_chunk_size):
+            chunk = genes[start:start + gene_chunk_size]
+            cluster_values = expression.loc[in_cluster, chunk].to_numpy()
+            other_values = expression.loc[~in_cluster, chunk].to_numpy()
+            cluster_mean = cluster_values.mean(axis=0)
+            other_mean = other_values.mean(axis=0)
+            cluster_expressed = cluster_values > 0
+            other_expressed = other_values > 0
+            cells_expressing_in = cluster_expressed.sum(axis=0)
+            cells_expressing_out = other_expressed.sum(axis=0)
+            pct_in = cells_expressing_in / cluster_size
+            pct_out = cells_expressing_out / reference_size
+            p_values = np.asarray(
+                mannwhitneyu(
+                    cluster_values,
+                    other_values,
+                    alternative="greater",
+                    axis=0,
+                    method="asymptotic",
+                ).pvalue,
+                dtype=float,
+            )
+            chunk_results.append(
+                pd.DataFrame(
+                    {
+                        "cluster": cluster,
+                        "gene": chunk,
+                        "cluster_size": cluster_size,
+                        "reference_size": reference_size,
+                        "cluster_mean": cluster_mean,
+                        "other_mean": other_mean,
+                        "mean_difference": cluster_mean - other_mean,
+                        "pct_in": pct_in,
+                        "pct_out": pct_out,
+                        "cells_expressing_in": cells_expressing_in,
+                        "cells_expressing_out": cells_expressing_out,
+                        "pct_difference": pct_in - pct_out,
+                        "log2FC": np.log2(
+                            (cluster_mean + pseudocount)
+                            / (other_mean + pseudocount)
+                        ),
+                        "p_value": p_values,
+                    }
+                )
+            )
 
-        cluster_mean = cluster_values.mean(axis=0)
-        other_mean = other_values.mean(axis=0)
-
-        pct_in = cluster_values.gt(0).mean(axis=0)
-        pct_out = other_values.gt(0).mean(axis=0)
-        cells_expressing_in = cluster_values.gt(0).sum(axis=0)
-        cells_expressing_out = other_values.gt(0).sum(axis=0)
-
-        log2fc = np.log2(
-            (cluster_mean.to_numpy() + pseudocount)
-            / (other_mean.to_numpy() + pseudocount)
-        )
-
-        test_result = mannwhitneyu(
-            cluster_values.to_numpy(),
-            other_values.to_numpy(),
-            alternative="greater",
-            axis=0,
-            method="asymptotic",
-        )
-
-        p_values = np.asarray(
-            test_result.pvalue,
-            dtype=float,
-        )
-        p_adjusted = _benjamini_hochberg(p_values)
-
-        cluster_result = pd.DataFrame(
-            {
-                "cluster": cluster,
-                "gene": genes,
-                "cluster_size": cluster_size,
-                "reference_size": reference_size,
-                "cluster_mean": cluster_mean.to_numpy(),
-                "other_mean": other_mean.to_numpy(),
-                "mean_difference": (cluster_mean - other_mean).to_numpy(),
-                "pct_in": pct_in.to_numpy(),
-                "pct_out": pct_out.to_numpy(),
-                "cells_expressing_in": cells_expressing_in.to_numpy(),
-                "cells_expressing_out": cells_expressing_out.to_numpy(),
-                "pct_difference": (pct_in - pct_out).to_numpy(),
-                "log2FC": log2fc,
-                "p_value": p_values,
-                "p_adj": p_adjusted,
-            }
+        cluster_result = pd.concat(chunk_results, ignore_index=True)
+        # Adjust across every tested gene, not independently within chunks.
+        cluster_result["p_adj"] = _benjamini_hochberg(
+            cluster_result["p_value"].to_numpy()
         )
 
         other_mean_passes = (
@@ -839,11 +857,13 @@ def run(
     max_other_mean: float | None = None,
     max_cells_expressing_out: int | None = None,
     max_dense_memory_mb: float | None = DEFAULT_MAX_DENSE_MEMORY_MB,
+    gene_chunk_size: int = DEFAULT_GENE_CHUNK_SIZE,
     diagnostics: dict[str, object] | None = None,
 ) -> pd.DataFrame:
     """Read an expression dataset, find markers and save the results."""
 
     run_started = perf_counter()
+    _validate_gene_chunk_size(gene_chunk_size)
 
     if use_raw and layer is not None:
         raise ValueError("use_raw and layer are mutually exclusive.")
@@ -943,6 +963,7 @@ def run(
             min_mean_difference=min_mean_difference,
             max_other_mean=max_other_mean,
             max_cells_expressing_out=max_cells_expressing_out,
+            gene_chunk_size=gene_chunk_size,
         )
         analysis_seconds = perf_counter() - analysis_started
 
@@ -965,6 +986,9 @@ def run(
                 "genes": gene_count,
                 "clusters": cluster_count,
                 "marker_rows": len(markers),
+                "gene_chunk_size": (
+                    gene_chunk_size if engine == "native" else None
+                ),
                 "load_seconds": load_seconds,
                 "analysis_seconds": analysis_seconds,
                 "output_seconds": output_seconds,
@@ -1105,6 +1129,15 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Native H5AD dense-conversion safety limit in MiB; "
             "use 0 to disable it."
+        ),
+    )
+    parser.add_argument(
+        "--gene-chunk-size",
+        type=int,
+        default=DEFAULT_GENE_CHUNK_SIZE,
+        help=(
+            "Number of genes processed together by the Native engine "
+            f"(default: {DEFAULT_GENE_CHUNK_SIZE})."
         ),
     )
     parser.add_argument(
@@ -1281,6 +1314,7 @@ def main() -> None:
         excluded_genes=args.exclude_gene,
         excluded_prefixes=args.exclude_prefix,
         max_dense_memory_mb=args.max_dense_memory_mb,
+        gene_chunk_size=args.gene_chunk_size,
     )
 
     if bool(args.input_dir) != bool(args.output_dir):

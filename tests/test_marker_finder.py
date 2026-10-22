@@ -54,6 +54,18 @@ def test_parser_accepts_diagnostics_path() -> None:
     assert args.diagnostics_json == "diagnostics.json"
 
 
+def test_parser_accepts_native_gene_chunk_size() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--gene-chunk-size", "17",
+        ]
+    )
+
+    assert args.gene_chunk_size == 17
+
+
 def test_run_batch_continues_after_an_input_failure(tmp_path: Path) -> None:
     input_dir = tmp_path / "inputs"
     output_dir = tmp_path / "outputs"
@@ -117,6 +129,7 @@ def test_run_populates_runtime_diagnostics(tmp_path: Path) -> None:
     assert diagnostics["genes"] == 8
     assert diagnostics["clusters"] == 4
     assert diagnostics["marker_rows"] == len(markers)
+    assert diagnostics["gene_chunk_size"] == 1000
     for name in (
         "load_seconds",
         "analysis_seconds",
@@ -1104,3 +1117,26 @@ def test_excluding_every_gene_is_rejected() -> None:
     expression = pd.DataFrame({"cluster": ["A", "B"], "G": [1, 0]})
     with pytest.raises(ValueError, match="removed every gene"):
         find_markers(expression, cell_column=None, excluded_genes=["G"])
+
+
+def test_native_gene_chunking_preserves_marker_results() -> None:
+    expression = pd.read_csv(EXAMPLE_DATA)
+
+    unchunked = find_markers(
+        expression,
+        top_n=100,
+        gene_chunk_size=len(expression.columns),
+    )
+    one_gene_chunks = find_markers(
+        expression,
+        top_n=100,
+        gene_chunk_size=1,
+    )
+
+    pd.testing.assert_frame_equal(one_gene_chunks, unchunked)
+
+
+@pytest.mark.parametrize("value", [0, -1, 1.5, True])
+def test_invalid_native_gene_chunk_size_is_rejected(value) -> None:
+    with pytest.raises(ValueError, match="gene_chunk_size"):
+        find_markers(pd.read_csv(EXAMPLE_DATA), gene_chunk_size=value)
