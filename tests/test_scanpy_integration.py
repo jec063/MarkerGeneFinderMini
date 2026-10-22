@@ -78,6 +78,26 @@ def test_parser_accepts_scanpy_engine() -> None:
     assert args.engine == "scanpy"
 
 
+def test_scanpy_run_rejects_parallel_native_workers(tmp_path: Path) -> None:
+    input_path = tmp_path / "expression.h5ad"
+    ad.AnnData(
+        X=np.ones((4, 2)),
+        obs=pd.DataFrame(
+            {"cluster": pd.Categorical(["A", "A", "B", "B"])},
+            index=[f"cell_{index}" for index in range(4)],
+        ),
+        var=pd.DataFrame(index=["G1", "G2"]),
+    ).write_h5ad(input_path)
+
+    with pytest.raises(ValueError, match="Native engine only"):
+        run(
+            input_path,
+            tmp_path / "markers.csv",
+            engine="scanpy",
+            workers=2,
+        )
+
+
 def test_scanpy_max_pct_out_filters_broadly_expressed_genes() -> None:
     adata = ad.AnnData(
         X=np.array(

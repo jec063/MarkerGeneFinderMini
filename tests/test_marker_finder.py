@@ -78,6 +78,18 @@ def test_parser_accepts_quiet_progress_mode() -> None:
     assert args.quiet is True
 
 
+def test_parser_accepts_native_workers() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--workers", "3",
+        ]
+    )
+
+    assert args.workers == 3
+
+
 def test_run_batch_continues_after_an_input_failure(tmp_path: Path) -> None:
     input_dir = tmp_path / "inputs"
     output_dir = tmp_path / "outputs"
@@ -142,6 +154,7 @@ def test_run_populates_runtime_diagnostics(tmp_path: Path) -> None:
     assert diagnostics["clusters"] == 4
     assert diagnostics["marker_rows"] == len(markers)
     assert diagnostics["gene_chunk_size"] == 1000
+    assert diagnostics["workers"] == 1
     for name in (
         "load_seconds",
         "analysis_seconds",
@@ -1170,3 +1183,32 @@ def test_native_progress_callback_reports_each_completed_cluster() -> None:
         (1, 2, 0),
         (2, 2, 1),
     ]
+
+
+def test_parallel_native_analysis_preserves_order_and_results() -> None:
+    expression = pd.read_csv(EXAMPLE_DATA)
+    events = []
+
+    sequential = find_markers(expression, top_n=100, workers=1)
+    parallel = find_markers(
+        expression,
+        top_n=100,
+        workers=2,
+        progress_callback=lambda completed, total, cluster: events.append(
+            (completed, total, cluster)
+        ),
+    )
+
+    pd.testing.assert_frame_equal(parallel, sequential)
+    assert events == [
+        (1, 4, 0),
+        (2, 4, 1),
+        (3, 4, 2),
+        (4, 4, 3),
+    ]
+
+
+@pytest.mark.parametrize("value", [0, -1, 1.5, True])
+def test_invalid_native_worker_count_is_rejected(value) -> None:
+    with pytest.raises(ValueError, match="workers"):
+        find_markers(pd.read_csv(EXAMPLE_DATA), workers=value)
