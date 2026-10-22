@@ -6,6 +6,7 @@ import argparse
 import json
 import sys
 from collections.abc import Callable, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from time import perf_counter
 
@@ -50,6 +51,16 @@ RANK_BY_CHOICES = (
 DEFAULT_MAX_DENSE_MEMORY_MB = 2048.0
 DEFAULT_GENE_CHUNK_SIZE = 1000
 ProgressCallback = Callable[[int, int, object], None]
+
+
+def _validate_workers(workers: int) -> None:
+    """Require a positive, non-Boolean worker count."""
+    if (
+        isinstance(workers, bool)
+        or not isinstance(workers, (int, np.integer))
+        or workers < 1
+    ):
+        raise ValueError("workers must be a positive integer.")
 
 
 def _validate_gene_chunk_size(gene_chunk_size: int) -> None:
@@ -431,13 +442,15 @@ def find_markers(
     max_cells_expressing_out: int | None = None,
     gene_chunk_size: int = DEFAULT_GENE_CHUNK_SIZE,
     progress_callback: ProgressCallback | None = None,
+    workers: int = 1,
 ) -> pd.DataFrame:
-    """Return top markers while processing Native gene statistics in chunks."""
+    """Return top markers with chunked, optionally parallel Native analysis."""
 
     if top_n < 1:
         raise ValueError("top_n must be at least 1.")
 
     _validate_gene_chunk_size(gene_chunk_size)
+    _validate_workers(workers)
 
     if (
         isinstance(min_cells_expressing, bool)
@@ -496,13 +509,11 @@ def find_markers(
     )
     genes = _filter_genes(genes, excluded_genes, excluded_prefixes)
 
-    results = []
-
     clusters = _selected_clusters(
         expression[cluster_column], target_clusters, min_cluster_size,
     )
 
-    for cluster_index, cluster in enumerate(clusters, start=1):
+    def analyze_cluster(cluster: object) -> pd.DataFrame:
         in_cluster = expression[cluster_column] == cluster
         cluster_size = int(in_cluster.sum())
         reference_size = int((~in_cluster).sum())
@@ -559,13 +570,11 @@ def find_markers(
         cluster_result["p_adj"] = _benjamini_hochberg(
             cluster_result["p_value"].to_numpy()
         )
-
         other_mean_passes = (
             True if max_other_mean is None
             else cluster_result["other_mean"] <= max_other_mean
         )
-
-        cluster_result = _rank_markers(
+        return _rank_markers(
             cluster_result.loc[
                 (cluster_result["pct_in"] >= min_pct)
                 & (cluster_result["cells_expressing_in"] >= min_cells_expressing)
@@ -586,9 +595,24 @@ def find_markers(
             top_n,
         )
 
-        results.append(cluster_result)
-        if progress_callback is not None:
-            progress_callback(cluster_index, len(clusters), cluster)
+    if workers == 1:
+        analyzed = map(analyze_cluster, clusters)
+        executor = None
+    else:
+        executor = ThreadPoolExecutor(max_workers=workers)
+        analyzed = executor.map(analyze_cluster, clusters)
+
+    try:
+        results = []
+        for cluster_index, (cluster, cluster_result) in enumerate(
+            zip(clusters, analyzed), start=1
+        ):
+            results.append(cluster_result)
+            if progress_callback is not None:
+                progress_callback(cluster_index, len(clusters), cluster)
+    finally:
+        if executor is not None:
+            executor.shutdown(wait=True, cancel_futures=True)
 
     if not results:
         return pd.DataFrame(columns=RESULT_COLUMNS)
@@ -867,12 +891,14 @@ def run(
     max_dense_memory_mb: float | None = DEFAULT_MAX_DENSE_MEMORY_MB,
     gene_chunk_size: int = DEFAULT_GENE_CHUNK_SIZE,
     progress_callback: ProgressCallback | None = None,
+    workers: int = 1,
     diagnostics: dict[str, object] | None = None,
 ) -> pd.DataFrame:
     """Read an expression dataset, find markers and save the results."""
 
     run_started = perf_counter()
     _validate_gene_chunk_size(gene_chunk_size)
+    _validate_workers(workers)
 
     if use_raw and layer is not None:
         raise ValueError("use_raw and layer are mutually exclusive.")
@@ -882,6 +908,10 @@ def run(
     if engine not in {"native", "scanpy"}:
         raise ValueError(
             "engine must be either 'native' or 'scanpy'."
+        )
+    if engine == "scanpy" and workers != 1:
+        raise ValueError(
+            "workers greater than 1 are supported by the Native engine only."
         )
 
     input_path = Path(input_path)
@@ -975,6 +1005,7 @@ def run(
             max_cells_expressing_out=max_cells_expressing_out,
             gene_chunk_size=gene_chunk_size,
             progress_callback=progress_callback,
+            workers=workers,
         )
         analysis_seconds = perf_counter() - analysis_started
 
@@ -1000,6 +1031,7 @@ def run(
                 "gene_chunk_size": (
                     gene_chunk_size if engine == "native" else None
                 ),
+                "workers": workers,
                 "load_seconds": load_seconds,
                 "analysis_seconds": analysis_seconds,
                 "output_seconds": output_seconds,
@@ -1149,6 +1181,15 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Number of genes processed together by the Native engine "
             f"(default: {DEFAULT_GENE_CHUNK_SIZE})."
+        ),
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help=(
+            "Native target clusters analyzed concurrently (default: 1). "
+            "Higher values can increase peak memory use."
         ),
     )
     parser.add_argument(
@@ -1339,6 +1380,7 @@ def main() -> None:
         max_dense_memory_mb=args.max_dense_memory_mb,
         gene_chunk_size=args.gene_chunk_size,
         progress_callback=None if args.quiet else report_progress,
+        workers=args.workers,
     )
 
     if bool(args.input_dir) != bool(args.output_dir):

@@ -56,6 +56,14 @@ machine-readable while making long Native or Scanpy runs observable. Pass
 `progress_callback` to `find_markers()`, `find_markers_scanpy()`, or `run()`;
 the callback receives the completed count, total count, and cluster label.
 
+Native command-line analysis can process independent target clusters
+concurrently with `--workers`. The default is one worker, which preserves the
+lowest peak-memory behavior. Multiple workers preserve cluster ordering and
+marker results, but each active worker needs its own temporary gene-chunk
+arrays, so increase the value only when additional memory is available. Scanpy
+already performs its ranking in one engine call and therefore requires one
+worker.
+
 ## Analysis engines
 
 MarkerGeneFinderMini provides two analysis engines:
@@ -224,6 +232,7 @@ marker-gene-finder \
   --engine native \
   --cluster-column leiden \
   --gene-chunk-size 500 \
+  --workers 2 \
   --diagnostics-json diagnostics.json
 ```
 
@@ -232,6 +241,7 @@ For automation that should emit only its final summary, add `--quiet`.
 Durations use a monotonic high-resolution clock and are intended for runtime
 comparison and troubleshooting, not as stable performance assertions. Native
 diagnostics also record the resolved gene chunk size.
+They also record the configured worker count.
 
 ## Web interface
 
