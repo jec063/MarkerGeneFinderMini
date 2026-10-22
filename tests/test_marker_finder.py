@@ -173,6 +173,52 @@ def test_native_h5ad_rejects_dense_conversion_above_limit(
     assert loaded.shape == (4, 5)
 
 
+@pytest.mark.parametrize(
+    "limit",
+    [-1, float("nan"), float("inf"), True, "100"],
+)
+def test_native_h5ad_rejects_invalid_dense_memory_limits(
+    tmp_path: Path,
+    limit,
+) -> None:
+    input_path = tmp_path / "expression.h5ad"
+    ad.AnnData(X=np.ones((2, 2))).write_h5ad(input_path)
+
+    with pytest.raises(ValueError, match="max_dense_memory_mb"):
+        load_expression(input_path, max_dense_memory_mb=limit)
+
+
+def test_batch_manifest_records_dense_memory_failure(tmp_path: Path) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "outputs"
+    input_dir.mkdir()
+    input_path = input_dir / "large.h5ad"
+    adata = ad.AnnData(
+        X=sparse.csr_matrix(np.ones((4, 3))),
+        obs=pd.DataFrame(
+            {"cluster": ["A", "A", "B", "B"]},
+            index=[f"cell_{index}" for index in range(4)],
+        ),
+        var=pd.DataFrame(index=["G1", "G2", "G3"]),
+    )
+    adata.write_h5ad(input_path)
+
+    runs = run_batch(
+        input_dir,
+        output_dir,
+        max_dense_memory_mb=0.00001,
+    )
+
+    assert runs[0]["status"] == "failed"
+    assert "dense conversion requires" in runs[0]["error"]
+    assert not (output_dir / "large.h5ad.markers.csv").exists()
+    manifest = json.loads(
+        (output_dir / "batch_manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["completed"] == 0
+    assert manifest["failed"] == 1
+
+
 def test_parser_accepts_dense_memory_limit() -> None:
     args = build_parser().parse_args(
         [

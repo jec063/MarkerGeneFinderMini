@@ -129,6 +129,10 @@ def _enforce_dense_memory_limit(
         return
     if (
         isinstance(max_dense_memory_mb, bool)
+        or not isinstance(
+            max_dense_memory_mb,
+            (int, float, np.integer, np.floating),
+        )
         or not np.isfinite(max_dense_memory_mb)
         or max_dense_memory_mb < 0
     ):

@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **1.3.0**. The version is shown in the web
+Current application version: **1.3.1**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -41,7 +41,7 @@ when the estimate exceeds the default 2,048 MiB safety limit, avoiding a large
 unexpected allocation. Use Scanpy to preserve sparse storage, change the CLI
 limit with `--max-dense-memory-mb`, or explicitly pass `0` to disable the
 guard. CSV inputs and Scanpy analysis are not subject to this dense-conversion
-limit.
+limit. Negative, non-finite, Boolean, and non-numeric limits are rejected.
 
 ## Analysis engines
 
