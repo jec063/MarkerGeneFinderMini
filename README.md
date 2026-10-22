@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **1.0.1**. The version is shown in the web
+Current application version: **1.2.0**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -168,6 +168,28 @@ marker-gene-finder --version
 
 Install the optional Streamlit interface with `python -m pip install '.[web]'`
 or the test dependencies with `python -m pip install '.[test]'`.
+
+## Batch command-line analysis
+
+Use `--input-dir` and `--output-dir` to apply one configuration to every CSV
+or H5AD file directly inside a directory:
+
+```bash
+marker-gene-finder \
+  --input-dir batch_inputs \
+  --output-dir batch_outputs \
+  --cluster-column cluster \
+  --min-log2fc 1.0 \
+  --max-p-adj 0.05
+```
+
+Each input receives its own `<input-name>.markers.csv` output. The output
+directory also contains `batch_manifest.json`, which records the application
+version, output path, marker-row count, and success or error for every input.
+Inputs are processed in filename order. A failed input is recorded without
+preventing later files from running, and the command exits with a nonzero
+status after the batch finishes if any input failed. Batch mode intentionally
+uses the same analysis options as single-file mode.
 
 ## Web interface
 

@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import anndata as ad
@@ -12,6 +13,7 @@ from src.marker_finder import (
     find_markers,
     load_expression,
     run,
+    run_batch,
 )
 from src.version import APP_VERSION
 
@@ -26,6 +28,70 @@ def test_parser_reports_application_version(capsys) -> None:
         build_parser().parse_args(["--version"])
 
     assert capsys.readouterr().out.strip().endswith(APP_VERSION)
+
+
+def test_parser_accepts_batch_directories() -> None:
+    args = build_parser().parse_args(
+        ["--input-dir", "inputs", "--output-dir", "outputs"]
+    )
+
+    assert args.input_dir == "inputs"
+    assert args.output_dir == "outputs"
+    assert args.input is None
+    assert args.output is None
+
+
+def test_run_batch_continues_after_an_input_failure(tmp_path: Path) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "outputs"
+    input_dir.mkdir()
+    pd.DataFrame(
+        {
+            "cluster": ["A", "A", "B", "B"],
+            "GENE_A": [5.0, 4.0, 0.0, 0.0],
+            "GENE_B": [0.0, 0.0, 5.0, 4.0],
+        }
+    ).to_csv(input_dir / "valid.csv", index=False)
+    pd.DataFrame({"GENE": [1.0, 2.0]}).to_csv(
+        input_dir / "invalid.csv", index=False
+    )
+
+    runs = run_batch(
+        input_dir,
+        output_dir,
+        cell_column=None,
+        top_n=1,
+    )
+
+    assert [Path(run["input"]).name for run in runs] == [
+        "invalid.csv",
+        "valid.csv",
+    ]
+    assert [run["status"] for run in runs] == ["failed", "complete"]
+    assert runs[0]["error"]
+    assert runs[1]["marker_rows"] == 2
+    assert (output_dir / "valid.csv.markers.csv").is_file()
+    assert not (output_dir / "invalid.csv.markers.csv").exists()
+
+    manifest = json.loads(
+        (output_dir / "batch_manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["app_version"] == APP_VERSION
+    assert manifest["inputs"] == 2
+    assert manifest["completed"] == 1
+    assert manifest["failed"] == 1
+    assert manifest["runs"] == runs
+
+
+def test_run_batch_rejects_directory_without_supported_inputs(
+    tmp_path: Path,
+) -> None:
+    input_dir = tmp_path / "inputs"
+    input_dir.mkdir()
+    (input_dir / "notes.txt").write_text("not expression data")
+
+    with pytest.raises(ValueError, match="contains no CSV or H5AD"):
+        run_batch(input_dir, tmp_path / "outputs")
 
 
 def test_load_expression_reads_h5ad(
