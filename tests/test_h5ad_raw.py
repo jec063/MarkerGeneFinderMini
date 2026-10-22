@@ -4,7 +4,12 @@ import pandas as pd
 import pytest
 from scipy import sparse
 
-from src.marker_finder import build_parser, find_markers_scanpy, run
+from src.marker_finder import (
+    build_parser,
+    estimate_dense_expression_bytes,
+    find_markers_scanpy,
+    run,
+)
 
 
 @pytest.fixture
@@ -62,6 +67,16 @@ def test_raw_uses_its_own_genes(raw_input, tmp_path, engine):
         rtol=1e-6,
         atol=1e-8,
     )
+
+
+def test_dense_memory_estimate_uses_raw_shape_and_dtype(raw_input):
+    data = ad.read_h5ad(raw_input, backed="r")
+    try:
+        expected = data.raw.n_obs * data.raw.n_vars * data.raw.X.dtype.itemsize
+    finally:
+        data.file.close()
+
+    assert estimate_dense_expression_bytes(raw_input, use_raw=True) == expected
 
 
 @pytest.mark.parametrize("engine", ["native", "scanpy"])
