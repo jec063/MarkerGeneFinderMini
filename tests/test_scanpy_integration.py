@@ -36,10 +36,14 @@ def test_find_markers_scanpy_ranks_expected_genes() -> None:
         var=pd.DataFrame(index=["GENE_A", "GENE_B"]),
     )
 
+    progress_events = []
     markers = find_markers_scanpy(
         adata,
         cluster_column="cluster",
         top_n=1,
+        progress_callback=lambda completed, total, cluster: progress_events.append(
+            (completed, total, cluster)
+        ),
     )
 
     observed = dict(
@@ -57,6 +61,7 @@ def test_find_markers_scanpy_ranks_expected_genes() -> None:
     }
     assert markers["cluster_size"].tolist() == [4, 4]
     assert markers["reference_size"].tolist() == [4, 4]
+    assert progress_events == [(1, 2, "A"), (2, 2, "B")]
 
 def test_parser_accepts_scanpy_engine() -> None:
     args = build_parser().parse_args(

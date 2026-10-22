@@ -49,6 +49,13 @@ the available memory. Benjamini-Hochberg correction is still applied across
 all tested genes in a cluster, so changing the chunk size does not change
 marker values, ordering, or adjusted p-values.
 
+Command-line analyses report completed clusters to standard error, including
+the current and total cluster counts. This keeps CSV output and diagnostics
+machine-readable while making long Native or Scanpy runs observable. Pass
+`--quiet` to suppress progress messages. Library callers can supply a
+`progress_callback` to `find_markers()`, `find_markers_scanpy()`, or `run()`;
+the callback receives the completed count, total count, and cluster label.
+
 ## Analysis engines
 
 MarkerGeneFinderMini provides two analysis engines:
@@ -219,6 +226,8 @@ marker-gene-finder \
   --gene-chunk-size 500 \
   --diagnostics-json diagnostics.json
 ```
+
+For automation that should emit only its final summary, add `--quiet`.
 
 Durations use a monotonic high-resolution clock and are intended for runtime
 comparison and troubleshooting, not as stable performance assertions. Native
