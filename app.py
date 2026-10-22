@@ -11,8 +11,15 @@ import anndata as ad
 import pandas as pd
 import streamlit as st
 
+from src.analysis_profiles import (
+    PROFILE_DEFAULTS,
+    build_analysis_profile,
+    compare_profile_state,
+    is_newer_app_version,
+    reset_profile_state,
+)
 from src.expression_summary import summarize_clusters, summarize_expression
-from src.filter_presets import FILTER_DEFAULTS, FILTER_PRESETS, get_filter_preset
+from src.filter_presets import FILTER_PRESETS, get_filter_preset
 
 from src.marker_finder import (
     find_markers,
@@ -20,7 +27,7 @@ from src.marker_finder import (
     load_expression,
 )
 from src.report_bundle import build_analysis_bundle
-from src.settings_import import load_analysis_settings_upload
+from src.settings_import import load_analysis_profile_upload
 from src.version import APP_VERSION
 from time import perf_counter
 
@@ -140,6 +147,12 @@ def mark_filter_preset_custom() -> None:
     clear_marker_results()
 
 
+def reset_analysis_profile() -> None:
+    """Restore portable analysis controls to their stable defaults."""
+    reset_profile_state(st.session_state)
+    clear_marker_results()
+
+
 use_example_data = st.checkbox(
     "Use example data",
     key="use_example_data",
@@ -236,24 +249,32 @@ else:
 
 with st.sidebar:
 
-    widget_defaults = {
-        "top_n": 5,
-        "rank_by": "log2FC",
-        "min_cluster_size": 1,
-        "min_cells_expressing": 0,
-        "min_cluster_mean": 0.0,
-        "min_mean_difference": 0.0,
-        "limit_other_mean": False,
-        "max_other_mean": 0.0,
-        "limit_cells_expressing_out": False,
-        "max_cells_expressing_out": 0,
-        "pseudocount": 0.1,
-        "excluded_gene_text": "",
-        "excluded_prefix_text": "",
-        **FILTER_DEFAULTS,
-    }
+    widget_defaults = PROFILE_DEFAULTS
     for setting_name, default_value in widget_defaults.items():
         st.session_state.setdefault(setting_name, default_value)
+
+    st.subheader("Analysis profile")
+    profile_name = st.text_input(
+        "Profile name",
+        value="My marker profile",
+        help="Used as the filename and stored inside the portable profile.",
+    )
+    safe_profile_name = "".join(
+        character if character.isalnum() or character in "-_" else "_"
+        for character in profile_name.strip()
+    ).strip("_") or "analysis_profile"
+    st.download_button(
+        "Download current profile",
+        data=build_analysis_profile(st.session_state, profile_name),
+        file_name=f"{safe_profile_name}.json",
+        mime="application/json",
+        help="Save the current portable controls without running an analysis.",
+    )
+    st.button(
+        "Reset profile to defaults",
+        on_click=reset_analysis_profile,
+        help="Restore all portable controls to their stable defaults.",
+    )
 
     uploaded_settings = st.file_uploader(
         "Import analysis settings",
@@ -264,24 +285,41 @@ with st.sidebar:
             "preset selection from an exported settings JSON or analysis bundle."
         ),
     )
-    if st.button(
-        "Apply imported settings",
-        disabled=uploaded_settings is None,
-        key="apply_imported_settings",
-    ):
+    restored_settings = None
+    imported_metadata = None
+    if uploaded_settings is not None:
         try:
-            restored_settings = load_analysis_settings_upload(
+            restored_settings, imported_metadata = load_analysis_profile_upload(
                 uploaded_settings.getvalue(), uploaded_settings.name
             )
         except ValueError as error:
             st.error(f"Could not import analysis settings: {error}")
         else:
-            st.session_state.update(restored_settings)
-            clear_marker_results()
-            st.success(
-                "Imported portable analysis settings. Dataset-specific input, "
-                "cluster, and expression-source selections were left unchanged."
-            )
+            imported_name = imported_metadata["profile_name"] or uploaded_settings.name
+            st.caption(f"Profile preview: {imported_name}")
+            changes = compare_profile_state(st.session_state, restored_settings)
+            if changes:
+                st.dataframe(changes, hide_index=True, width="stretch")
+            else:
+                st.info("The imported profile matches the current portable settings.")
+            if is_newer_app_version(imported_metadata["app_version"]):
+                st.warning(
+                    "This profile was created by newer app version "
+                    f"{imported_metadata['app_version']}. Review compatibility "
+                    "before applying it."
+                )
+
+    if st.button(
+        "Apply imported settings",
+        disabled=restored_settings is None,
+        key="apply_imported_settings",
+    ):
+        st.session_state.update(restored_settings)
+        clear_marker_results()
+        st.success(
+            "Imported portable analysis settings. Dataset-specific input, "
+            "cluster, and expression-source selections were left unchanged."
+        )
 
     filter_preset = st.selectbox(
         "Filter preset",

@@ -112,3 +112,9 @@ def test_settings_import_controls_are_available() -> None:
         item for item in app.button if item.label == "Apply imported settings"
     )
     assert apply_button.disabled is True
+    assert any(
+        item.label == "Download current profile" for item in app.get("download_button")
+    )
+    assert any(
+        item.label == "Reset profile to defaults" for item in app.button
+    )

@@ -295,6 +295,20 @@ column, target clusters, and cell-ID column—are intentionally left unchanged
 and must match the current dataset. Review the restored controls before running
 the analysis.
 
+## Saved analysis profiles
+
+Use **Download current profile** to save the portable controls at any time after
+loading a dataset; running marker analysis is not required. Give the profile a
+descriptive name before downloading it. Profiles use the same validated JSON
+schema as exported analysis settings and can be imported from a standalone JSON
+file or an analysis-bundle ZIP.
+
+Selecting a profile displays a before-and-after table of settings that would
+change. The app warns when a profile was created by a newer application version,
+and no values change until **Apply imported settings** is clicked. Use **Reset
+profile to defaults** to restore every portable control to the stable defaults.
+Dataset-specific selections are deliberately excluded from profiles.
+
 ## Download an analysis bundle
 
 After a successful analysis, click **Download analysis bundle as ZIP** to save
