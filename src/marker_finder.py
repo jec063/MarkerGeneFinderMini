@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -845,6 +846,58 @@ def run(
 
     return markers
 
+
+def run_batch(
+    input_dir: str | Path,
+    output_dir: str | Path,
+    **analysis_options,
+) -> list[dict[str, object]]:
+    """Analyze every supported file and write a machine-readable run manifest."""
+    input_dir = Path(input_dir)
+    output_dir = Path(output_dir)
+    if not input_dir.is_dir():
+        raise ValueError(f"Batch input directory does not exist: {input_dir}")
+
+    inputs = sorted(
+        path for path in input_dir.iterdir()
+        if path.is_file() and path.suffix.lower() in {".csv", ".h5ad"}
+    )
+    if not inputs:
+        raise ValueError("Batch input directory contains no CSV or H5AD files.")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    manifest: list[dict[str, object]] = []
+    for input_path in inputs:
+        output_path = output_dir / f"{input_path.name}.markers.csv"
+        record: dict[str, object] = {
+            "input": str(input_path),
+            "output": str(output_path),
+        }
+        try:
+            markers = run(input_path, output_path, **analysis_options)
+        except Exception as error:
+            record.update(status="failed", marker_rows=0, error=str(error))
+        else:
+            record.update(status="complete", marker_rows=len(markers), error=None)
+        manifest.append(record)
+
+    manifest_path = output_dir / "batch_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "app_version": APP_VERSION,
+                "inputs": len(inputs),
+                "completed": sum(row["status"] == "complete" for row in manifest),
+                "failed": sum(row["status"] == "failed" for row in manifest),
+                "runs": manifest,
+            },
+            indent=2,
+        ) + "\n",
+        encoding="utf-8",
+    )
+    return manifest
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Create the command-line argument parser."""
 
@@ -861,16 +914,24 @@ def build_parser() -> argparse.ArgumentParser:
         version=f"%(prog)s {APP_VERSION}",
     )
 
-    parser.add_argument(
+    inputs = parser.add_mutually_exclusive_group(required=True)
+    inputs.add_argument(
         "--input",
-        required=True,
         help="Input expression CSV or H5AD path.",
     )
+    inputs.add_argument(
+        "--input-dir",
+        help="Directory of CSV or H5AD files to analyze as a batch.",
+    )
 
-    parser.add_argument(
+    outputs = parser.add_mutually_exclusive_group(required=True)
+    outputs.add_argument(
         "--output",
-        required=True,
         help="Output marker CSV path.",
+    )
+    outputs.add_argument(
+        "--output-dir",
+        help="Directory for batch marker CSVs and batch_manifest.json.",
     )
 
     parser.add_argument(
@@ -1037,9 +1098,7 @@ def main() -> None:
 
     args = build_parser().parse_args()
 
-    markers = run(
-        input_path=args.input,
-        output_path=args.output,
+    analysis_options = dict(
         cluster_column=args.cluster_column,
         cell_column=args.cell_column,
         top_n=args.top_n,
@@ -1062,6 +1121,29 @@ def main() -> None:
         min_cluster_size=args.min_cluster_size,
         excluded_genes=args.exclude_gene,
         excluded_prefixes=args.exclude_prefix,
+    )
+
+    if bool(args.input_dir) != bool(args.output_dir):
+        raise SystemExit("--input-dir and --output-dir must be used together.")
+    if bool(args.input) != bool(args.output):
+        raise SystemExit("--input and --output must be used together.")
+
+    if args.input_dir:
+        manifest = run_batch(args.input_dir, args.output_dir, **analysis_options)
+        completed = sum(row["status"] == "complete" for row in manifest)
+        failed = len(manifest) - completed
+        print(
+            f"Batch complete: {completed} succeeded, {failed} failed. "
+            f"Manifest: {Path(args.output_dir) / 'batch_manifest.json'}"
+        )
+        if failed:
+            raise SystemExit(1)
+        return
+
+    markers = run(
+        input_path=args.input,
+        output_path=args.output,
+        **analysis_options,
     )
 
     print(
