@@ -45,6 +45,7 @@ RANK_BY_CHOICES = (
     "pct_difference",
     "p_adj",
 )
+DEFAULT_MAX_DENSE_MEMORY_MB = 2048.0
 
 
 def _rank_markers(markers: pd.DataFrame, rank_by: str, top_n: int) -> pd.DataFrame:
@@ -83,12 +84,81 @@ def _raw_expression(adata: ad.AnnData) -> ad.AnnData:
     )
 
 
+def estimate_dense_expression_bytes(
+    input_path: str | Path,
+    layer: str | None = None,
+    use_raw: bool = False,
+) -> int:
+    """Estimate bytes needed to materialize the selected H5AD matrix."""
+    input_path = Path(input_path)
+    if input_path.suffix.lower() != ".h5ad":
+        raise ValueError("Dense-memory estimation requires H5AD input.")
+    if use_raw and layer is not None:
+        raise ValueError("use_raw and layer are mutually exclusive.")
+
+    adata = ad.read_h5ad(input_path, backed="r")
+    try:
+        if use_raw:
+            if adata.raw is None or adata.raw.X is None:
+                raise ValueError("The AnnData object does not contain raw expression.")
+            matrix = adata.raw.X
+        elif layer is not None:
+            if layer not in adata.layers:
+                raise ValueError(f"Missing AnnData layer: {layer!r}.")
+            matrix = adata.layers[layer]
+        else:
+            if adata.X is None:
+                raise ValueError(
+                    "The AnnData object does not contain an expression matrix in X."
+                )
+            matrix = adata.X
+        rows, columns = matrix.shape
+        return int(rows) * int(columns) * np.dtype(matrix.dtype).itemsize
+    finally:
+        adata.file.close()
+
+
+def _enforce_dense_memory_limit(
+    input_path: str | Path,
+    layer: str | None,
+    use_raw: bool,
+    max_dense_memory_mb: float | None,
+) -> None:
+    """Reject Native H5AD conversion when its dense matrix exceeds a limit."""
+    if max_dense_memory_mb is None:
+        return
+    if (
+        isinstance(max_dense_memory_mb, bool)
+        or not np.isfinite(max_dense_memory_mb)
+        or max_dense_memory_mb < 0
+    ):
+        raise ValueError("max_dense_memory_mb must be non-negative or None.")
+    if max_dense_memory_mb == 0:
+        return
+
+    estimated_bytes = estimate_dense_expression_bytes(
+        input_path,
+        layer=layer,
+        use_raw=use_raw,
+    )
+    estimated_mb = estimated_bytes / (1024 ** 2)
+    if estimated_mb > max_dense_memory_mb:
+        raise ValueError(
+            "Native dense conversion requires approximately "
+            f"{estimated_mb:.1f} MiB, exceeding the "
+            f"{max_dense_memory_mb:g} MiB safety limit. Use the Scanpy "
+            "engine, raise max_dense_memory_mb, or set it to 0 to disable "
+            "the limit."
+        )
+
+
 def load_expression(
     input_path: str | Path,
     cluster_column: str = "cluster",
     cell_column: str | None = "cell_id",
     layer: str | None = None,
     use_raw: bool = False,
+    max_dense_memory_mb: float | None = DEFAULT_MAX_DENSE_MEMORY_MB,
 ) -> pd.DataFrame:
     """Load CSV or AnnData input as an expression table."""
 
@@ -108,6 +178,13 @@ def load_expression(
         raise ValueError(
             "Unsupported input format. Use a .csv or .h5ad file."
         )
+
+    _enforce_dense_memory_limit(
+        input_path,
+        layer,
+        use_raw,
+        max_dense_memory_mb,
+    )
 
     adata = ad.read_h5ad(input_path)
     if use_raw:
@@ -756,6 +833,7 @@ def run(
     min_mean_difference: float = 0.0,
     max_other_mean: float | None = None,
     max_cells_expressing_out: int | None = None,
+    max_dense_memory_mb: float | None = DEFAULT_MAX_DENSE_MEMORY_MB,
 ) -> pd.DataFrame:
     """Read an expression dataset, find markers and save the results."""
 
@@ -811,6 +889,7 @@ def run(
             use_raw=use_raw,
             cluster_column=cluster_column,
             cell_column=cell_column,
+            max_dense_memory_mb=max_dense_memory_mb,
         )
         selected_clusters = _resolve_cluster_arguments(
             expression[cluster_column], target_clusters
@@ -954,6 +1033,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--cell-column",
         default="cell",
         help="Cell-ID column excluded from gene columns.",
+    )
+    parser.add_argument(
+        "--max-dense-memory-mb",
+        type=float,
+        default=DEFAULT_MAX_DENSE_MEMORY_MB,
+        help=(
+            "Native H5AD dense-conversion safety limit in MiB; "
+            "use 0 to disable it."
+        ),
     )
 
     parser.add_argument(
@@ -1121,6 +1209,7 @@ def main() -> None:
         min_cluster_size=args.min_cluster_size,
         excluded_genes=args.exclude_gene,
         excluded_prefixes=args.exclude_prefix,
+        max_dense_memory_mb=args.max_dense_memory_mb,
     )
 
     if bool(args.input_dir) != bool(args.output_dir):
