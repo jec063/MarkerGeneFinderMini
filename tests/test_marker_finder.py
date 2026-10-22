@@ -42,6 +42,18 @@ def test_parser_accepts_batch_directories() -> None:
     assert args.output is None
 
 
+def test_parser_accepts_diagnostics_path() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--diagnostics-json", "diagnostics.json",
+        ]
+    )
+
+    assert args.diagnostics_json == "diagnostics.json"
+
+
 def test_run_batch_continues_after_an_input_failure(tmp_path: Path) -> None:
     input_dir = tmp_path / "inputs"
     output_dir = tmp_path / "outputs"
@@ -70,6 +82,7 @@ def test_run_batch_continues_after_an_input_failure(tmp_path: Path) -> None:
     ]
     assert [run["status"] for run in runs] == ["failed", "complete"]
     assert runs[0]["error"]
+    assert runs[0]["duration_seconds"] >= 0
     assert runs[1]["marker_rows"] == 2
     assert (output_dir / "valid.csv.markers.csv").is_file()
     assert not (output_dir / "invalid.csv.markers.csv").exists()
@@ -81,7 +94,36 @@ def test_run_batch_continues_after_an_input_failure(tmp_path: Path) -> None:
     assert manifest["inputs"] == 2
     assert manifest["completed"] == 1
     assert manifest["failed"] == 1
+    assert manifest["duration_seconds"] >= 0
     assert manifest["runs"] == runs
+    assert manifest["runs"][1]["diagnostics"]["marker_rows"] == 2
+
+
+def test_run_populates_runtime_diagnostics(tmp_path: Path) -> None:
+    output_path = tmp_path / "markers.csv"
+    diagnostics: dict[str, object] = {}
+
+    markers = run(
+        EXAMPLE_DATA,
+        output_path,
+        top_n=1,
+        diagnostics=diagnostics,
+    )
+
+    assert diagnostics["app_version"] == APP_VERSION
+    assert diagnostics["engine"] == "native"
+    assert diagnostics["input_format"] == "csv"
+    assert diagnostics["cells"] == 12
+    assert diagnostics["genes"] == 8
+    assert diagnostics["clusters"] == 4
+    assert diagnostics["marker_rows"] == len(markers)
+    for name in (
+        "load_seconds",
+        "analysis_seconds",
+        "output_seconds",
+        "total_seconds",
+    ):
+        assert diagnostics[name] >= 0
 
 
 def test_run_batch_rejects_directory_without_supported_inputs(

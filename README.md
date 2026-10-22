@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **1.3.1**. The version is shown in the web
+Current application version: **1.4.0**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -198,6 +198,23 @@ Inputs are processed in filename order. A failed input is recorded without
 preventing later files from running, and the command exits with a nonzero
 status after the batch finishes if any input failed. Batch mode intentionally
 uses the same analysis options as single-file mode.
+
+Successful batch records also include cells, genes, clusters, marker rows, and
+load, analysis, output, and total durations. The manifest records the overall
+batch duration. For a single input, pass `--diagnostics-json diagnostics.json`
+to write the same runtime and dataset metadata to a standalone JSON file:
+
+```bash
+marker-gene-finder \
+  --input expression.h5ad \
+  --output markers.csv \
+  --engine scanpy \
+  --cluster-column leiden \
+  --diagnostics-json diagnostics.json
+```
+
+Durations use a monotonic high-resolution clock and are intended for runtime
+comparison and troubleshooting, not as stable performance assertions.
 
 ## Web interface
 

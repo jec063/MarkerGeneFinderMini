@@ -6,6 +6,7 @@ import argparse
 import json
 from collections.abc import Sequence
 from pathlib import Path
+from time import perf_counter
 
 import anndata as ad
 import numpy as np
@@ -838,8 +839,11 @@ def run(
     max_other_mean: float | None = None,
     max_cells_expressing_out: int | None = None,
     max_dense_memory_mb: float | None = DEFAULT_MAX_DENSE_MEMORY_MB,
+    diagnostics: dict[str, object] | None = None,
 ) -> pd.DataFrame:
     """Read an expression dataset, find markers and save the results."""
+
+    run_started = perf_counter()
 
     if use_raw and layer is not None:
         raise ValueError("use_raw and layer are mutually exclusive.")
@@ -852,6 +856,7 @@ def run(
         )
 
     input_path = Path(input_path)
+    load_started = perf_counter()
 
     if engine == "scanpy":
         if input_path.suffix.lower() != ".h5ad":
@@ -860,6 +865,16 @@ def run(
             )
 
         adata = ad.read_h5ad(input_path)
+        cell_count = int(adata.n_obs)
+        if use_raw:
+            if adata.raw is None or adata.raw.X is None:
+                raise ValueError("The AnnData object does not contain raw expression.")
+            gene_count = int(adata.raw.n_vars)
+        else:
+            gene_count = int(adata.n_vars)
+        cluster_count = int(adata.obs[cluster_column].nunique())
+        load_seconds = perf_counter() - load_started
+        analysis_started = perf_counter()
         selected_clusters = _resolve_cluster_arguments(
             adata.obs[cluster_column], target_clusters
         )
@@ -886,6 +901,7 @@ def run(
             max_other_mean=max_other_mean,
             max_cells_expressing_out=max_cells_expressing_out,
         )
+        analysis_seconds = perf_counter() - analysis_started
     else:
         expression = load_expression(
             input_path,
@@ -895,6 +911,13 @@ def run(
             cell_column=cell_column,
             max_dense_memory_mb=max_dense_memory_mb,
         )
+        cell_count = len(expression)
+        gene_count = len(expression.columns) - 1 - int(
+            cell_column is not None and cell_column in expression.columns
+        )
+        cluster_count = int(expression[cluster_column].nunique())
+        load_seconds = perf_counter() - load_started
+        analysis_started = perf_counter()
         selected_clusters = _resolve_cluster_arguments(
             expression[cluster_column], target_clusters
         )
@@ -921,11 +944,33 @@ def run(
             max_other_mean=max_other_mean,
             max_cells_expressing_out=max_cells_expressing_out,
         )
+        analysis_seconds = perf_counter() - analysis_started
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    output_started = perf_counter()
     markers.to_csv(output_path, index=False)
+    output_seconds = perf_counter() - output_started
+
+    if diagnostics is not None:
+        diagnostics.update(
+            {
+                "app_version": APP_VERSION,
+                "engine": engine,
+                "input_format": input_path.suffix.lower().lstrip("."),
+                "input": str(input_path),
+                "output": str(output_path),
+                "cells": cell_count,
+                "genes": gene_count,
+                "clusters": cluster_count,
+                "marker_rows": len(markers),
+                "load_seconds": load_seconds,
+                "analysis_seconds": analysis_seconds,
+                "output_seconds": output_seconds,
+                "total_seconds": perf_counter() - run_started,
+            }
+        )
 
     return markers
 
@@ -936,6 +981,7 @@ def run_batch(
     **analysis_options,
 ) -> list[dict[str, object]]:
     """Analyze every supported file and write a machine-readable run manifest."""
+    batch_started = perf_counter()
     input_dir = Path(input_dir)
     output_dir = Path(output_dir)
     if not input_dir.is_dir():
@@ -956,12 +1002,25 @@ def run_batch(
             "input": str(input_path),
             "output": str(output_path),
         }
+        run_diagnostics: dict[str, object] = {}
+        attempt_started = perf_counter()
         try:
-            markers = run(input_path, output_path, **analysis_options)
+            markers = run(
+                input_path,
+                output_path,
+                diagnostics=run_diagnostics,
+                **analysis_options,
+            )
         except Exception as error:
             record.update(status="failed", marker_rows=0, error=str(error))
         else:
-            record.update(status="complete", marker_rows=len(markers), error=None)
+            record.update(
+                status="complete",
+                marker_rows=len(markers),
+                error=None,
+                diagnostics=run_diagnostics,
+            )
+        record["duration_seconds"] = perf_counter() - attempt_started
         manifest.append(record)
 
     manifest_path = output_dir / "batch_manifest.json"
@@ -972,6 +1031,7 @@ def run_batch(
                 "inputs": len(inputs),
                 "completed": sum(row["status"] == "complete" for row in manifest),
                 "failed": sum(row["status"] == "failed" for row in manifest),
+                "duration_seconds": perf_counter() - batch_started,
                 "runs": manifest,
             },
             indent=2,
@@ -1045,6 +1105,13 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Native H5AD dense-conversion safety limit in MiB; "
             "use 0 to disable it."
+        ),
+    )
+    parser.add_argument(
+        "--diagnostics-json",
+        help=(
+            "Write single-file runtime diagnostics as JSON. Batch diagnostics "
+            "are included in batch_manifest.json."
         ),
     )
 
@@ -1220,6 +1287,11 @@ def main() -> None:
         raise SystemExit("--input-dir and --output-dir must be used together.")
     if bool(args.input) != bool(args.output):
         raise SystemExit("--input and --output must be used together.")
+    if args.input_dir and args.diagnostics_json:
+        raise SystemExit(
+            "--diagnostics-json is for single-file analysis; batch diagnostics "
+            "are written to batch_manifest.json."
+        )
 
     if args.input_dir:
         manifest = run_batch(args.input_dir, args.output_dir, **analysis_options)
@@ -1233,11 +1305,21 @@ def main() -> None:
             raise SystemExit(1)
         return
 
+    diagnostics: dict[str, object] = {}
     markers = run(
         input_path=args.input,
         output_path=args.output,
+        diagnostics=diagnostics,
         **analysis_options,
     )
+
+    if args.diagnostics_json:
+        diagnostics_path = Path(args.diagnostics_json)
+        diagnostics_path.parent.mkdir(parents=True, exist_ok=True)
+        diagnostics_path.write_text(
+            json.dumps(diagnostics, indent=2, allow_nan=False) + "\n",
+            encoding="utf-8",
+        )
 
     print(
         f"Saved {len(markers)} marker rows "
