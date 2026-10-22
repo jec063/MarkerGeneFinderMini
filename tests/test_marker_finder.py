@@ -66,6 +66,18 @@ def test_parser_accepts_native_gene_chunk_size() -> None:
     assert args.gene_chunk_size == 17
 
 
+def test_parser_accepts_quiet_progress_mode() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--quiet",
+        ]
+    )
+
+    assert args.quiet is True
+
+
 def test_run_batch_continues_after_an_input_failure(tmp_path: Path) -> None:
     input_dir = tmp_path / "inputs"
     output_dir = tmp_path / "outputs"
@@ -1140,3 +1152,21 @@ def test_native_gene_chunking_preserves_marker_results() -> None:
 def test_invalid_native_gene_chunk_size_is_rejected(value) -> None:
     with pytest.raises(ValueError, match="gene_chunk_size"):
         find_markers(pd.read_csv(EXAMPLE_DATA), gene_chunk_size=value)
+
+
+def test_native_progress_callback_reports_each_completed_cluster() -> None:
+    events = []
+
+    find_markers(
+        pd.read_csv(EXAMPLE_DATA),
+        top_n=1,
+        target_clusters=[0, 1],
+        progress_callback=lambda completed, total, cluster: events.append(
+            (completed, total, cluster)
+        ),
+    )
+
+    assert events == [
+        (1, 2, 0),
+        (2, 2, 1),
+    ]

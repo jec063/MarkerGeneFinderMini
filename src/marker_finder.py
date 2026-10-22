@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import argparse
 import json
-from collections.abc import Sequence
+import sys
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from time import perf_counter
 
@@ -48,6 +49,7 @@ RANK_BY_CHOICES = (
 )
 DEFAULT_MAX_DENSE_MEMORY_MB = 2048.0
 DEFAULT_GENE_CHUNK_SIZE = 1000
+ProgressCallback = Callable[[int, int, object], None]
 
 
 def _validate_gene_chunk_size(gene_chunk_size: int) -> None:
@@ -428,6 +430,7 @@ def find_markers(
     max_other_mean: float | None = None,
     max_cells_expressing_out: int | None = None,
     gene_chunk_size: int = DEFAULT_GENE_CHUNK_SIZE,
+    progress_callback: ProgressCallback | None = None,
 ) -> pd.DataFrame:
     """Return top markers while processing Native gene statistics in chunks."""
 
@@ -499,7 +502,7 @@ def find_markers(
         expression[cluster_column], target_clusters, min_cluster_size,
     )
 
-    for cluster in clusters:
+    for cluster_index, cluster in enumerate(clusters, start=1):
         in_cluster = expression[cluster_column] == cluster
         cluster_size = int(in_cluster.sum())
         reference_size = int((~in_cluster).sum())
@@ -584,6 +587,8 @@ def find_markers(
         )
 
         results.append(cluster_result)
+        if progress_callback is not None:
+            progress_callback(cluster_index, len(clusters), cluster)
 
     if not results:
         return pd.DataFrame(columns=RESULT_COLUMNS)
@@ -614,6 +619,7 @@ def find_markers_scanpy(
     min_mean_difference: float = 0.0,
     max_other_mean: float | None = None,
     max_cells_expressing_out: int | None = None,
+    progress_callback: ProgressCallback | None = None,
 ) -> pd.DataFrame:
     """Find marker genes using Scanpy's Wilcoxon implementation."""
 
@@ -751,7 +757,7 @@ def find_markers_scanpy(
 
     results = []
 
-    for cluster in clusters:
+    for cluster_index, cluster in enumerate(clusters, start=1):
         in_cluster = np.asarray(
             working.obs[cluster_column] == cluster,
             dtype=bool,
@@ -821,6 +827,8 @@ def find_markers_scanpy(
         )
 
         results.append(cluster_result)
+        if progress_callback is not None:
+            progress_callback(cluster_index, len(clusters), cluster)
 
     if not results:
         return pd.DataFrame(columns=RESULT_COLUMNS)
@@ -858,6 +866,7 @@ def run(
     max_cells_expressing_out: int | None = None,
     max_dense_memory_mb: float | None = DEFAULT_MAX_DENSE_MEMORY_MB,
     gene_chunk_size: int = DEFAULT_GENE_CHUNK_SIZE,
+    progress_callback: ProgressCallback | None = None,
     diagnostics: dict[str, object] | None = None,
 ) -> pd.DataFrame:
     """Read an expression dataset, find markers and save the results."""
@@ -920,6 +929,7 @@ def run(
             min_mean_difference=min_mean_difference,
             max_other_mean=max_other_mean,
             max_cells_expressing_out=max_cells_expressing_out,
+            progress_callback=progress_callback,
         )
         analysis_seconds = perf_counter() - analysis_started
     else:
@@ -964,6 +974,7 @@ def run(
             max_other_mean=max_other_mean,
             max_cells_expressing_out=max_cells_expressing_out,
             gene_chunk_size=gene_chunk_size,
+            progress_callback=progress_callback,
         )
         analysis_seconds = perf_counter() - analysis_started
 
@@ -1147,6 +1158,11 @@ def build_parser() -> argparse.ArgumentParser:
             "are included in batch_manifest.json."
         ),
     )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress per-cluster progress messages.",
+    )
 
     parser.add_argument(
         "--target-cluster",
@@ -1290,6 +1306,13 @@ def main() -> None:
 
     args = build_parser().parse_args()
 
+    def report_progress(completed: int, total: int, cluster: object) -> None:
+        print(
+            f"[{completed}/{total}] Completed cluster {cluster}",
+            file=sys.stderr,
+            flush=True,
+        )
+
     analysis_options = dict(
         cluster_column=args.cluster_column,
         cell_column=args.cell_column,
@@ -1315,6 +1338,7 @@ def main() -> None:
         excluded_prefixes=args.exclude_prefix,
         max_dense_memory_mb=args.max_dense_memory_mb,
         gene_chunk_size=args.gene_chunk_size,
+        progress_callback=None if args.quiet else report_progress,
     )
 
     if bool(args.input_dir) != bool(args.output_dir):
