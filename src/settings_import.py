@@ -16,13 +16,13 @@ MAX_SETTINGS_BYTES = 1_000_000
 SETTINGS_BUNDLE_PATH = "analysis_settings.json"
 
 
-def load_analysis_settings_upload(contents: bytes, filename: str) -> dict[str, object]:
-    """Load settings from an exported JSON file or analysis-bundle ZIP."""
+def extract_analysis_settings_upload(contents: bytes, filename: str) -> bytes:
+    """Extract the settings JSON bytes from JSON or an analysis-bundle ZIP."""
     suffix = Path(filename).suffix.lower()
     if suffix == ".json":
         if len(contents) > MAX_SETTINGS_BYTES:
             raise ValueError("Analysis settings JSON must be no larger than 1 MB.")
-        return load_analysis_settings(contents)
+        return contents
     if suffix != ".zip":
         raise ValueError("Analysis settings must be uploaded as JSON or ZIP.")
 
@@ -45,7 +45,29 @@ def load_analysis_settings_upload(contents: bytes, filename: str) -> dict[str, o
 
     if len(settings_contents) > MAX_SETTINGS_BYTES:
         raise ValueError("Analysis settings JSON must be no larger than 1 MB.")
-    return load_analysis_settings(settings_contents)
+    return settings_contents
+
+
+def load_analysis_settings_upload(contents: bytes, filename: str) -> dict[str, object]:
+    """Load widget state from an exported JSON file or analysis-bundle ZIP."""
+    return load_analysis_settings(extract_analysis_settings_upload(contents, filename))
+
+
+def load_analysis_profile_upload(
+    contents: bytes, filename: str
+) -> tuple[dict[str, object], dict[str, str | None]]:
+    """Load portable state and display metadata from a settings upload."""
+    settings_contents = extract_analysis_settings_upload(contents, filename)
+    restored = load_analysis_settings(settings_contents)
+    settings = json.loads(settings_contents.decode("utf-8"))
+    metadata = {
+        "profile_name": settings.get("profile_name"),
+        "app_version": settings.get("app_version"),
+    }
+    for key, value in metadata.items():
+        if value is not None and not isinstance(value, str):
+            raise ValueError(f"{key} must be a string when provided.")
+    return restored, metadata
 
 
 def _number(settings: dict, name: str, minimum: float = 0.0) -> float | None:

@@ -9,6 +9,7 @@ import pytest
 from src.settings_import import (
     MAX_SETTINGS_BYTES,
     load_analysis_settings,
+    load_analysis_profile_upload,
     load_analysis_settings_upload,
 )
 
@@ -109,6 +110,26 @@ def test_load_analysis_settings_from_bundle() -> None:
     restored = load_analysis_settings_upload(contents, "analysis_bundle.ZIP")
 
     assert restored["top_n"] == 9
+
+
+def test_profile_import_returns_display_metadata() -> None:
+    restored, metadata = load_analysis_profile_upload(
+        encode(
+            {
+                "schema_version": 1,
+                "app_version": "1.1.0",
+                "profile_name": "Strict markers",
+                "top_n": 8,
+            }
+        ),
+        "strict.json",
+    )
+
+    assert restored["top_n"] == 8
+    assert metadata == {
+        "app_version": "1.1.0",
+        "profile_name": "Strict markers",
+    }
 
 
 @pytest.mark.parametrize(
