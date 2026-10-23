@@ -64,6 +64,13 @@ arrays, so increase the value only when additional memory is available. Scanpy
 already performs its ranking in one engine call and therefore requires one
 worker.
 
+Before committing to an analysis, use `--inspect-json` to scan an input and
+write a machine-readable preflight report without calculating markers. The
+report includes the application version, expression source, cell, gene, and
+cluster counts, plus the estimated dense expression size in bytes and MiB.
+H5AD inspection opens the file in backed mode; CSV inspection reads bounded
+10,000-row chunks rather than loading the entire table solely for preflight.
+
 ## Analysis engines
 
 MarkerGeneFinderMini provides two analysis engines:
@@ -199,6 +206,18 @@ Install the optional Streamlit interface with `python -m pip install '.[web]'`
 or the test dependencies with `python -m pip install '.[test]'`.
 
 ## Batch command-line analysis
+
+Inspect a dataset without creating marker results:
+
+```bash
+marker-gene-finder \
+  --input expression.h5ad \
+  --cluster-column leiden \
+  --inspect-json inspection.json
+```
+
+The inspection respects `--layer` and `--use-raw`. It cannot be combined with
+an analysis output, batch input, or runtime diagnostics.
 
 Use `--input-dir` and `--output-dir` to apply one configuration to every CSV
 or H5AD file directly inside a directory:

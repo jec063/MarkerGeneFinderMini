@@ -50,6 +50,7 @@ RANK_BY_CHOICES = (
 )
 DEFAULT_MAX_DENSE_MEMORY_MB = 2048.0
 DEFAULT_GENE_CHUNK_SIZE = 1000
+CSV_INSPECTION_CHUNK_ROWS = 10_000
 ProgressCallback = Callable[[int, int, object], None]
 
 
@@ -141,6 +142,109 @@ def estimate_dense_expression_bytes(
         return int(rows) * int(columns) * np.dtype(matrix.dtype).itemsize
     finally:
         adata.file.close()
+
+
+def inspect_input(
+    input_path: str | Path,
+    cluster_column: str = "cluster",
+    cell_column: str | None = "cell",
+    layer: str | None = None,
+    use_raw: bool = False,
+) -> dict[str, object]:
+    """Inspect dataset dimensions and memory without running marker analysis."""
+    input_path = Path(input_path)
+    suffix = input_path.suffix.lower()
+    if use_raw and layer is not None:
+        raise ValueError("use_raw and layer are mutually exclusive.")
+
+    if suffix == ".h5ad":
+        adata = ad.read_h5ad(input_path, backed="r")
+        try:
+            if cluster_column not in adata.obs.columns:
+                raise ValueError(
+                    f"Missing cluster column in AnnData.obs: {cluster_column!r}."
+                )
+            if adata.obs[cluster_column].isna().any():
+                raise ValueError("Cluster labels cannot contain missing values.")
+            if use_raw:
+                if adata.raw is None or adata.raw.X is None:
+                    raise ValueError(
+                        "The AnnData object does not contain raw expression."
+                    )
+                matrix = adata.raw.X
+                source = "raw"
+            elif layer is not None:
+                if layer not in adata.layers:
+                    raise ValueError(f"Missing AnnData layer: {layer!r}.")
+                matrix = adata.layers[layer]
+                source = f"layer:{layer}"
+            else:
+                if adata.X is None:
+                    raise ValueError(
+                        "The AnnData object does not contain an expression matrix in X."
+                    )
+                matrix = adata.X
+                source = "X"
+            cells, genes = matrix.shape
+            dense_bytes = (
+                int(cells) * int(genes) * np.dtype(matrix.dtype).itemsize
+            )
+            clusters = int(adata.obs[cluster_column].nunique())
+        finally:
+            adata.file.close()
+    elif suffix == ".csv":
+        if layer is not None or use_raw:
+            raise ValueError("Layer and raw selection require H5AD input.")
+        header = pd.read_csv(input_path, nrows=0)
+        if cluster_column not in header.columns:
+            raise ValueError(f"Missing cluster column: {cluster_column!r}.")
+        metadata = {cluster_column}
+        if cell_column and cell_column in header.columns:
+            metadata.add(cell_column)
+        gene_columns = [column for column in header.columns if column not in metadata]
+        if not gene_columns:
+            raise ValueError("No gene-expression columns were found.")
+        cells = 0
+        dense_bytes = 0
+        observed_clusters: set[object] = set()
+        for chunk in pd.read_csv(input_path, chunksize=CSV_INSPECTION_CHUNK_ROWS):
+            cells += len(chunk)
+            if chunk[cluster_column].isna().any():
+                raise ValueError("Cluster labels cannot contain missing values.")
+            observed_clusters.update(chunk[cluster_column].dropna().unique())
+            values = chunk[gene_columns]
+            non_numeric = [
+                gene for gene in gene_columns
+                if not pd.api.types.is_numeric_dtype(values[gene])
+            ]
+            if non_numeric:
+                raise ValueError(
+                    "Gene-expression columns must be numeric: "
+                    + ", ".join(non_numeric)
+                )
+            dense_bytes += int(values.memory_usage(index=False).sum())
+        genes = len(gene_columns)
+        clusters = len(observed_clusters)
+        source = "csv"
+    else:
+        raise ValueError("Input must be a CSV or H5AD file.")
+
+    if cells == 0:
+        raise ValueError("The expression dataset contains no cells.")
+    if clusters < 2:
+        raise ValueError("At least two clusters are required.")
+
+    return {
+        "app_version": APP_VERSION,
+        "input": str(input_path),
+        "input_format": suffix.lstrip("."),
+        "expression_source": source,
+        "cells": int(cells),
+        "genes": int(genes),
+        "clusters": clusters,
+        "estimated_dense_bytes": dense_bytes,
+        "estimated_dense_mib": dense_bytes / (1024 ** 2),
+    }
 
 
 def _enforce_dense_memory_limit(
@@ -1134,7 +1238,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory of CSV or H5AD files to analyze as a batch.",
     )
 
-    outputs = parser.add_mutually_exclusive_group(required=True)
+    outputs = parser.add_mutually_exclusive_group()
     outputs.add_argument(
         "--output",
         help="Output marker CSV path.",
@@ -1197,6 +1301,13 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Write single-file runtime diagnostics as JSON. Batch diagnostics "
             "are included in batch_manifest.json."
+        ),
+    )
+    parser.add_argument(
+        "--inspect-json",
+        help=(
+            "Inspect input dimensions and estimated dense memory, write JSON, "
+            "and exit without marker analysis."
         ),
     )
     parser.add_argument(
@@ -1347,6 +1458,32 @@ def main() -> None:
 
     args = build_parser().parse_args()
 
+    if args.inspect_json:
+        if not args.input or args.output or args.input_dir or args.output_dir:
+            raise SystemExit(
+                "--inspect-json requires --input and cannot be combined with "
+                "analysis outputs or batch input."
+            )
+        if args.diagnostics_json:
+            raise SystemExit(
+                "--inspect-json cannot be combined with --diagnostics-json."
+            )
+        inspection = inspect_input(
+            args.input,
+            cluster_column=args.cluster_column,
+            cell_column=args.cell_column,
+            layer=args.layer,
+            use_raw=args.use_raw,
+        )
+        inspection_path = Path(args.inspect_json)
+        inspection_path.parent.mkdir(parents=True, exist_ok=True)
+        inspection_path.write_text(
+            json.dumps(inspection, indent=2, allow_nan=False) + "\n",
+            encoding="utf-8",
+        )
+        print(f"Saved input inspection to {inspection_path}")
+        return
+
     def report_progress(completed: int, total: int, cluster: object) -> None:
         print(
             f"[{completed}/{total}] Completed cluster {cluster}",
@@ -1387,6 +1524,10 @@ def main() -> None:
         raise SystemExit("--input-dir and --output-dir must be used together.")
     if bool(args.input) != bool(args.output):
         raise SystemExit("--input and --output must be used together.")
+    if not args.input and not args.input_dir:
+        raise SystemExit(
+            "Provide --input with --output, or --input-dir with --output-dir."
+        )
     if args.input_dir and args.diagnostics_json:
         raise SystemExit(
             "--diagnostics-json is for single-file analysis; batch diagnostics "

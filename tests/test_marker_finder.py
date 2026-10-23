@@ -12,6 +12,7 @@ from src.marker_finder import (
     build_parser,
     estimate_dense_expression_bytes,
     find_markers,
+    inspect_input,
     load_expression,
     run,
     run_batch,
@@ -88,6 +89,53 @@ def test_parser_accepts_native_workers() -> None:
     )
 
     assert args.workers == 3
+
+
+def test_parser_accepts_input_inspection_without_analysis_output() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--inspect-json", "inspection.json",
+        ]
+    )
+
+    assert args.output is None
+    assert args.inspect_json == "inspection.json"
+
+
+def test_inspect_csv_reports_dimensions_and_dense_memory() -> None:
+    inspection = inspect_input(EXAMPLE_DATA)
+
+    assert inspection["app_version"] == APP_VERSION
+    assert inspection["input_format"] == "csv"
+    assert inspection["expression_source"] == "csv"
+    assert inspection["cells"] == 12
+    assert inspection["genes"] == 8
+    assert inspection["clusters"] == 4
+    assert inspection["estimated_dense_bytes"] == 12 * 8 * 8
+    assert inspection["estimated_dense_mib"] > 0
+
+
+def test_inspect_h5ad_uses_selected_layer(tmp_path: Path) -> None:
+    input_path = tmp_path / "expression.h5ad"
+    adata = ad.AnnData(
+        X=np.ones((4, 2), dtype=np.float32),
+        obs=pd.DataFrame(
+            {"cluster": ["A", "A", "B", "B"]},
+            index=[f"cell_{index}" for index in range(4)],
+        ),
+        var=pd.DataFrame(index=["G1", "G2"]),
+    )
+    adata.layers["counts"] = np.ones((4, 2), dtype=np.float64)
+    adata.write_h5ad(input_path)
+
+    inspection = inspect_input(input_path, layer="counts")
+
+    assert inspection["expression_source"] == "layer:counts"
+    assert inspection["cells"] == 4
+    assert inspection["genes"] == 2
+    assert inspection["clusters"] == 2
+    assert inspection["estimated_dense_bytes"] == 4 * 2 * 8
 
 
 def test_run_batch_continues_after_an_input_failure(tmp_path: Path) -> None:
