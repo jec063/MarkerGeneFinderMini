@@ -109,11 +109,16 @@ def test_inspect_csv_reports_dimensions_and_dense_memory() -> None:
     assert inspection["app_version"] == APP_VERSION
     assert inspection["input_format"] == "csv"
     assert inspection["expression_source"] == "csv"
+    assert inspection["storage"] == "dense"
     assert inspection["cells"] == 12
     assert inspection["genes"] == 8
     assert inspection["clusters"] == 4
     assert inspection["estimated_dense_bytes"] == 12 * 8 * 8
     assert inspection["estimated_dense_mib"] > 0
+    assert inspection["native_dense_limit_mib"] == 2048
+    assert inspection["native_within_limit"] is True
+    assert inspection["recommended_engine"] == "native"
+    assert inspection["recommendation_reasons"] == []
 
 
 def test_inspect_h5ad_uses_selected_layer(tmp_path: Path) -> None:
@@ -136,6 +141,56 @@ def test_inspect_h5ad_uses_selected_layer(tmp_path: Path) -> None:
     assert inspection["genes"] == 2
     assert inspection["clusters"] == 2
     assert inspection["estimated_dense_bytes"] == 4 * 2 * 8
+    assert inspection["storage"] == "dense"
+    assert inspection["native_within_limit"] is True
+    assert inspection["recommended_engine"] == "native"
+
+
+def test_inspect_sparse_h5ad_recommends_scanpy(tmp_path: Path) -> None:
+    input_path = tmp_path / "sparse.h5ad"
+    adata = ad.AnnData(
+        X=sparse.csr_matrix(np.ones((4, 2), dtype=np.float32)),
+        obs=pd.DataFrame(
+            {"cluster": ["A", "A", "B", "B"]},
+            index=[f"cell_{index}" for index in range(4)],
+        ),
+        var=pd.DataFrame(index=["G1", "G2"]),
+    )
+    adata.write_h5ad(input_path)
+
+    inspection = inspect_input(input_path)
+
+    assert inspection["storage"] == "sparse"
+    assert inspection["native_within_limit"] is True
+    assert inspection["recommended_engine"] == "scanpy"
+    assert inspection["recommendation_reasons"] == [
+        "Scanpy preserves the selected sparse H5AD matrix."
+    ]
+
+
+def test_inspect_h5ad_over_native_limit_recommends_scanpy(
+    tmp_path: Path,
+) -> None:
+    input_path = tmp_path / "dense.h5ad"
+    adata = ad.AnnData(
+        X=np.ones((4, 2), dtype=np.float64),
+        obs=pd.DataFrame(
+            {"cluster": ["A", "A", "B", "B"]},
+            index=[f"cell_{index}" for index in range(4)],
+        ),
+        var=pd.DataFrame(index=["G1", "G2"]),
+    )
+    adata.write_h5ad(input_path)
+
+    inspection = inspect_input(input_path, max_dense_memory_mb=0.000001)
+
+    assert inspection["storage"] == "dense"
+    assert inspection["native_dense_limit_mib"] == 0.000001
+    assert inspection["native_within_limit"] is False
+    assert inspection["recommended_engine"] == "scanpy"
+    assert inspection["recommendation_reasons"] == [
+        "The estimated dense matrix exceeds the Native safety limit."
+    ]
 
 
 def test_run_batch_continues_after_an_input_failure(tmp_path: Path) -> None:

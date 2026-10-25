@@ -14,6 +14,7 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 import scanpy as sc
+from scipy import sparse
 from scipy.stats import mannwhitneyu
 
 if __package__:
@@ -150,12 +151,14 @@ def inspect_input(
     cell_column: str | None = "cell",
     layer: str | None = None,
     use_raw: bool = False,
+    max_dense_memory_mb: float | None = DEFAULT_MAX_DENSE_MEMORY_MB,
 ) -> dict[str, object]:
     """Inspect dataset dimensions and memory without running marker analysis."""
     input_path = Path(input_path)
     suffix = input_path.suffix.lower()
     if use_raw and layer is not None:
         raise ValueError("use_raw and layer are mutually exclusive.")
+    _validate_max_dense_memory_mb(max_dense_memory_mb)
 
     if suffix == ".h5ad":
         adata = ad.read_h5ad(input_path, backed="r")
@@ -188,6 +191,12 @@ def inspect_input(
             cells, genes = matrix.shape
             dense_bytes = (
                 int(cells) * int(genes) * np.dtype(matrix.dtype).itemsize
+            )
+            storage = (
+                "sparse"
+                if sparse.issparse(matrix)
+                or getattr(matrix, "format", None) in {"csr", "csc"}
+                else "dense"
             )
             clusters = int(adata.obs[cluster_column].nunique())
         finally:
@@ -226,6 +235,7 @@ def inspect_input(
         genes = len(gene_columns)
         clusters = len(observed_clusters)
         source = "csv"
+        storage = "dense"
     else:
         raise ValueError("Input must be a CSV or H5AD file.")
 
@@ -234,26 +244,46 @@ def inspect_input(
     if clusters < 2:
         raise ValueError("At least two clusters are required.")
 
+    dense_mib = dense_bytes / (1024 ** 2)
+    limit_enabled = max_dense_memory_mb not in {None, 0}
+    native_within_limit = (
+        suffix == ".csv"
+        or not limit_enabled
+        or dense_mib <= max_dense_memory_mb
+    )
+    recommendation_reasons = []
+    if suffix == ".h5ad" and storage == "sparse":
+        recommendation_reasons.append(
+            "Scanpy preserves the selected sparse H5AD matrix."
+        )
+    if suffix == ".h5ad" and not native_within_limit:
+        recommendation_reasons.append(
+            "The estimated dense matrix exceeds the Native safety limit."
+        )
+    recommended_engine = (
+        "scanpy" if recommendation_reasons else "native"
+    )
+
     return {
         "app_version": APP_VERSION,
         "input": str(input_path),
         "input_format": suffix.lstrip("."),
         "expression_source": source,
+        "storage": storage,
         "cells": int(cells),
         "genes": int(genes),
         "clusters": clusters,
         "estimated_dense_bytes": dense_bytes,
-        "estimated_dense_mib": dense_bytes / (1024 ** 2),
+        "estimated_dense_mib": dense_mib,
+        "native_dense_limit_mib": max_dense_memory_mb,
+        "native_within_limit": native_within_limit,
+        "recommended_engine": recommended_engine,
+        "recommendation_reasons": recommendation_reasons,
     }
 
 
-def _enforce_dense_memory_limit(
-    input_path: str | Path,
-    layer: str | None,
-    use_raw: bool,
-    max_dense_memory_mb: float | None,
-) -> None:
-    """Reject Native H5AD conversion when its dense matrix exceeds a limit."""
+def _validate_max_dense_memory_mb(max_dense_memory_mb: float | None) -> None:
+    """Validate the optional Native dense-conversion safety limit."""
     if max_dense_memory_mb is None:
         return
     if (
@@ -266,6 +296,18 @@ def _enforce_dense_memory_limit(
         or max_dense_memory_mb < 0
     ):
         raise ValueError("max_dense_memory_mb must be non-negative or None.")
+
+
+def _enforce_dense_memory_limit(
+    input_path: str | Path,
+    layer: str | None,
+    use_raw: bool,
+    max_dense_memory_mb: float | None,
+) -> None:
+    """Reject Native H5AD conversion when its dense matrix exceeds a limit."""
+    _validate_max_dense_memory_mb(max_dense_memory_mb)
+    if max_dense_memory_mb is None:
+        return
     if max_dense_memory_mb == 0:
         return
 
@@ -1474,6 +1516,7 @@ def main() -> None:
             cell_column=args.cell_column,
             layer=args.layer,
             use_raw=args.use_raw,
+            max_dense_memory_mb=args.max_dense_memory_mb,
         )
         inspection_path = Path(args.inspect_json)
         inspection_path.parent.mkdir(parents=True, exist_ok=True)
