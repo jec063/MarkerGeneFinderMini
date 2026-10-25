@@ -159,6 +159,11 @@ def inspect_input(
     if use_raw and layer is not None:
         raise ValueError("use_raw and layer are mutually exclusive.")
     _validate_max_dense_memory_mb(max_dense_memory_mb)
+    normalized_dense_limit = (
+        None
+        if max_dense_memory_mb is None
+        else float(max_dense_memory_mb)
+    )
 
     if suffix == ".h5ad":
         adata = ad.read_h5ad(input_path, backed="r")
@@ -245,11 +250,11 @@ def inspect_input(
         raise ValueError("At least two clusters are required.")
 
     dense_mib = dense_bytes / (1024 ** 2)
-    limit_enabled = max_dense_memory_mb not in {None, 0}
+    limit_enabled = normalized_dense_limit not in {None, 0}
     native_within_limit = (
         suffix == ".csv"
         or not limit_enabled
-        or dense_mib <= max_dense_memory_mb
+        or dense_mib <= normalized_dense_limit
     )
     recommendation_reasons = []
     if suffix == ".h5ad" and storage == "sparse":
@@ -275,7 +280,7 @@ def inspect_input(
         "clusters": clusters,
         "estimated_dense_bytes": dense_bytes,
         "estimated_dense_mib": dense_mib,
-        "native_dense_limit_mib": max_dense_memory_mb,
+        "native_dense_limit_mib": normalized_dense_limit,
         "native_within_limit": native_within_limit,
         "recommended_engine": recommended_engine,
         "recommendation_reasons": recommendation_reasons,

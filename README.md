@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **1.4.0**. The version is shown in the web
+Current application version: **1.9.1**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -74,6 +74,8 @@ recommend Scanpy; CSV and dense H5AD inputs within the limit recommend Native.
 This is resource guidance, not a claim that the engines use identical
 statistics. H5AD inspection opens the file in backed mode; CSV inspection reads bounded
 10,000-row chunks rather than loading the entire table solely for preflight.
+Inspection reports normalize the configured memory limit to a regular JSON
+number, including when library callers provide a NumPy numeric scalar.
 
 ## Analysis engines
 

@@ -193,6 +193,17 @@ def test_inspect_h5ad_over_native_limit_recommends_scanpy(
     ]
 
 
+def test_inspection_normalizes_numpy_memory_limit_for_json() -> None:
+    inspection = inspect_input(
+        EXAMPLE_DATA,
+        max_dense_memory_mb=np.int64(512),
+    )
+
+    assert inspection["native_dense_limit_mib"] == 512.0
+    assert type(inspection["native_dense_limit_mib"]) is float
+    json.dumps(inspection, allow_nan=False)
+
+
 def test_run_batch_continues_after_an_input_failure(tmp_path: Path) -> None:
     input_dir = tmp_path / "inputs"
     output_dir = tmp_path / "outputs"

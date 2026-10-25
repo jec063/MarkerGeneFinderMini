@@ -1,3 +1,3 @@
 """Application version shared by the UI, CLI, and reproducibility exports."""
 
-APP_VERSION = "1.9.0"
+APP_VERSION = "1.9.1"
