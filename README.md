@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **1.9.1**. The version is shown in the web
+Current application version: **1.11.0**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -76,6 +76,18 @@ statistics. H5AD inspection opens the file in backed mode; CSV inspection reads 
 10,000-row chunks rather than loading the entire table solely for preflight.
 Inspection reports normalize the configured memory limit to a regular JSON
 number, including when library callers provide a NumPy numeric scalar.
+
+Use `--plan-json` to turn the same preflight data into a versioned execution
+plan without calculating markers. Plans keep `requested_engine`,
+`recommended_engine`, and `resolved_engine` separate, record resolved Native
+chunk and worker settings, and report conflicts through `can_execute` and
+`warnings`. Explicit engine choices are never silently replaced.
+
+The opt-in `--engine auto` mode follows the preflight resource recommendation
+for each input: CSV uses Native, sparse H5AD uses Scanpy, and dense H5AD uses
+Native unless its estimated dense representation exceeds the configured
+safety limit. The default remains `native`, and automatic selection is
+resource-based rather than a guarantee of statistically identical results.
 
 ## Analysis engines
 
@@ -227,6 +239,20 @@ The inspection respects `--layer`, `--use-raw`, and
 `native_within_limit`, `recommended_engine`, and `recommendation_reasons` so
 automation can select an engine before analysis. It cannot be combined with an
 analysis output, batch input, or runtime diagnostics.
+
+Create a reviewable execution plan without running marker analysis:
+
+```bash
+marker-gene-finder \
+  --input expression.h5ad \
+  --engine auto \
+  --cluster-column leiden \
+  --plan-json analysis-plan.json
+```
+
+After reviewing the plan, run with `--engine auto` to use its resource-based
+engine resolution. Runtime diagnostics record both the requested and resolved
+engine. For batch input, auto resolution is performed independently per file.
 
 Use `--input-dir` and `--output-dir` to apply one configuration to every CSV
 or H5AD file directly inside a directory:

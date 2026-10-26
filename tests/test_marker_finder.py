@@ -9,6 +9,7 @@ from scipy import sparse
 
 from src.marker_finder import (
     _benjamini_hochberg,
+    build_analysis_plan,
     build_parser,
     estimate_dense_expression_bytes,
     find_markers,
@@ -101,6 +102,20 @@ def test_parser_accepts_input_inspection_without_analysis_output() -> None:
 
     assert args.output is None
     assert args.inspect_json == "inspection.json"
+
+
+def test_parser_accepts_analysis_plan_and_auto_engine() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.h5ad",
+            "--engine", "auto",
+            "--plan-json", "plan.json",
+        ]
+    )
+
+    assert args.output is None
+    assert args.engine == "auto"
+    assert args.plan_json == "plan.json"
 
 
 def test_inspect_csv_reports_dimensions_and_dense_memory() -> None:
@@ -202,6 +217,80 @@ def test_inspection_normalizes_numpy_memory_limit_for_json() -> None:
     assert inspection["native_dense_limit_mib"] == 512.0
     assert type(inspection["native_dense_limit_mib"]) is float
     json.dumps(inspection, allow_nan=False)
+
+
+def test_analysis_plan_resolves_sparse_h5ad_to_scanpy(tmp_path: Path) -> None:
+    input_path = tmp_path / "sparse.h5ad"
+    adata = ad.AnnData(
+        X=sparse.csr_matrix(np.ones((4, 2), dtype=np.float32)),
+        obs=pd.DataFrame(
+            {"cluster": ["A", "A", "B", "B"]},
+            index=[f"cell_{index}" for index in range(4)],
+        ),
+        var=pd.DataFrame(index=["G1", "G2"]),
+    )
+    adata.write_h5ad(input_path)
+
+    plan = build_analysis_plan(input_path, requested_engine="auto")
+
+    assert plan["schema_version"] == 1
+    assert plan["requested_engine"] == "auto"
+    assert plan["recommended_engine"] == "scanpy"
+    assert plan["resolved_engine"] == "scanpy"
+    assert plan["gene_chunk_size"] is None
+    assert plan["can_execute"] is True
+    assert plan["warnings"] == []
+    json.dumps(plan, allow_nan=False)
+
+
+def test_analysis_plan_reports_explicit_native_memory_conflict(
+    tmp_path: Path,
+) -> None:
+    input_path = tmp_path / "dense.h5ad"
+    adata = ad.AnnData(
+        X=np.ones((4, 2), dtype=np.float64),
+        obs=pd.DataFrame(
+            {"cluster": ["A", "A", "B", "B"]},
+            index=[f"cell_{index}" for index in range(4)],
+        ),
+        var=pd.DataFrame(index=["G1", "G2"]),
+    )
+    adata.write_h5ad(input_path)
+
+    plan = build_analysis_plan(
+        input_path,
+        requested_engine="native",
+        max_dense_memory_mb=0.000001,
+    )
+
+    assert plan["recommended_engine"] == "scanpy"
+    assert plan["resolved_engine"] == "native"
+    assert plan["can_execute"] is False
+    assert plan["warnings"] == [
+        "Explicit native selection differs from the scanpy resource "
+        "recommendation.",
+        "Native dense conversion exceeds the configured memory limit.",
+    ]
+
+
+def test_auto_engine_records_requested_and_resolved_engine(
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "markers.csv"
+    diagnostics: dict[str, object] = {}
+
+    run(
+        EXAMPLE_DATA,
+        output_path,
+        engine="auto",
+        top_n=1,
+        diagnostics=diagnostics,
+    )
+
+    assert diagnostics["requested_engine"] == "auto"
+    assert diagnostics["resolved_engine"] == "native"
+    assert diagnostics["engine"] == "native"
+    assert output_path.is_file()
 
 
 def test_run_batch_continues_after_an_input_failure(tmp_path: Path) -> None:
