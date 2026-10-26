@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import platform
 import sys
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from statistics import median
+from tempfile import TemporaryDirectory
 from time import perf_counter
 
 import anndata as ad
@@ -54,6 +58,8 @@ DEFAULT_GENE_CHUNK_SIZE = 1000
 CSV_INSPECTION_CHUNK_ROWS = 10_000
 ProgressCallback = Callable[[int, int, object], None]
 PLAN_SCHEMA_VERSION = 1
+BATCH_MANIFEST_SCHEMA_VERSION = 1
+BENCHMARK_SCHEMA_VERSION = 1
 
 
 def _validate_workers(workers: int) -> None:
@@ -1277,9 +1283,12 @@ def run(
 def run_batch(
     input_dir: str | Path,
     output_dir: str | Path,
+    resume: bool = False,
+    retry_failed: bool = False,
+    fail_fast: bool = False,
     **analysis_options,
 ) -> list[dict[str, object]]:
-    """Analyze every supported file and write a machine-readable run manifest."""
+    """Analyze supported files with resumable, atomic manifest tracking."""
     batch_started = perf_counter()
     input_dir = Path(input_dir)
     output_dir = Path(output_dir)
@@ -1294,25 +1303,82 @@ def run_batch(
         raise ValueError("Batch input directory contains no CSV or H5AD files.")
 
     output_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = output_dir / "batch_manifest.json"
+    previous_runs: dict[str, dict[str, object]] = {}
+    if (resume or retry_failed) and manifest_path.is_file():
+        previous = json.loads(manifest_path.read_text(encoding="utf-8"))
+        previous_runs = {
+            str(row["input"]): row for row in previous.get("runs", [])
+        }
+
+    fingerprint_options = {
+        key: value for key, value in analysis_options.items()
+        if key != "progress_callback"
+    }
+    settings_json = json.dumps(
+        fingerprint_options,
+        sort_keys=True,
+        default=str,
+        allow_nan=False,
+    )
+    settings_fingerprint = hashlib.sha256(settings_json.encode()).hexdigest()
     manifest: list[dict[str, object]] = []
+    stopped = False
     for input_path in inputs:
         output_path = output_dir / f"{input_path.name}.markers.csv"
+        stat = input_path.stat()
+        input_fingerprint = {
+            "size": stat.st_size,
+            "mtime_ns": stat.st_mtime_ns,
+        }
         record: dict[str, object] = {
             "input": str(input_path),
             "output": str(output_path),
+            "input_fingerprint": input_fingerprint,
+            "settings_fingerprint": settings_fingerprint,
         }
+        if stopped:
+            record.update(
+                status="pending", marker_rows=0,
+                error="Not attempted because fail_fast stopped the batch.",
+                duration_seconds=0.0,
+            )
+            manifest.append(record)
+            continue
+        previous = previous_runs.get(str(input_path))
+        if (
+            previous
+            and previous.get("status") in {"complete", "skipped"}
+            and previous.get("input_fingerprint") == input_fingerprint
+            and previous.get("settings_fingerprint") == settings_fingerprint
+            and output_path.is_file()
+        ):
+            record.update(
+                status="skipped",
+                marker_rows=previous.get("marker_rows", 0),
+                error=None,
+                diagnostics=previous.get("diagnostics", {}),
+                duration_seconds=0.0,
+            )
+            manifest.append(record)
+            continue
         run_diagnostics: dict[str, object] = {}
         attempt_started = perf_counter()
+        temporary_output = output_path.with_suffix(output_path.suffix + ".tmp")
         try:
             markers = run(
                 input_path,
-                output_path,
+                temporary_output,
                 diagnostics=run_diagnostics,
                 **analysis_options,
             )
         except Exception as error:
+            temporary_output.unlink(missing_ok=True)
             record.update(status="failed", marker_rows=0, error=str(error))
+            stopped = fail_fast
         else:
+            temporary_output.replace(output_path)
+            run_diagnostics["output"] = str(output_path)
             record.update(
                 status="complete",
                 marker_rows=len(markers),
@@ -1322,22 +1388,57 @@ def run_batch(
         record["duration_seconds"] = perf_counter() - attempt_started
         manifest.append(record)
 
-    manifest_path = output_dir / "batch_manifest.json"
-    manifest_path.write_text(
-        json.dumps(
-            {
-                "app_version": APP_VERSION,
-                "inputs": len(inputs),
-                "completed": sum(row["status"] == "complete" for row in manifest),
-                "failed": sum(row["status"] == "failed" for row in manifest),
-                "duration_seconds": perf_counter() - batch_started,
-                "runs": manifest,
-            },
-            indent=2,
-        ) + "\n",
+    document = {
+        "schema_version": BATCH_MANIFEST_SCHEMA_VERSION,
+        "app_version": APP_VERSION,
+        "settings_fingerprint": settings_fingerprint,
+        "inputs": len(inputs),
+        "completed": sum(
+            row["status"] in {"complete", "skipped"} for row in manifest
+        ),
+        "skipped": sum(row["status"] == "skipped" for row in manifest),
+        "failed": sum(row["status"] == "failed" for row in manifest),
+        "pending": sum(row["status"] == "pending" for row in manifest),
+        "duration_seconds": perf_counter() - batch_started,
+        "runs": manifest,
+    }
+    temporary_manifest = manifest_path.with_suffix(".json.tmp")
+    temporary_manifest.write_text(
+        json.dumps(document, indent=2, allow_nan=False) + "\n",
         encoding="utf-8",
     )
+    temporary_manifest.replace(manifest_path)
     return manifest
+
+
+def benchmark_analysis(
+    input_path: str | Path,
+    repeats: int = 3,
+    **analysis_options,
+) -> dict[str, object]:
+    """Benchmark repeated analyses and return machine-readable timings."""
+    if isinstance(repeats, bool) or not isinstance(repeats, int) or repeats < 1:
+        raise ValueError("repeats must be a positive integer.")
+    runs: list[dict[str, object]] = []
+    with TemporaryDirectory() as temporary_directory:
+        for index in range(repeats):
+            diagnostics: dict[str, object] = {}
+            output = Path(temporary_directory) / f"run-{index + 1}.csv"
+            run(input_path, output, diagnostics=diagnostics, **analysis_options)
+            runs.append({"repeat": index + 1, **diagnostics})
+    totals = [float(item["total_seconds"]) for item in runs]
+    return {
+        "schema_version": BENCHMARK_SCHEMA_VERSION,
+        "app_version": APP_VERSION,
+        "python_version": platform.python_version(),
+        "platform": platform.platform(),
+        "input": str(input_path),
+        "repeats": repeats,
+        "min_seconds": min(totals),
+        "median_seconds": median(totals),
+        "max_seconds": max(totals),
+        "runs": runs,
+    }
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -1444,6 +1545,34 @@ def build_parser() -> argparse.ArgumentParser:
             "Write a versioned execution plan and exit without marker "
             "analysis. Requires a single --input."
         ),
+    )
+    parser.add_argument(
+        "--benchmark-json",
+        help=(
+            "Run repeated single-input analyses, write benchmark JSON, and "
+            "exit without retaining marker CSV output."
+        ),
+    )
+    parser.add_argument(
+        "--benchmark-repeats",
+        type=int,
+        default=3,
+        help="Number of benchmark repetitions (default: 3).",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume a batch by skipping unchanged completed inputs.",
+    )
+    parser.add_argument(
+        "--retry-failed",
+        action="store_true",
+        help="Retry failed batch inputs while skipping unchanged successes.",
+    )
+    parser.add_argument(
+        "--fail-fast",
+        action="store_true",
+        help="Stop a batch after its first failed input.",
     )
     parser.add_argument(
         "--quiet",
@@ -1593,8 +1722,12 @@ def main() -> None:
 
     args = build_parser().parse_args()
 
-    if args.inspect_json and args.plan_json:
-        raise SystemExit("--inspect-json and --plan-json are mutually exclusive.")
+    exclusive_modes = [args.inspect_json, args.plan_json, args.benchmark_json]
+    if sum(value is not None for value in exclusive_modes) > 1:
+        raise SystemExit(
+            "--inspect-json, --plan-json, and --benchmark-json are mutually "
+            "exclusive."
+        )
 
     if args.plan_json:
         if not args.input or args.output or args.input_dir or args.output_dir:
@@ -1689,6 +1822,30 @@ def main() -> None:
         workers=args.workers,
     )
 
+    if args.benchmark_json:
+        if not args.input or args.output or args.input_dir or args.output_dir:
+            raise SystemExit(
+                "--benchmark-json requires --input and cannot be combined "
+                "with analysis outputs or batch input."
+            )
+        if args.diagnostics_json:
+            raise SystemExit(
+                "--benchmark-json cannot be combined with --diagnostics-json."
+            )
+        benchmark = benchmark_analysis(
+            args.input,
+            repeats=args.benchmark_repeats,
+            **analysis_options,
+        )
+        benchmark_path = Path(args.benchmark_json)
+        benchmark_path.parent.mkdir(parents=True, exist_ok=True)
+        benchmark_path.write_text(
+            json.dumps(benchmark, indent=2, allow_nan=False) + "\n",
+            encoding="utf-8",
+        )
+        print(f"Saved benchmark to {benchmark_path}")
+        return
+
     if bool(args.input_dir) != bool(args.output_dir):
         raise SystemExit("--input-dir and --output-dir must be used together.")
     if bool(args.input) != bool(args.output):
@@ -1704,9 +1861,18 @@ def main() -> None:
         )
 
     if args.input_dir:
-        manifest = run_batch(args.input_dir, args.output_dir, **analysis_options)
-        completed = sum(row["status"] == "complete" for row in manifest)
-        failed = len(manifest) - completed
+        manifest = run_batch(
+            args.input_dir,
+            args.output_dir,
+            resume=args.resume,
+            retry_failed=args.retry_failed,
+            fail_fast=args.fail_fast,
+            **analysis_options,
+        )
+        completed = sum(
+            row["status"] in {"complete", "skipped"} for row in manifest
+        )
+        failed = sum(row["status"] == "failed" for row in manifest)
         print(
             f"Batch complete: {completed} succeeded, {failed} failed. "
             f"Manifest: {Path(args.output_dir) / 'batch_manifest.json'}"
