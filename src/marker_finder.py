@@ -53,6 +53,7 @@ DEFAULT_MAX_DENSE_MEMORY_MB = 2048.0
 DEFAULT_GENE_CHUNK_SIZE = 1000
 CSV_INSPECTION_CHUNK_ROWS = 10_000
 ProgressCallback = Callable[[int, int, object], None]
+PLAN_SCHEMA_VERSION = 1
 
 
 def _validate_workers(workers: int) -> None:
@@ -284,6 +285,68 @@ def inspect_input(
         "native_within_limit": native_within_limit,
         "recommended_engine": recommended_engine,
         "recommendation_reasons": recommendation_reasons,
+    }
+
+
+def build_analysis_plan(
+    input_path: str | Path,
+    requested_engine: str = "native",
+    cluster_column: str = "cluster",
+    cell_column: str | None = "cell",
+    layer: str | None = None,
+    use_raw: bool = False,
+    max_dense_memory_mb: float | None = DEFAULT_MAX_DENSE_MEMORY_MB,
+    gene_chunk_size: int = DEFAULT_GENE_CHUNK_SIZE,
+    workers: int = 1,
+) -> dict[str, object]:
+    """Build a non-destructive, machine-readable analysis execution plan."""
+    if requested_engine not in {"native", "scanpy", "auto"}:
+        raise ValueError("requested_engine must be native, scanpy, or auto.")
+    _validate_gene_chunk_size(gene_chunk_size)
+    _validate_workers(workers)
+    inspection = inspect_input(
+        input_path,
+        cluster_column=cluster_column,
+        cell_column=cell_column,
+        layer=layer,
+        use_raw=use_raw,
+        max_dense_memory_mb=max_dense_memory_mb,
+    )
+    recommended_engine = str(inspection["recommended_engine"])
+    resolved_engine = (
+        recommended_engine if requested_engine == "auto" else requested_engine
+    )
+    warnings: list[str] = []
+    can_execute = True
+
+    if requested_engine != "auto" and requested_engine != recommended_engine:
+        warnings.append(
+            f"Explicit {requested_engine} selection differs from the "
+            f"{recommended_engine} resource recommendation."
+        )
+    if resolved_engine == "scanpy" and inspection["input_format"] != "h5ad":
+        warnings.append("Scanpy requires H5AD input.")
+        can_execute = False
+    if resolved_engine == "native" and not inspection["native_within_limit"]:
+        warnings.append(
+            "Native dense conversion exceeds the configured memory limit."
+        )
+        can_execute = False
+    if resolved_engine == "scanpy" and workers != 1:
+        warnings.append("Scanpy requires workers=1.")
+        can_execute = False
+
+    return {
+        "schema_version": PLAN_SCHEMA_VERSION,
+        **inspection,
+        "requested_engine": requested_engine,
+        "resolved_engine": resolved_engine,
+        "gene_chunk_size": (
+            int(gene_chunk_size) if resolved_engine == "native" else None
+        ),
+        "workers": int(workers),
+        "can_execute": can_execute,
+        "warnings": warnings,
     }
 
 
@@ -1056,10 +1119,26 @@ def run(
     if use_raw and Path(input_path).suffix.lower() != ".h5ad":
         raise ValueError("Raw selection requires H5AD input.")
 
-    if engine not in {"native", "scanpy"}:
+    if engine not in {"native", "scanpy", "auto"}:
         raise ValueError(
-            "engine must be either 'native' or 'scanpy'."
+            "engine must be 'native', 'scanpy', or 'auto'."
         )
+    requested_engine = engine
+    if engine == "auto":
+        plan = build_analysis_plan(
+            input_path,
+            requested_engine="auto",
+            cluster_column=cluster_column,
+            cell_column=cell_column,
+            layer=layer,
+            use_raw=use_raw,
+            max_dense_memory_mb=max_dense_memory_mb,
+            gene_chunk_size=gene_chunk_size,
+            workers=workers,
+        )
+        if not plan["can_execute"]:
+            raise ValueError("; ".join(plan["warnings"]))
+        engine = str(plan["resolved_engine"])
     if engine == "scanpy" and workers != 1:
         raise ValueError(
             "workers greater than 1 are supported by the Native engine only."
@@ -1172,6 +1251,8 @@ def run(
             {
                 "app_version": APP_VERSION,
                 "engine": engine,
+                "requested_engine": requested_engine,
+                "resolved_engine": engine,
                 "input_format": input_path.suffix.lower().lstrip("."),
                 "input": str(input_path),
                 "output": str(output_path),
@@ -1297,11 +1378,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--engine",
-        choices=["native", "scanpy"],
+        choices=["native", "scanpy", "auto"],
         default="native",
         help=(
-            "Marker-analysis engine. The Scanpy engine "
-            "requires H5AD input."
+            "Marker-analysis engine. Auto follows the preflight resource "
+            "recommendation; Scanpy requires H5AD input."
         ),
     )
 
@@ -1355,6 +1436,13 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Inspect input dimensions and estimated dense memory, write JSON, "
             "and exit without marker analysis."
+        ),
+    )
+    parser.add_argument(
+        "--plan-json",
+        help=(
+            "Write a versioned execution plan and exit without marker "
+            "analysis. Requires a single --input."
         ),
     )
     parser.add_argument(
@@ -1504,6 +1592,39 @@ def main() -> None:
     """Run the command-line application."""
 
     args = build_parser().parse_args()
+
+    if args.inspect_json and args.plan_json:
+        raise SystemExit("--inspect-json and --plan-json are mutually exclusive.")
+
+    if args.plan_json:
+        if not args.input or args.output or args.input_dir or args.output_dir:
+            raise SystemExit(
+                "--plan-json requires --input and cannot be combined with "
+                "analysis outputs or batch input."
+            )
+        if args.diagnostics_json:
+            raise SystemExit(
+                "--plan-json cannot be combined with --diagnostics-json."
+            )
+        plan = build_analysis_plan(
+            args.input,
+            requested_engine=args.engine,
+            cluster_column=args.cluster_column,
+            cell_column=args.cell_column,
+            layer=args.layer,
+            use_raw=args.use_raw,
+            max_dense_memory_mb=args.max_dense_memory_mb,
+            gene_chunk_size=args.gene_chunk_size,
+            workers=args.workers,
+        )
+        plan_path = Path(args.plan_json)
+        plan_path.parent.mkdir(parents=True, exist_ok=True)
+        plan_path.write_text(
+            json.dumps(plan, indent=2, allow_nan=False) + "\n",
+            encoding="utf-8",
+        )
+        print(f"Saved analysis plan to {plan_path}")
+        return
 
     if args.inspect_json:
         if not args.input or args.output or args.input_dir or args.output_dir:
