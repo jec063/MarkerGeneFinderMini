@@ -21,10 +21,10 @@ web = ["streamlit>=1.40,<2.0"]
 test = ["pytest>=7.0,<9.0"]
 
 [project.scripts]
-marker-gene-finder = "src.marker_finder:main"
+marker-gene-finder = "marker_gene_finder.cli:main"
 
 [tool.setuptools.dynamic]
 version = {attr = "src.version.APP_VERSION"}
 
 [tool.setuptools.packages.find]
-include = ["src", "src.*"]
+include = ["marker_gene_finder", "marker_gene_finder.*", "src", "src.*"]

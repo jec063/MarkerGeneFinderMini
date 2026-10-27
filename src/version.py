@@ -1,3 +1,3 @@
-"""Application version shared by the UI, CLI, and reproducibility exports."""
+"""Application version shared by the legacy engine and v2 package."""
 
-APP_VERSION = "1.17.0"
+APP_VERSION = "2.0.0"

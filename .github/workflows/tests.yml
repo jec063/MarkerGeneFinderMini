@@ -43,3 +43,5 @@ jobs:
         run: |
           python -m pip install --no-deps --force-reinstall dist/*.whl
           marker-gene-finder --version
+          marker-gene-finder --help
+          marker-gene-finder analyze --help

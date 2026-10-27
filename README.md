@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **1.17.0**. The version is shown in the web
+Current application version: **2.0.0**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -223,12 +223,77 @@ marker-gene-finder --version
 Install the optional Streamlit interface with `python -m pip install '.[web]'`
 or the test dependencies with `python -m pip install '.[test]'`.
 
-## Batch command-line analysis
+## Version 2 API and CLI
+
+Version 2 provides a stable `marker_gene_finder` Python package, a validated
+`AnalysisConfig`, a typed `MarkerResult`, documented public exceptions, and an
+explicit subcommand CLI. The established analysis engines remain available
+behind this interface, so the release changes orchestration without changing
+the marker calculations.
+
+```python
+import pandas as pd
+
+from marker_gene_finder import AnalysisConfig, analyze
+
+expression = pd.read_csv("expression.csv")
+result = analyze(expression, AnalysisConfig(top_n=10, min_log2fc=1.0))
+result.to_csv("markers.csv")
+print(result.metadata)
+```
+
+Run a file analysis with the installed command:
+
+```bash
+marker-gene-finder analyze expression.csv markers.csv \
+  --config analysis-config.json
+```
+
+The versioned configuration schema is shared by the API and every analysis
+subcommand. Unknown fields and unsupported schema versions are rejected rather
+than silently ignored. A minimal configuration is:
+
+```json
+{
+  "schema_name": "marker-gene-finder.analysis-config",
+  "schema_version": 2,
+  "engine": "native",
+  "cluster_column": "cluster",
+  "cell_column": "cell",
+  "top_n": 10
+}
+```
+
+The v2 commands are `analyze`, `inspect`, `plan`, `batch`, `batch-plan`,
+`verify`, `benchmark`, and `compare-benchmarks`. For example:
+
+```bash
+marker-gene-finder inspect expression.h5ad --output inspection.json \
+  --config analysis-config.json
+marker-gene-finder plan expression.h5ad --output plan.json \
+  --config analysis-config.json
+marker-gene-finder batch inputs outputs --config analysis-config.json --resume
+```
+
+### Migrating from v1
+
+The installed command now requires a subcommand and moves analysis settings
+into a reusable JSON configuration. For example, replace
+`marker-gene-finder --input expression.csv --output markers.csv --top-n 10`
+with the `analyze` command above and set `top_n` to `10` in the configuration.
+The original flat parser remains temporarily available through
+`python src/marker_finder.py` for migration, but new automation should use the
+v2 subcommands and public package.
+
+## Legacy v1 command-line reference
+
+The examples below document the transitional flat parser invoked with
+`python src/marker_finder.py`. Prefer the v2 commands above for new workflows.
 
 Inspect a dataset without creating marker results:
 
 ```bash
-marker-gene-finder \
+python src/marker_finder.py \
   --input expression.h5ad \
   --cluster-column leiden \
   --inspect-json inspection.json
@@ -243,7 +308,7 @@ analysis output, batch input, or runtime diagnostics.
 Create a reviewable execution plan without running marker analysis:
 
 ```bash
-marker-gene-finder \
+python src/marker_finder.py \
   --input expression.h5ad \
   --engine auto \
   --cluster-column leiden \
@@ -258,7 +323,7 @@ Use `--input-dir` and `--output-dir` to apply one configuration to every CSV
 or H5AD file directly inside a directory:
 
 ```bash
-marker-gene-finder \
+python src/marker_finder.py \
   --input-dir batch_inputs \
   --output-dir batch_outputs \
   --cluster-column cluster \
@@ -280,7 +345,7 @@ batch duration. For a single input, pass `--diagnostics-json diagnostics.json`
 to write the same runtime and dataset metadata to a standalone JSON file:
 
 ```bash
-marker-gene-finder \
+python src/marker_finder.py \
   --input expression.h5ad \
   --output markers.csv \
   --engine native \
@@ -307,7 +372,7 @@ causes that input to run again.
 Benchmark a complete single-input analysis without retaining marker output:
 
 ```bash
-marker-gene-finder \
+python src/marker_finder.py \
   --input expression.h5ad \
   --engine auto \
   --benchmark-repeats 3 \
@@ -325,7 +390,7 @@ Compare a candidate benchmark with a baseline and fail when its median runtime
 regresses by more than an allowed percentage:
 
 ```bash
-marker-gene-finder \
+python src/marker_finder.py \
   --compare-benchmarks baseline.json candidate.json \
   --max-regression-percent 10 \
   --comparison-json comparison.json
@@ -341,7 +406,7 @@ marker output. Verify that a completed batch still matches those recorded
 artifacts without rerunning the analysis:
 
 ```bash
-marker-gene-finder \
+python src/marker_finder.py \
   --verify-batch-manifest batch_outputs/batch_manifest.json \
   --verification-json batch-verification.json
 ```
@@ -354,7 +419,7 @@ Select a batch subset with repeatable filename globs. Include patterns are
 combined with OR logic, then matching exclude patterns are removed:
 
 ```bash
-marker-gene-finder \
+python src/marker_finder.py \
   --input-dir batch_inputs \
   --output-dir batch_outputs \
   --include-pattern 'sample-*.csv' \
@@ -366,7 +431,7 @@ Preview the exact selected files and whether resume mode would run or skip each
 one without executing marker analysis or changing the batch manifest:
 
 ```bash
-marker-gene-finder \
+python src/marker_finder.py \
   --input-dir batch_inputs \
   --output-dir batch_outputs \
   --include-pattern 'sample-*.csv' \
