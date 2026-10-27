@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import anndata as ad
@@ -8,16 +9,709 @@ from scipy import sparse
 
 from src.marker_finder import (
     _benjamini_hochberg,
+    benchmark_analysis,
+    build_analysis_plan,
+    build_batch_plan,
     build_parser,
+    compare_benchmarks,
+    estimate_dense_expression_bytes,
     find_markers,
+    inspect_input,
     load_expression,
     run,
+    run_batch,
+    verify_batch_manifest,
 )
+from src.version import APP_VERSION
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE_DATA = (
     PROJECT_ROOT / "data" / "example_expression.csv"
 )
+
+
+def test_parser_reports_application_version(capsys) -> None:
+    with pytest.raises(SystemExit, match="0"):
+        build_parser().parse_args(["--version"])
+
+    assert capsys.readouterr().out.strip().endswith(APP_VERSION)
+
+
+def test_parser_accepts_batch_directories() -> None:
+    args = build_parser().parse_args(
+        ["--input-dir", "inputs", "--output-dir", "outputs"]
+    )
+
+    assert args.input_dir == "inputs"
+    assert args.output_dir == "outputs"
+    assert args.input is None
+    assert args.output is None
+
+
+def test_parser_accepts_diagnostics_path() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--diagnostics-json", "diagnostics.json",
+        ]
+    )
+
+    assert args.diagnostics_json == "diagnostics.json"
+
+
+def test_parser_accepts_native_gene_chunk_size() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--gene-chunk-size", "17",
+        ]
+    )
+
+    assert args.gene_chunk_size == 17
+
+
+def test_parser_accepts_quiet_progress_mode() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--quiet",
+        ]
+    )
+
+    assert args.quiet is True
+
+
+def test_parser_accepts_native_workers() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--workers", "3",
+        ]
+    )
+
+    assert args.workers == 3
+
+
+def test_parser_accepts_input_inspection_without_analysis_output() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--inspect-json", "inspection.json",
+        ]
+    )
+
+    assert args.output is None
+    assert args.inspect_json == "inspection.json"
+
+
+def test_parser_accepts_analysis_plan_and_auto_engine() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.h5ad",
+            "--engine", "auto",
+            "--plan-json", "plan.json",
+        ]
+    )
+
+    assert args.output is None
+    assert args.engine == "auto"
+    assert args.plan_json == "plan.json"
+
+
+def test_parser_accepts_batch_recovery_and_benchmark_options() -> None:
+    batch = build_parser().parse_args(
+        [
+            "--input-dir", "inputs", "--output-dir", "outputs",
+            "--resume", "--retry-failed", "--fail-fast",
+        ]
+    )
+    benchmark = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--benchmark-json", "benchmark.json",
+            "--benchmark-repeats", "2",
+        ]
+    )
+
+    assert batch.resume and batch.retry_failed and batch.fail_fast
+    assert benchmark.benchmark_json == "benchmark.json"
+    assert benchmark.benchmark_repeats == 2
+
+
+def test_parser_accepts_batch_selection_and_dry_run_plan() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input-dir", "inputs",
+            "--output-dir", "outputs",
+            "--include-pattern", "sample-*.csv",
+            "--include-pattern", "*.h5ad",
+            "--exclude-pattern", "*-draft.csv",
+            "--resume",
+            "--batch-plan-json", "batch-plan.json",
+        ]
+    )
+
+    assert args.include_pattern == ["sample-*.csv", "*.h5ad"]
+    assert args.exclude_pattern == ["*-draft.csv"]
+    assert args.batch_plan_json == "batch-plan.json"
+
+
+def test_main_rejects_batch_selection_for_single_input(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "marker-gene-finder",
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--include-pattern", "*.csv",
+        ],
+    )
+
+    from src.marker_finder import main
+
+    with pytest.raises(SystemExit, match="require --input-dir"):
+        main()
+
+
+def test_parser_accepts_verification_and_benchmark_comparison() -> None:
+    verification = build_parser().parse_args(
+        [
+            "--verify-batch-manifest", "batch_manifest.json",
+            "--verification-json", "verification.json",
+        ]
+    )
+    comparison = build_parser().parse_args(
+        [
+            "--compare-benchmarks", "baseline.json", "candidate.json",
+            "--comparison-json", "comparison.json",
+            "--max-regression-percent", "15",
+        ]
+    )
+
+    assert verification.verify_batch_manifest == "batch_manifest.json"
+    assert verification.verification_json == "verification.json"
+    assert comparison.compare_benchmarks == ["baseline.json", "candidate.json"]
+    assert comparison.comparison_json == "comparison.json"
+    assert comparison.max_regression_percent == 15
+
+
+def test_inspect_csv_reports_dimensions_and_dense_memory() -> None:
+    inspection = inspect_input(EXAMPLE_DATA)
+
+    assert inspection["app_version"] == APP_VERSION
+    assert inspection["input_format"] == "csv"
+    assert inspection["expression_source"] == "csv"
+    assert inspection["storage"] == "dense"
+    assert inspection["cells"] == 12
+    assert inspection["genes"] == 8
+    assert inspection["clusters"] == 4
+    assert inspection["estimated_dense_bytes"] == 12 * 8 * 8
+    assert inspection["estimated_dense_mib"] > 0
+    assert inspection["native_dense_limit_mib"] == 2048
+    assert inspection["native_within_limit"] is True
+    assert inspection["recommended_engine"] == "native"
+    assert inspection["recommendation_reasons"] == []
+
+
+def test_inspect_h5ad_uses_selected_layer(tmp_path: Path) -> None:
+    input_path = tmp_path / "expression.h5ad"
+    adata = ad.AnnData(
+        X=np.ones((4, 2), dtype=np.float32),
+        obs=pd.DataFrame(
+            {"cluster": ["A", "A", "B", "B"]},
+            index=[f"cell_{index}" for index in range(4)],
+        ),
+        var=pd.DataFrame(index=["G1", "G2"]),
+    )
+    adata.layers["counts"] = np.ones((4, 2), dtype=np.float64)
+    adata.write_h5ad(input_path)
+
+    inspection = inspect_input(input_path, layer="counts")
+
+    assert inspection["expression_source"] == "layer:counts"
+    assert inspection["cells"] == 4
+    assert inspection["genes"] == 2
+    assert inspection["clusters"] == 2
+    assert inspection["estimated_dense_bytes"] == 4 * 2 * 8
+    assert inspection["storage"] == "dense"
+    assert inspection["native_within_limit"] is True
+    assert inspection["recommended_engine"] == "native"
+
+
+def test_inspect_sparse_h5ad_recommends_scanpy(tmp_path: Path) -> None:
+    input_path = tmp_path / "sparse.h5ad"
+    adata = ad.AnnData(
+        X=sparse.csr_matrix(np.ones((4, 2), dtype=np.float32)),
+        obs=pd.DataFrame(
+            {"cluster": ["A", "A", "B", "B"]},
+            index=[f"cell_{index}" for index in range(4)],
+        ),
+        var=pd.DataFrame(index=["G1", "G2"]),
+    )
+    adata.write_h5ad(input_path)
+
+    inspection = inspect_input(input_path)
+
+    assert inspection["storage"] == "sparse"
+    assert inspection["native_within_limit"] is True
+    assert inspection["recommended_engine"] == "scanpy"
+    assert inspection["recommendation_reasons"] == [
+        "Scanpy preserves the selected sparse H5AD matrix."
+    ]
+
+
+def test_inspect_h5ad_over_native_limit_recommends_scanpy(
+    tmp_path: Path,
+) -> None:
+    input_path = tmp_path / "dense.h5ad"
+    adata = ad.AnnData(
+        X=np.ones((4, 2), dtype=np.float64),
+        obs=pd.DataFrame(
+            {"cluster": ["A", "A", "B", "B"]},
+            index=[f"cell_{index}" for index in range(4)],
+        ),
+        var=pd.DataFrame(index=["G1", "G2"]),
+    )
+    adata.write_h5ad(input_path)
+
+    inspection = inspect_input(input_path, max_dense_memory_mb=0.000001)
+
+    assert inspection["storage"] == "dense"
+    assert inspection["native_dense_limit_mib"] == 0.000001
+    assert inspection["native_within_limit"] is False
+    assert inspection["recommended_engine"] == "scanpy"
+    assert inspection["recommendation_reasons"] == [
+        "The estimated dense matrix exceeds the Native safety limit."
+    ]
+
+
+def test_inspection_normalizes_numpy_memory_limit_for_json() -> None:
+    inspection = inspect_input(
+        EXAMPLE_DATA,
+        max_dense_memory_mb=np.int64(512),
+    )
+
+    assert inspection["native_dense_limit_mib"] == 512.0
+    assert type(inspection["native_dense_limit_mib"]) is float
+    json.dumps(inspection, allow_nan=False)
+
+
+def test_analysis_plan_resolves_sparse_h5ad_to_scanpy(tmp_path: Path) -> None:
+    input_path = tmp_path / "sparse.h5ad"
+    adata = ad.AnnData(
+        X=sparse.csr_matrix(np.ones((4, 2), dtype=np.float32)),
+        obs=pd.DataFrame(
+            {"cluster": ["A", "A", "B", "B"]},
+            index=[f"cell_{index}" for index in range(4)],
+        ),
+        var=pd.DataFrame(index=["G1", "G2"]),
+    )
+    adata.write_h5ad(input_path)
+
+    plan = build_analysis_plan(input_path, requested_engine="auto")
+
+    assert plan["schema_version"] == 1
+    assert plan["requested_engine"] == "auto"
+    assert plan["recommended_engine"] == "scanpy"
+    assert plan["resolved_engine"] == "scanpy"
+    assert plan["gene_chunk_size"] is None
+    assert plan["can_execute"] is True
+    assert plan["warnings"] == []
+    json.dumps(plan, allow_nan=False)
+
+
+def test_analysis_plan_reports_explicit_native_memory_conflict(
+    tmp_path: Path,
+) -> None:
+    input_path = tmp_path / "dense.h5ad"
+    adata = ad.AnnData(
+        X=np.ones((4, 2), dtype=np.float64),
+        obs=pd.DataFrame(
+            {"cluster": ["A", "A", "B", "B"]},
+            index=[f"cell_{index}" for index in range(4)],
+        ),
+        var=pd.DataFrame(index=["G1", "G2"]),
+    )
+    adata.write_h5ad(input_path)
+
+    plan = build_analysis_plan(
+        input_path,
+        requested_engine="native",
+        max_dense_memory_mb=0.000001,
+    )
+
+    assert plan["recommended_engine"] == "scanpy"
+    assert plan["resolved_engine"] == "native"
+    assert plan["can_execute"] is False
+    assert plan["warnings"] == [
+        "Explicit native selection differs from the scanpy resource "
+        "recommendation.",
+        "Native dense conversion exceeds the configured memory limit.",
+    ]
+
+
+def test_auto_engine_records_requested_and_resolved_engine(
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "markers.csv"
+    diagnostics: dict[str, object] = {}
+
+    run(
+        EXAMPLE_DATA,
+        output_path,
+        engine="auto",
+        top_n=1,
+        diagnostics=diagnostics,
+    )
+
+    assert diagnostics["requested_engine"] == "auto"
+    assert diagnostics["resolved_engine"] == "native"
+    assert diagnostics["engine"] == "native"
+    assert output_path.is_file()
+
+
+def test_run_batch_continues_after_an_input_failure(tmp_path: Path) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "outputs"
+    input_dir.mkdir()
+    pd.DataFrame(
+        {
+            "cluster": ["A", "A", "B", "B"],
+            "GENE_A": [5.0, 4.0, 0.0, 0.0],
+            "GENE_B": [0.0, 0.0, 5.0, 4.0],
+        }
+    ).to_csv(input_dir / "valid.csv", index=False)
+    pd.DataFrame({"GENE": [1.0, 2.0]}).to_csv(
+        input_dir / "invalid.csv", index=False
+    )
+
+    runs = run_batch(
+        input_dir,
+        output_dir,
+        cell_column=None,
+        top_n=1,
+    )
+
+    assert [Path(run["input"]).name for run in runs] == [
+        "invalid.csv",
+        "valid.csv",
+    ]
+    assert [run["status"] for run in runs] == ["failed", "complete"]
+    assert runs[0]["error"]
+    assert runs[0]["duration_seconds"] >= 0
+    assert runs[1]["marker_rows"] == 2
+    assert (output_dir / "valid.csv.markers.csv").is_file()
+    assert not (output_dir / "invalid.csv.markers.csv").exists()
+
+    manifest = json.loads(
+        (output_dir / "batch_manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["app_version"] == APP_VERSION
+    assert manifest["schema_version"] == 2
+    assert manifest["inputs"] == 2
+    assert manifest["completed"] == 1
+    assert manifest["failed"] == 1
+    assert manifest["duration_seconds"] >= 0
+    assert manifest["runs"] == runs
+    assert manifest["runs"][1]["diagnostics"]["marker_rows"] == 2
+
+
+def test_run_batch_resumes_unchanged_completed_input(tmp_path: Path) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "outputs"
+    input_dir.mkdir()
+    source = pd.DataFrame(
+        {
+            "cluster": ["A", "A", "B", "B"],
+            "G1": [4.0, 3.0, 0.0, 0.0],
+            "G2": [0.0, 0.0, 4.0, 3.0],
+        }
+    )
+    source.to_csv(input_dir / "sample.csv", index=False)
+
+    first = run_batch(input_dir, output_dir, cell_column=None, top_n=1)
+    resumed = run_batch(
+        input_dir, output_dir, resume=True, cell_column=None, top_n=1
+    )
+
+    assert first[0]["status"] == "complete"
+    assert resumed[0]["status"] == "skipped"
+    assert resumed[0]["duration_seconds"] == 0.0
+    manifest = json.loads((output_dir / "batch_manifest.json").read_text())
+    assert manifest["completed"] == 1
+    assert manifest["skipped"] == 1
+    assert manifest["failed"] == 0
+
+
+def test_batch_patterns_select_inputs_in_filename_order(tmp_path: Path) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "outputs"
+    input_dir.mkdir()
+    frame = pd.DataFrame({
+        "cluster": ["A", "A", "B", "B"],
+        "G1": [4.0, 3.0, 0.0, 0.0],
+    })
+    for name in ("sample-b.csv", "sample-a.csv", "sample-draft.csv", "other.csv"):
+        frame.to_csv(input_dir / name, index=False)
+
+    runs = run_batch(
+        input_dir,
+        output_dir,
+        include_patterns=["sample-*.csv"],
+        exclude_patterns=["*-draft.csv"],
+        cell_column=None,
+        top_n=1,
+    )
+
+    assert [Path(run["input"]).name for run in runs] == [
+        "sample-a.csv", "sample-b.csv",
+    ]
+    manifest = json.loads((output_dir / "batch_manifest.json").read_text())
+    assert manifest["include_patterns"] == ["sample-*.csv"]
+    assert manifest["exclude_patterns"] == ["*-draft.csv"]
+
+
+def test_build_batch_plan_predicts_resume_actions_without_writing(
+    tmp_path: Path,
+) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "outputs"
+    input_dir.mkdir()
+    pd.DataFrame({
+        "cluster": ["A", "A", "B", "B"],
+        "G1": [4.0, 3.0, 0.0, 0.0],
+    }).to_csv(input_dir / "sample.csv", index=False)
+
+    initial = build_batch_plan(
+        input_dir, output_dir, resume=True, cell_column=None, top_n=1
+    )
+    assert initial["schema_version"] == 1
+    assert initial["run"] == 1
+    assert initial["skip"] == 0
+    assert initial["entries"][0]["reason"] == "new_input"
+    assert not output_dir.exists()
+
+    run_batch(input_dir, output_dir, cell_column=None, top_n=1)
+    resumed = build_batch_plan(
+        input_dir, output_dir, resume=True, cell_column=None, top_n=1
+    )
+
+    assert resumed["run"] == 0
+    assert resumed["skip"] == 1
+    assert resumed["entries"][0]["action"] == "skip"
+    assert resumed["entries"][0]["reason"] == "unchanged_success"
+
+
+def test_build_batch_plan_explains_changed_output(tmp_path: Path) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "outputs"
+    input_dir.mkdir()
+    pd.DataFrame({
+        "cluster": ["A", "A", "B", "B"],
+        "G1": [4.0, 3.0, 0.0, 0.0],
+    }).to_csv(input_dir / "sample.csv", index=False)
+    run_batch(input_dir, output_dir, cell_column=None, top_n=1)
+    (output_dir / "sample.csv.markers.csv").write_text("changed\n")
+
+    plan = build_batch_plan(
+        input_dir, output_dir, resume=True, cell_column=None, top_n=1
+    )
+
+    assert plan["entries"][0]["action"] == "run"
+    assert plan["entries"][0]["reason"] == "output_changed"
+
+
+def test_run_batch_resume_invalidates_changed_settings(tmp_path: Path) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "outputs"
+    input_dir.mkdir()
+    pd.DataFrame(
+        {
+            "cluster": ["A", "A", "B", "B"],
+            "G1": [4.0, 3.0, 0.0, 0.0],
+        }
+    ).to_csv(input_dir / "sample.csv", index=False)
+
+    run_batch(input_dir, output_dir, cell_column=None, top_n=1)
+    rerun = run_batch(
+        input_dir, output_dir, resume=True, cell_column=None, top_n=2
+    )
+
+    assert rerun[0]["status"] == "complete"
+
+
+def test_run_batch_fail_fast_marks_remaining_inputs_pending(
+    tmp_path: Path,
+) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "outputs"
+    input_dir.mkdir()
+    pd.DataFrame({"G1": [1.0]}).to_csv(
+        input_dir / "a-invalid.csv", index=False
+    )
+    pd.DataFrame(
+        {"cluster": ["A", "A", "B", "B"], "G1": [1, 1, 0, 0]}
+    ).to_csv(input_dir / "b-valid.csv", index=False)
+
+    runs = run_batch(
+        input_dir, output_dir, fail_fast=True, cell_column=None
+    )
+
+    assert [run["status"] for run in runs] == ["failed", "pending"]
+    manifest = json.loads((output_dir / "batch_manifest.json").read_text())
+    assert manifest["failed"] == 1
+    assert manifest["pending"] == 1
+
+
+def test_benchmark_analysis_reports_repeated_timings() -> None:
+    benchmark = benchmark_analysis(
+        EXAMPLE_DATA,
+        repeats=2,
+        cell_column="cell",
+        top_n=1,
+        progress_callback=None,
+    )
+
+    assert benchmark["schema_version"] == 1
+    assert benchmark["app_version"] == APP_VERSION
+    assert benchmark["repeats"] == 2
+    assert len(benchmark["runs"]) == 2
+    assert benchmark["min_seconds"] <= benchmark["median_seconds"]
+    assert benchmark["median_seconds"] <= benchmark["max_seconds"]
+    json.dumps(benchmark, allow_nan=False)
+
+
+def test_compare_benchmarks_reports_regression_and_compatibility(
+    tmp_path: Path,
+) -> None:
+    baseline_path = tmp_path / "baseline.json"
+    candidate_path = tmp_path / "candidate.json"
+    baseline_path.write_text(json.dumps({
+        "schema_version": 1,
+        "median_seconds": 10.0,
+        "platform": "same",
+        "python_version": "3.12",
+        "input": "expression.csv",
+    }))
+    candidate_path.write_text(json.dumps({
+        "schema_version": 1,
+        "median_seconds": 12.0,
+        "platform": "different",
+        "python_version": "3.12",
+        "input": "expression.csv",
+    }))
+
+    comparison = compare_benchmarks(
+        baseline_path, candidate_path, max_regression_percent=15
+    )
+
+    assert comparison["schema_version"] == 1
+    assert comparison["ratio"] == pytest.approx(1.2)
+    assert comparison["change_percent"] == pytest.approx(20)
+    assert comparison["regression"] is True
+    assert comparison["passed"] is False
+    assert comparison["compatibility_warnings"] == ["platform_mismatch"]
+
+
+@pytest.mark.parametrize("threshold", [-1, float("nan"), float("inf")])
+def test_compare_benchmarks_rejects_invalid_threshold(
+    tmp_path: Path, threshold: float,
+) -> None:
+    report = tmp_path / "benchmark.json"
+    report.write_text(json.dumps({"schema_version": 1, "median_seconds": 1}))
+
+    with pytest.raises(ValueError, match="finite and non-negative"):
+        compare_benchmarks(report, report, threshold)
+
+
+def test_verify_batch_manifest_detects_output_tampering(tmp_path: Path) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "outputs"
+    input_dir.mkdir()
+    pd.DataFrame({
+        "cluster": ["A", "A", "B", "B"],
+        "G1": [3.0, 2.0, 0.0, 0.0],
+    }).to_csv(input_dir / "sample.csv", index=False)
+    run_batch(input_dir, output_dir, cell_column=None, top_n=1)
+    manifest_path = output_dir / "batch_manifest.json"
+
+    valid = verify_batch_manifest(manifest_path)
+    assert valid["valid"] is True
+    assert valid["invalid"] == 0
+
+    output_path = output_dir / "sample.csv.markers.csv"
+    output_path.write_text(output_path.read_text() + "tampered\n")
+    invalid = verify_batch_manifest(manifest_path)
+
+    assert invalid["valid"] is False
+    assert invalid["invalid"] == 1
+    assert invalid["entries"][0]["issues"] == ["output_sha256_mismatch"]
+
+
+def test_run_batch_resume_reruns_tampered_output(tmp_path: Path) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "outputs"
+    input_dir.mkdir()
+    pd.DataFrame({
+        "cluster": ["A", "A", "B", "B"],
+        "G1": [3.0, 2.0, 0.0, 0.0],
+    }).to_csv(input_dir / "sample.csv", index=False)
+    run_batch(input_dir, output_dir, cell_column=None, top_n=1)
+    output_path = output_dir / "sample.csv.markers.csv"
+    output_path.write_text("tampered\n")
+
+    resumed = run_batch(
+        input_dir, output_dir, resume=True, cell_column=None, top_n=1
+    )
+
+    assert resumed[0]["status"] == "complete"
+    assert output_path.read_text() != "tampered\n"
+
+
+def test_run_populates_runtime_diagnostics(tmp_path: Path) -> None:
+    output_path = tmp_path / "markers.csv"
+    diagnostics: dict[str, object] = {}
+
+    markers = run(
+        EXAMPLE_DATA,
+        output_path,
+        top_n=1,
+        diagnostics=diagnostics,
+    )
+
+    assert diagnostics["app_version"] == APP_VERSION
+    assert diagnostics["engine"] == "native"
+    assert diagnostics["input_format"] == "csv"
+    assert diagnostics["cells"] == 12
+    assert diagnostics["genes"] == 8
+    assert diagnostics["clusters"] == 4
+    assert diagnostics["marker_rows"] == len(markers)
+    assert diagnostics["gene_chunk_size"] == 1000
+    assert diagnostics["workers"] == 1
+    for name in (
+        "load_seconds",
+        "analysis_seconds",
+        "output_seconds",
+        "total_seconds",
+    ):
+        assert diagnostics[name] >= 0
+
+
+def test_run_batch_rejects_directory_without_supported_inputs(
+    tmp_path: Path,
+) -> None:
+    input_dir = tmp_path / "inputs"
+    input_dir.mkdir()
+    (input_dir / "notes.txt").write_text("not expression data")
+
+    with pytest.raises(ValueError, match="contains no CSV or H5AD"):
+        run_batch(input_dir, tmp_path / "outputs")
 
 
 def test_load_expression_reads_h5ad(
@@ -68,6 +762,92 @@ def test_load_expression_reads_h5ad(
         expected,
         check_dtype=False,
     )
+
+
+def test_dense_memory_estimate_uses_shape_and_dtype(tmp_path: Path) -> None:
+    input_path = tmp_path / "expression.h5ad"
+    ad.AnnData(X=np.ones((4, 3), dtype=np.float32)).write_h5ad(input_path)
+
+    assert estimate_dense_expression_bytes(input_path) == 48
+
+
+def test_native_h5ad_rejects_dense_conversion_above_limit(
+    tmp_path: Path,
+) -> None:
+    input_path = tmp_path / "expression.h5ad"
+    adata = ad.AnnData(
+        X=sparse.csr_matrix(np.ones((4, 3), dtype=np.float64)),
+        obs=pd.DataFrame(
+            {"cluster": ["A", "A", "B", "B"]},
+            index=[f"cell_{index}" for index in range(4)],
+        ),
+        var=pd.DataFrame(index=["G1", "G2", "G3"]),
+    )
+    adata.write_h5ad(input_path)
+
+    with pytest.raises(ValueError, match="dense conversion requires"):
+        load_expression(input_path, max_dense_memory_mb=0.00001)
+
+    loaded = load_expression(input_path, max_dense_memory_mb=0)
+    assert loaded.shape == (4, 5)
+
+
+@pytest.mark.parametrize(
+    "limit",
+    [-1, float("nan"), float("inf"), True, "100"],
+)
+def test_native_h5ad_rejects_invalid_dense_memory_limits(
+    tmp_path: Path,
+    limit,
+) -> None:
+    input_path = tmp_path / "expression.h5ad"
+    ad.AnnData(X=np.ones((2, 2))).write_h5ad(input_path)
+
+    with pytest.raises(ValueError, match="max_dense_memory_mb"):
+        load_expression(input_path, max_dense_memory_mb=limit)
+
+
+def test_batch_manifest_records_dense_memory_failure(tmp_path: Path) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "outputs"
+    input_dir.mkdir()
+    input_path = input_dir / "large.h5ad"
+    adata = ad.AnnData(
+        X=sparse.csr_matrix(np.ones((4, 3))),
+        obs=pd.DataFrame(
+            {"cluster": ["A", "A", "B", "B"]},
+            index=[f"cell_{index}" for index in range(4)],
+        ),
+        var=pd.DataFrame(index=["G1", "G2", "G3"]),
+    )
+    adata.write_h5ad(input_path)
+
+    runs = run_batch(
+        input_dir,
+        output_dir,
+        max_dense_memory_mb=0.00001,
+    )
+
+    assert runs[0]["status"] == "failed"
+    assert "dense conversion requires" in runs[0]["error"]
+    assert not (output_dir / "large.h5ad.markers.csv").exists()
+    manifest = json.loads(
+        (output_dir / "batch_manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["completed"] == 0
+    assert manifest["failed"] == 1
+
+
+def test_parser_accepts_dense_memory_limit() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.h5ad",
+            "--output", "markers.csv",
+            "--max-dense-memory-mb", "512",
+        ]
+    )
+
+    assert args.max_dense_memory_mb == 512
 
 
 def test_run_reads_sparse_h5ad(
@@ -172,6 +952,25 @@ def test_expected_markers_are_ranked_first() -> None:
     }
 
     assert observed == expected
+    assert markers.groupby("cluster")["rank"].apply(list).to_dict() == {
+        cluster: [1, 2] for cluster in expected
+    }
+
+
+def test_rank_reflects_filtered_marker_order() -> None:
+    expression = pd.read_csv(EXAMPLE_DATA)
+
+    markers = find_markers(
+        expression,
+        top_n=3,
+        min_pct=0.5,
+    )
+
+    for _, cluster_markers in markers.groupby("cluster", sort=False):
+        assert cluster_markers["rank"].tolist() == list(
+            range(1, len(cluster_markers) + 1)
+        )
+        assert cluster_markers["log2FC"].is_monotonic_decreasing
 
 
 def test_output_contains_expression_prevalence() -> None:
@@ -184,7 +983,239 @@ def test_output_contains_expression_prevalence() -> None:
 
     assert markers["pct_in"].between(0, 1).all()
     assert markers["pct_out"].between(0, 1).all()
+    assert (markers["cells_expressing_in"] >= 0).all()
+    assert (markers["cells_expressing_out"] >= 0).all()
+    assert pd.api.types.is_integer_dtype(markers["cells_expressing_in"])
+    assert pd.api.types.is_integer_dtype(markers["cells_expressing_out"])
     assert (markers["log2FC"] > 0).all()
+
+
+def test_output_contains_comparison_group_sizes() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["A", "A", "B", "B", "B"],
+            "gene": [5.0, 4.0, 0.0, 0.0, 0.0],
+        }
+    )
+
+    markers = find_markers(
+        expression,
+        cell_column=None,
+        target_clusters=["A"],
+        top_n=1,
+    )
+
+    assert markers["cluster_size"].tolist() == [2]
+    assert markers["reference_size"].tolist() == [3]
+    assert pd.api.types.is_integer_dtype(markers["cluster_size"])
+    assert pd.api.types.is_integer_dtype(markers["reference_size"])
+
+
+def test_min_cells_expressing_filters_rare_markers() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["A"] * 4 + ["B"] * 4,
+            "rare": [10, 0, 0, 0, 0, 0, 0, 0],
+            "supported": [2, 2, 2, 0, 0, 0, 0, 0],
+        }
+    )
+
+    markers = find_markers(
+        expression,
+        cell_column=None,
+        target_clusters=["A"],
+        top_n=10,
+        min_cells_expressing=2,
+    )
+
+    assert markers["gene"].tolist() == ["supported"]
+    assert markers["cells_expressing_in"].tolist() == [3]
+
+
+@pytest.mark.parametrize("value", [-1, 1.5, True])
+def test_invalid_min_cells_expressing_is_rejected(value) -> None:
+    with pytest.raises(ValueError, match="min_cells_expressing"):
+        find_markers(
+            pd.read_csv(EXAMPLE_DATA),
+            min_cells_expressing=value,
+        )
+
+
+def test_parser_accepts_min_cells_expressing() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--min-cells-expressing", "3",
+        ]
+    )
+
+    assert args.min_cells_expressing == 3
+
+
+def test_min_cluster_mean_filters_low_expression_markers() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["A"] * 4 + ["B"] * 4,
+            "low_mean": [0.2, 0.2, 0.2, 0.2, 0.0, 0.0, 0.0, 0.0],
+            "high_mean": [2.0, 2.0, 2.0, 2.0, 0.0, 0.0, 0.0, 0.0],
+        }
+    )
+
+    markers = find_markers(
+        expression,
+        cell_column=None,
+        target_clusters=["A"],
+        top_n=10,
+        min_cluster_mean=1.0,
+    )
+
+    assert markers["gene"].tolist() == ["high_mean"]
+    assert (markers["cluster_mean"] >= 1.0).all()
+
+
+def test_negative_min_cluster_mean_is_rejected() -> None:
+    with pytest.raises(ValueError, match="min_cluster_mean"):
+        find_markers(
+            pd.read_csv(EXAMPLE_DATA),
+            min_cluster_mean=-0.1,
+        )
+
+
+def test_min_mean_difference_filters_weakly_enriched_markers() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["A", "A", "B", "B"],
+            "weak": [1.5, 1.5, 1.0, 1.0],
+            "strong": [3.0, 3.0, 1.0, 1.0],
+        }
+    )
+
+    markers = find_markers(
+        expression,
+        cell_column=None,
+        target_clusters=["A"],
+        top_n=10,
+        min_mean_difference=1.0,
+    )
+
+    assert markers["gene"].tolist() == ["strong"]
+    assert markers["mean_difference"].tolist() == pytest.approx([2.0])
+
+
+def test_negative_min_mean_difference_is_rejected() -> None:
+    with pytest.raises(ValueError, match="min_mean_difference"):
+        find_markers(
+            pd.read_csv(EXAMPLE_DATA),
+            min_mean_difference=-0.1,
+        )
+
+
+def test_max_other_mean_filters_broad_reference_expression() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["A", "A", "B", "B"],
+            "specific": [3.0, 3.0, 0.2, 0.2],
+            "broad": [5.0, 5.0, 2.0, 2.0],
+        }
+    )
+
+    markers = find_markers(
+        expression,
+        cell_column=None,
+        target_clusters=["A"],
+        top_n=10,
+        max_other_mean=0.5,
+    )
+
+    assert markers["gene"].tolist() == ["specific"]
+    assert markers["other_mean"].tolist() == pytest.approx([0.2])
+
+
+def test_negative_max_other_mean_is_rejected() -> None:
+    with pytest.raises(ValueError, match="max_other_mean"):
+        find_markers(
+            pd.read_csv(EXAMPLE_DATA),
+            max_other_mean=-0.1,
+        )
+
+
+def test_max_reference_expressing_cells_filters_broad_markers() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["A"] * 4 + ["B"] * 4,
+            "specific": [3.0] * 4 + [1.0, 0.0, 0.0, 0.0],
+            "broad": [5.0] * 4 + [1.0, 1.0, 1.0, 0.0],
+        }
+    )
+
+    markers = find_markers(
+        expression,
+        cell_column=None,
+        target_clusters=["A"],
+        top_n=10,
+        max_cells_expressing_out=1,
+    )
+
+    assert markers["gene"].tolist() == ["specific"]
+    assert markers["cells_expressing_out"].tolist() == [1]
+
+
+@pytest.mark.parametrize("value", [-1, 1.5, True])
+def test_invalid_max_reference_expressing_cells_is_rejected(value) -> None:
+    with pytest.raises(ValueError, match="max_cells_expressing_out"):
+        find_markers(
+            pd.read_csv(EXAMPLE_DATA),
+            max_cells_expressing_out=value,
+        )
+
+
+def test_parser_accepts_min_cluster_mean() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--min-cluster-mean", "1.5",
+        ]
+    )
+
+    assert args.min_cluster_mean == pytest.approx(1.5)
+
+
+def test_parser_accepts_min_mean_difference() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--min-mean-difference", "0.75",
+        ]
+    )
+
+    assert args.min_mean_difference == pytest.approx(0.75)
+
+
+def test_parser_accepts_max_other_mean() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--max-other-mean", "0.5",
+        ]
+    )
+
+    assert args.max_other_mean == pytest.approx(0.5)
+
+
+def test_parser_accepts_max_reference_expressing_cells() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--max-cells-expressing-out", "3",
+        ]
+    )
+
+    assert args.max_cells_expressing_out == 3
 
 def test_output_contains_statistical_significance() -> None:
     expression = pd.read_csv(EXAMPLE_DATA)
@@ -248,6 +1279,181 @@ def test_min_pct_filters_rare_genes() -> None:
 
     assert "common" in cluster_zero_genes
     assert "rare" not in cluster_zero_genes
+
+
+def test_min_pct_difference_filters_nonspecific_genes() -> None:
+    expression = pd.DataFrame({
+        "cluster": ["A", "A", "B", "B"],
+        "specific": [2.0, 2.0, 0.0, 0.0],
+        "shared": [2.0, 2.0, 1.0, 1.0],
+    })
+
+    markers = find_markers(expression, cell_column=None, top_n=10,
+                           min_pct_difference=0.5)
+
+    assert set(markers.loc[markers["cluster"] == "A", "gene"]) == {"specific"}
+    assert (markers["pct_difference"] >= 0.5).all()
+
+
+@pytest.mark.parametrize("value", [-0.01, 1.01])
+def test_invalid_min_pct_difference_is_rejected(value) -> None:
+    with pytest.raises(ValueError, match="min_pct_difference"):
+        find_markers(pd.read_csv(EXAMPLE_DATA), min_pct_difference=value)
+
+
+def test_max_pct_out_filters_broadly_expressed_genes() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["A", "A", "A", "A", "B", "B", "B", "B"],
+            "specific": [5, 4, 5, 4, 0, 0, 0, 0],
+            "broad": [5, 5, 4, 4, 1, 1, 1, 0],
+        }
+    )
+
+    markers = find_markers(
+        expression,
+        cell_column=None,
+        target_clusters=["A"],
+        top_n=10,
+        max_pct_out=0.5,
+    )
+
+    assert markers["gene"].tolist() == ["specific"]
+    assert (markers["pct_out"] <= 0.5).all()
+
+
+@pytest.mark.parametrize("value", [-0.01, 1.01])
+def test_invalid_max_pct_out_is_rejected(value) -> None:
+    with pytest.raises(ValueError, match="max_pct_out"):
+        find_markers(pd.read_csv(EXAMPLE_DATA), max_pct_out=value)
+
+
+def test_rank_by_pct_difference_changes_marker_order() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["A"] * 4 + ["B"] * 4,
+            "high_fc": [10, 0, 0, 0, 0, 0, 0, 0],
+            "specific": [2, 2, 2, 2, 1, 0, 0, 0],
+        }
+    )
+
+    fold_change = find_markers(
+        expression, cell_column=None, target_clusters=["A"], top_n=2,
+    )
+    specificity = find_markers(
+        expression,
+        cell_column=None,
+        target_clusters=["A"],
+        top_n=2,
+        rank_by="pct_difference",
+    )
+
+    assert fold_change["gene"].tolist() == ["high_fc", "specific"]
+    assert specificity["gene"].tolist() == ["specific", "high_fc"]
+    assert specificity["rank"].tolist() == [1, 2]
+
+
+def test_rank_by_mean_difference_changes_marker_order() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["A", "A", "B", "B"],
+            "high_ratio": [2.0, 2.0, 0.0, 0.0],
+            "large_difference": [10.0, 10.0, 7.0, 7.0],
+        }
+    )
+
+    fold_change = find_markers(
+        expression, cell_column=None, target_clusters=["A"], top_n=2,
+    )
+    mean_difference = find_markers(
+        expression,
+        cell_column=None,
+        target_clusters=["A"],
+        top_n=2,
+        rank_by="mean_difference",
+    )
+
+    assert fold_change["gene"].tolist() == ["high_ratio", "large_difference"]
+    assert mean_difference["gene"].tolist() == [
+        "large_difference", "high_ratio",
+    ]
+    assert mean_difference["mean_difference"].tolist() == [3.0, 2.0]
+    assert mean_difference["rank"].tolist() == [1, 2]
+
+
+def test_rank_by_cluster_mean_changes_marker_order() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["A", "A", "B", "B"],
+            "high_ratio": [2.0, 2.0, 0.0, 0.0],
+            "high_mean": [10.0, 10.0, 7.0, 7.0],
+        }
+    )
+
+    fold_change = find_markers(
+        expression, cell_column=None, target_clusters=["A"], top_n=2,
+    )
+    cluster_mean = find_markers(
+        expression,
+        cell_column=None,
+        target_clusters=["A"],
+        top_n=2,
+        rank_by="cluster_mean",
+    )
+
+    assert fold_change["gene"].tolist() == ["high_ratio", "high_mean"]
+    assert cluster_mean["gene"].tolist() == ["high_mean", "high_ratio"]
+    assert cluster_mean["cluster_mean"].tolist() == [10.0, 2.0]
+    assert cluster_mean["rank"].tolist() == [1, 2]
+
+
+def test_invalid_rank_by_is_rejected() -> None:
+    with pytest.raises(ValueError, match="rank_by must be one of"):
+        find_markers(pd.read_csv(EXAMPLE_DATA), rank_by="unknown")
+
+
+def test_rank_by_cells_expressing_in_changes_marker_order() -> None:
+    expression = pd.DataFrame(
+        {
+            "cell": ["a1", "a2", "a3", "b1", "b2", "b3"],
+            "cluster": ["A", "A", "A", "B", "B", "B"],
+            "broad": [1.0, 1.0, 1.0, 0.8, 0.8, 0.8],
+            "sparse": [8.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        }
+    )
+
+    markers = find_markers(
+        expression,
+        target_clusters=["A"],
+        top_n=2,
+        rank_by="cells_expressing_in",
+    )
+
+    assert markers["gene"].tolist() == ["broad", "sparse"]
+    assert markers["cells_expressing_in"].tolist() == [3, 1]
+    assert markers["rank"].tolist() == [1, 2]
+
+
+def test_rank_by_cells_expressing_out_prefers_fewer_reference_cells() -> None:
+    expression = pd.DataFrame(
+        {
+            "cell": ["a1", "a2", "a3", "b1", "b2", "b3"],
+            "cluster": ["A", "A", "A", "B", "B", "B"],
+            "absent_out": [1.0, 1.0, 1.0, 0.0, 0.0, 0.0],
+            "rare_out": [10.0, 10.0, 10.0, 0.01, 0.0, 0.0],
+        }
+    )
+
+    markers = find_markers(
+        expression,
+        target_clusters=["A"],
+        top_n=2,
+        rank_by="cells_expressing_out",
+    )
+
+    assert markers["gene"].tolist() == ["absent_out", "rare_out"]
+    assert markers["cells_expressing_out"].tolist() == [0, 1]
+    assert markers["rank"].tolist() == [1, 2]
 
 
 def test_run_writes_output_file(
@@ -387,3 +1593,161 @@ def test_single_cluster_is_rejected() -> None:
         match="At least two clusters",
     ):
         find_markers(expression)
+
+
+def test_target_clusters_limit_output_but_compare_with_rest() -> None:
+    expression = pd.read_csv(EXAMPLE_DATA)
+
+    markers = find_markers(expression, top_n=2, target_clusters=[1])
+
+    assert markers["cluster"].unique().tolist() == [1]
+    assert set(markers["gene"]) == {"MS4A1", "CD79A"}
+
+
+def test_unknown_target_cluster_is_rejected() -> None:
+    with pytest.raises(ValueError, match="Unknown target clusters"):
+        find_markers(pd.read_csv(EXAMPLE_DATA), target_clusters=["missing"])
+
+
+def test_min_cluster_size_skips_small_target_clusters() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["small", "large", "large", "large"],
+            "small_gene": [5.0, 0.0, 0.0, 0.0],
+            "large_gene": [0.0, 5.0, 4.0, 5.0],
+        }
+    )
+
+    markers = find_markers(
+        expression,
+        cell_column=None,
+        min_cluster_size=2,
+    )
+
+    assert markers["cluster"].unique().tolist() == ["large"]
+
+
+def test_selected_cluster_below_minimum_size_is_rejected() -> None:
+    expression = pd.DataFrame(
+        {
+            "cluster": ["small", "large", "large"],
+            "gene": [5.0, 0.0, 0.0],
+        }
+    )
+
+    with pytest.raises(ValueError, match="below the minimum cluster size"):
+        find_markers(
+            expression,
+            cell_column=None,
+            target_clusters=["small"],
+            min_cluster_size=2,
+        )
+
+
+@pytest.mark.parametrize("value", [0, -1, 1.5, True])
+def test_invalid_min_cluster_size_is_rejected(value) -> None:
+    with pytest.raises(ValueError, match="min_cluster_size"):
+        find_markers(
+            pd.read_csv(EXAMPLE_DATA),
+            min_cluster_size=value,
+        )
+
+
+def test_parser_accepts_min_cluster_size() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--min-cluster-size", "10",
+        ]
+    )
+
+    assert args.min_cluster_size == 10
+
+
+def test_gene_and_prefix_exclusions_are_applied() -> None:
+    expression = pd.read_csv(EXAMPLE_DATA)
+
+    markers = find_markers(
+        expression, top_n=100,
+        excluded_genes=["CD3D"], excluded_prefixes=["MS4"],
+    )
+
+    assert "CD3D" not in set(markers["gene"])
+    assert not markers["gene"].str.startswith("MS4").any()
+
+
+def test_excluding_every_gene_is_rejected() -> None:
+    expression = pd.DataFrame({"cluster": ["A", "B"], "G": [1, 0]})
+    with pytest.raises(ValueError, match="removed every gene"):
+        find_markers(expression, cell_column=None, excluded_genes=["G"])
+
+
+def test_native_gene_chunking_preserves_marker_results() -> None:
+    expression = pd.read_csv(EXAMPLE_DATA)
+
+    unchunked = find_markers(
+        expression,
+        top_n=100,
+        gene_chunk_size=len(expression.columns),
+    )
+    one_gene_chunks = find_markers(
+        expression,
+        top_n=100,
+        gene_chunk_size=1,
+    )
+
+    pd.testing.assert_frame_equal(one_gene_chunks, unchunked)
+
+
+@pytest.mark.parametrize("value", [0, -1, 1.5, True])
+def test_invalid_native_gene_chunk_size_is_rejected(value) -> None:
+    with pytest.raises(ValueError, match="gene_chunk_size"):
+        find_markers(pd.read_csv(EXAMPLE_DATA), gene_chunk_size=value)
+
+
+def test_native_progress_callback_reports_each_completed_cluster() -> None:
+    events = []
+
+    find_markers(
+        pd.read_csv(EXAMPLE_DATA),
+        top_n=1,
+        target_clusters=[0, 1],
+        progress_callback=lambda completed, total, cluster: events.append(
+            (completed, total, cluster)
+        ),
+    )
+
+    assert events == [
+        (1, 2, 0),
+        (2, 2, 1),
+    ]
+
+
+def test_parallel_native_analysis_preserves_order_and_results() -> None:
+    expression = pd.read_csv(EXAMPLE_DATA)
+    events = []
+
+    sequential = find_markers(expression, top_n=100, workers=1)
+    parallel = find_markers(
+        expression,
+        top_n=100,
+        workers=2,
+        progress_callback=lambda completed, total, cluster: events.append(
+            (completed, total, cluster)
+        ),
+    )
+
+    pd.testing.assert_frame_equal(parallel, sequential)
+    assert events == [
+        (1, 4, 0),
+        (2, 4, 1),
+        (3, 4, 2),
+        (4, 4, 3),
+    ]
+
+
+@pytest.mark.parametrize("value", [0, -1, 1.5, True])
+def test_invalid_native_worker_count_is_rejected(value) -> None:
+    with pytest.raises(ValueError, match="workers"):
+        find_markers(pd.read_csv(EXAMPLE_DATA), workers=value)

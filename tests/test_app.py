@@ -4,6 +4,8 @@ from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
+from src.version import APP_VERSION
+
 
 APP_PATH = Path(__file__).resolve().parents[1] / "app.py"
 
@@ -14,6 +16,7 @@ def test_app_loads_without_errors():
 
     assert len(app.exception) == 0
     assert "CellCoPilot Marker Gene Finder" in app.title[0].value
+    assert any(f"Version {APP_VERSION}" in item.value for item in app.caption)
     assert app.info[0].value == "Upload a CSV or H5AD file to begin."
 
 def test_example_data_flow():
@@ -39,6 +42,7 @@ def test_example_data_flow():
 
     settings = app.session_state["analysis_settings"]
     assert settings["input_file"] == "example_expression.csv"
+    assert settings["app_version"] == APP_VERSION
     assert settings["example_data"] is True
     assert settings["engine"] == "native"
     assert settings["expression_source"] == "CSV"
@@ -47,12 +51,19 @@ def test_example_data_flow():
     assert settings["cluster_column"] == "cluster"
     assert settings["pseudocount"] == 0.1
     assert settings["clusters"] == 4
+    assert settings["min_cluster_size"] == 1
+    assert settings["min_cells_expressing"] == 0
+    assert settings["min_cluster_mean"] == 0.0
+    assert settings["min_mean_difference"] == 0.0
+    assert settings["max_other_mean"] is None
+    assert settings["max_cells_expressing_out"] is None
     assert settings["marker_rows"] == len(markers)
 
     top_n_widget = next(
         item for item in app.number_input if item.label == "Markers per cluster"
     )
     assert settings["top_n"] == int(top_n_widget.value)
+    assert settings["filter_preset"] == "Permissive"
     top_n_widget.set_value(1).run()
     assert len(app.exception) == 0
     assert "marker_results" not in app.session_state
@@ -71,3 +82,39 @@ def test_example_data_flow():
     assert "marker_results" not in app.session_state
     assert "analysis_settings" not in app.session_state
     assert app.info[0].value == "Upload a CSV or H5AD file to begin."
+
+
+def test_filter_preset_updates_core_controls() -> None:
+    """Selecting a preset updates its filters before analysis."""
+    app = AppTest.from_file(APP_PATH).run()
+    app.checkbox(key="use_example_data").check().run()
+
+    preset = next(item for item in app.selectbox if item.label == "Filter preset")
+    preset.select("Balanced").run()
+
+    assert app.session_state["filter_preset"] == "Balanced"
+    assert app.session_state["min_pct"] == 0.25
+    assert app.session_state["max_pct_out"] == 0.5
+    assert app.session_state["min_log2fc"] == 0.5
+    assert app.session_state["min_pct_difference"] == 0.1
+    assert app.session_state["max_p_adj"] == 0.05
+
+
+def test_settings_import_controls_are_available() -> None:
+    """The app should expose settings upload and application controls."""
+    app = AppTest.from_file(APP_PATH).run()
+    app.checkbox(key="use_example_data").check().run()
+
+    assert any(
+        item.label == "Import analysis settings" for item in app.file_uploader
+    )
+    apply_button = next(
+        item for item in app.button if item.label == "Apply imported settings"
+    )
+    assert apply_button.disabled is True
+    assert any(
+        item.label == "Download current profile" for item in app.get("download_button")
+    )
+    assert any(
+        item.label == "Reset profile to defaults" for item in app.button
+    )

@@ -4,7 +4,15 @@ import pandas as pd
 import pytest
 from scipy import sparse
 
-from src.expression_summary import summarize_expression
+from src.expression_summary import summarize_clusters, summarize_expression
+
+
+def test_cluster_summary_reports_counts_and_percentages():
+    result = summarize_clusters(pd.Series(["B", "A", "B", "B"]))
+
+    assert result["cluster"].tolist() == ["A", "B"]
+    assert result["cells"].tolist() == [1, 3]
+    np.testing.assert_allclose(result["percent_of_cells"], [25, 75])
 
 
 @pytest.mark.parametrize("source", ["table", "dense", "sparse", "layer", "raw"])

@@ -6,6 +6,20 @@ import pandas as pd
 from scipy import sparse
 
 
+def summarize_clusters(labels):
+    """Return cell counts and percentages for observed clusters."""
+    labels = pd.Series(labels, copy=False)
+    if labels.empty or labels.isna().any():
+        raise ValueError("Cluster labels must be nonempty and nonmissing.")
+    counts = labels.value_counts(sort=False)
+    ordered = sorted(counts.index, key=str)
+    return pd.DataFrame({
+        "cluster": ordered,
+        "cells": [int(counts[label]) for label in ordered],
+        "percent_of_cells": [100 * counts[label] / len(labels) for label in ordered],
+    })
+
+
 def summarize_expression(
     data,
     genes,

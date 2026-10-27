@@ -11,13 +11,24 @@ import anndata as ad
 import pandas as pd
 import streamlit as st
 
-from src.expression_summary import summarize_expression
+from src.analysis_profiles import (
+    PROFILE_DEFAULTS,
+    build_analysis_profile,
+    compare_profile_state,
+    is_newer_app_version,
+    reset_profile_state,
+)
+from src.expression_summary import summarize_clusters, summarize_expression
+from src.filter_presets import FILTER_PRESETS, get_filter_preset
 
 from src.marker_finder import (
     find_markers,
     find_markers_scanpy,
     load_expression,
 )
+from src.report_bundle import build_analysis_bundle
+from src.settings_import import load_analysis_profile_upload
+from src.version import APP_VERSION
 from time import perf_counter
 
 
@@ -28,6 +39,7 @@ st.set_page_config(
 )
 
 st.title("🧬 CellCoPilot Marker Gene Finder")
+st.caption(f"Version {APP_VERSION}")
 st.write(
     "Upload clustered gene-expression data and identify candidate "
     "marker genes for each cluster."
@@ -119,6 +131,26 @@ def clear_marker_results() -> None:
     """Clear results when the input or analysis settings change."""
     st.session_state.pop("marker_results", None)
     st.session_state.pop("analysis_settings", None)
+
+
+def apply_filter_preset() -> None:
+    """Apply the selected named preset and clear stale analysis results."""
+    preset = st.session_state["filter_preset"]
+    if preset != "Custom":
+        st.session_state.update(get_filter_preset(preset))
+    clear_marker_results()
+
+
+def mark_filter_preset_custom() -> None:
+    """Mark manually changed core filters as a custom configuration."""
+    st.session_state["filter_preset"] = "Custom"
+    clear_marker_results()
+
+
+def reset_analysis_profile() -> None:
+    """Restore portable analysis controls to their stable defaults."""
+    reset_profile_state(st.session_state)
+    clear_marker_results()
 
 
 use_example_data = st.checkbox(
@@ -216,6 +248,90 @@ else:
     cluster_index = cluster_options.index(default_cluster)
 
 with st.sidebar:
+
+    widget_defaults = PROFILE_DEFAULTS
+    for setting_name, default_value in widget_defaults.items():
+        st.session_state.setdefault(setting_name, default_value)
+
+    st.subheader("Analysis profile")
+    profile_name = st.text_input(
+        "Profile name",
+        value="My marker profile",
+        help="Used as the filename and stored inside the portable profile.",
+    )
+    safe_profile_name = "".join(
+        character if character.isalnum() or character in "-_" else "_"
+        for character in profile_name.strip()
+    ).strip("_") or "analysis_profile"
+    st.download_button(
+        "Download current profile",
+        data=build_analysis_profile(st.session_state, profile_name),
+        file_name=f"{safe_profile_name}.json",
+        mime="application/json",
+        help="Save the current portable controls without running an analysis.",
+    )
+    st.button(
+        "Reset profile to defaults",
+        on_click=reset_analysis_profile,
+        help="Restore all portable controls to their stable defaults.",
+    )
+
+    uploaded_settings = st.file_uploader(
+        "Import analysis settings",
+        type=["json", "zip"],
+        key="imported_analysis_settings",
+        help=(
+            "Restore portable analysis thresholds, ranking, exclusions, and "
+            "preset selection from an exported settings JSON or analysis bundle."
+        ),
+    )
+    restored_settings = None
+    imported_metadata = None
+    if uploaded_settings is not None:
+        try:
+            restored_settings, imported_metadata = load_analysis_profile_upload(
+                uploaded_settings.getvalue(), uploaded_settings.name
+            )
+        except ValueError as error:
+            st.error(f"Could not import analysis settings: {error}")
+        else:
+            imported_name = imported_metadata["profile_name"] or uploaded_settings.name
+            st.caption(f"Profile preview: {imported_name}")
+            changes = compare_profile_state(st.session_state, restored_settings)
+            if changes:
+                st.dataframe(changes, hide_index=True, width="stretch")
+            else:
+                st.info("The imported profile matches the current portable settings.")
+            if is_newer_app_version(imported_metadata["app_version"]):
+                st.warning(
+                    "This profile was created by newer app version "
+                    f"{imported_metadata['app_version']}. Review compatibility "
+                    "before applying it."
+                )
+
+    if st.button(
+        "Apply imported settings",
+        disabled=restored_settings is None,
+        key="apply_imported_settings",
+    ):
+        st.session_state.update(restored_settings)
+        clear_marker_results()
+        st.success(
+            "Imported portable analysis settings. Dataset-specific input, "
+            "cluster, and expression-source selections were left unchanged."
+        )
+
+    filter_preset = st.selectbox(
+        "Filter preset",
+        options=[*FILTER_PRESETS, "Custom"],
+        key="filter_preset",
+        on_change=apply_filter_preset,
+        help=(
+            "Apply a starting configuration to the core prevalence, fold-change, "
+            "and adjusted-p-value filters. Other controls are unchanged."
+        ),
+    )
+
     st.header("Analysis settings")
 
     cluster_column = st.selectbox(
@@ -351,37 +467,215 @@ with st.sidebar:
 
     top_n = st.number_input(
         "Markers per cluster",
+        key="top_n",
         on_change=clear_marker_results,
         min_value=1,
         max_value=100,
-        value=5,
         step=1,
     )
 
+    rank_by = st.selectbox(
+        "Rank markers by",
+        key="rank_by",
+        options=[
+            "log2FC",
+            "cluster_mean",
+            "cells_expressing_in",
+            "cells_expressing_out",
+            "mean_difference",
+            "pct_difference",
+            "p_adj",
+        ],
+        format_func=lambda value: {
+            "log2FC": "Log2 fold change",
+            "cluster_mean": "Target-cluster mean expression",
+            "cells_expressing_in": "Target-cluster cells expressing gene",
+            "cells_expressing_out": "Outside-cluster cells expressing gene",
+            "mean_difference": "Mean-expression difference",
+            "pct_difference": "Expression-fraction difference",
+            "p_adj": "Adjusted p-value",
+        }[value],
+        on_change=clear_marker_results,
+        help="Ranking is applied after all marker filters.",
+    )
+
+    observed_clusters = sorted(
+        (
+            adata.obs[cluster_column].unique()
+            if analysis_engine == "scanpy"
+            else expression[cluster_column].unique()
+        ),
+        key=str,
+    )
+    cluster_labels_for_controls = (
+        adata.obs[cluster_column]
+        if analysis_engine == "scanpy"
+        else expression[cluster_column]
+    )
+    cluster_sizes_for_controls = cluster_labels_for_controls.value_counts()
+    min_cluster_size = st.number_input(
+        "Minimum cells per target cluster",
+        key="min_cluster_size",
+        on_change=clear_marker_results,
+        min_value=1,
+        step=1,
+        help=(
+            "Clusters smaller than this remain in the one-versus-rest "
+            "reference population but are not analyzed as targets."
+        ),
+    )
+    eligible_clusters = [
+        cluster for cluster in observed_clusters
+        if int(cluster_sizes_for_controls.loc[cluster]) >= min_cluster_size
+    ]
+    target_clusters = st.multiselect(
+        "Clusters to analyze",
+        options=eligible_clusters,
+        default=eligible_clusters,
+        format_func=str,
+        on_change=clear_marker_results,
+        help="Each selected cluster is compared with all other cells.",
+    )
+    excluded_gene_text = st.text_input(
+        "Exclude genes",
+        key="excluded_gene_text",
+        on_change=clear_marker_results,
+        help="Comma-separated exact gene names.",
+    )
+    excluded_prefix_text = st.text_input(
+        "Exclude gene prefixes",
+        key="excluded_prefix_text",
+        on_change=clear_marker_results,
+        help="Comma-separated prefixes, such as MT-, RPL, RPS.",
+    )
+    excluded_genes = [
+        value.strip() for value in excluded_gene_text.split(",") if value.strip()
+    ]
+    excluded_prefixes = [
+        value.strip() for value in excluded_prefix_text.split(",") if value.strip()
+    ]
+
     min_pct = st.slider(
         "Minimum fraction expressing gene",
-        on_change=clear_marker_results,
+        key="min_pct",
+        on_change=mark_filter_preset_custom,
         min_value=0.0,
         max_value=1.0,
-        value=0.0,
         step=0.05,
+    )
+
+    min_cells_expressing = st.number_input(
+        "Minimum target-cluster cells expressing gene",
+        key="min_cells_expressing",
+        on_change=clear_marker_results,
+        min_value=0,
+        step=1,
+        help=(
+            "Require a marker to be detected in at least this many cells "
+            "inside its target cluster."
+        ),
+    )
+
+    min_cluster_mean = st.number_input(
+        "Minimum target-cluster mean expression",
+        key="min_cluster_mean",
+        on_change=clear_marker_results,
+        min_value=0.0,
+        step=0.1,
+        format="%.2f",
+        help=(
+            "Require a marker's mean expression inside its target cluster "
+            "to meet this threshold on the input matrix's existing scale."
+        ),
+    )
+
+    min_mean_difference = st.number_input(
+        "Minimum mean-expression difference",
+        key="min_mean_difference",
+        on_change=clear_marker_results,
+        min_value=0.0,
+        step=0.1,
+        format="%.2f",
+        help=(
+            "Require target-cluster mean expression minus reference mean "
+            "expression to meet this threshold on the input matrix's scale."
+        ),
+    )
+
+    limit_other_mean = st.checkbox(
+        "Limit outside-cluster mean expression",
+        key="limit_other_mean",
+        on_change=clear_marker_results,
+        help="Enable an absolute upper limit for reference mean expression.",
+    )
+    max_other_mean = st.number_input(
+        "Maximum outside-cluster mean expression",
+        key="max_other_mean",
+        on_change=clear_marker_results,
+        min_value=0.0,
+        step=0.1,
+        format="%.2f",
+        disabled=not limit_other_mean,
+        help=(
+            "Exclude genes whose reference-population mean exceeds this "
+            "value on the input matrix's existing scale."
+        ),
+    )
+
+    limit_cells_expressing_out = st.checkbox(
+        "Limit outside-cluster cells expressing gene",
+        key="limit_cells_expressing_out",
+        on_change=clear_marker_results,
+        help="Enable an absolute upper limit for reference expressing cells.",
+    )
+    max_cells_expressing_out = st.number_input(
+        "Maximum outside-cluster cells expressing gene",
+        key="max_cells_expressing_out",
+        on_change=clear_marker_results,
+        min_value=0,
+        step=1,
+        disabled=not limit_cells_expressing_out,
+        help=(
+            "Exclude genes detected in more than this many cells outside "
+            "their target cluster."
+        ),
+    )
+
+    max_pct_out = st.slider(
+        "Maximum outside-cluster fraction expressing gene",
+        key="max_pct_out",
+        on_change=mark_filter_preset_custom,
+        min_value=0.0,
+        max_value=1.0,
+        step=0.05,
+        help="Maximum pct_out allowed for a marker.",
     )
 
     min_log2fc = st.number_input(
         "Minimum log2 fold change",
-        on_change=clear_marker_results,
+        key="min_log2fc",
+        on_change=mark_filter_preset_custom,
         min_value=0.0,
-        value=0.0,
         step=0.1,
         format="%.2f",
     )
 
-    max_p_adj = st.number_input(
-        "Maximum adjusted p-value",
-        on_change=clear_marker_results,
+    min_pct_difference = st.slider(
+        "Minimum expression-fraction difference",
+        key="min_pct_difference",
+        on_change=mark_filter_preset_custom,
         min_value=0.0,
         max_value=1.0,
-        value=1.0,
+        step=0.05,
+        help="Minimum pct_in minus pct_out required for a marker.",
+    )
+
+    max_p_adj = st.number_input(
+        "Maximum adjusted p-value",
+        key="max_p_adj",
+        on_change=mark_filter_preset_custom,
+        min_value=0.0,
+        max_value=1.0,
         step=0.01,
         format="%.3f",
         help=(
@@ -394,9 +688,9 @@ with st.sidebar:
     if analysis_engine == "native":
         pseudocount = st.number_input(
             "Pseudocount",
+            key="pseudocount",
             on_change=clear_marker_results,
             min_value=0.0001,
-            value=0.1,
             step=0.1,
             format="%.4f",
         )
@@ -424,6 +718,27 @@ else:
         "Clusters",
         expression[cluster_column].nunique(),
     )
+
+cluster_labels = (
+    adata.obs[cluster_column]
+    if analysis_engine == "scanpy"
+    else expression[cluster_column]
+)
+cluster_summary = summarize_clusters(cluster_labels)
+with st.expander("Cluster sizes"):
+    st.dataframe(cluster_summary, hide_index=True, width="stretch")
+    st.download_button(
+        "Download cluster summary as CSV",
+        data=cluster_summary.to_csv(index=False).encode("utf-8"),
+        file_name="cluster_summary.csv",
+        mime="text/csv",
+    )
+    small_clusters = cluster_summary.loc[cluster_summary["cells"] < 10, "cluster"]
+    if not small_clusters.empty:
+        st.warning(
+            "Clusters with fewer than 10 cells may produce unstable marker "
+            "statistics: " + ", ".join(map(str, small_clusters))
+        )
 
 if st.button("Find marker genes", type="primary"):
     clear_marker_results()
@@ -466,6 +781,8 @@ if st.button("Find marker genes", type="primary"):
     started_at = perf_counter()
 
     try:
+        if not target_clusters:
+            raise ValueError("Select at least one cluster to analyze.")
         if analysis_engine == "scanpy":
             markers = find_markers_scanpy(
                 adata,
@@ -474,8 +791,25 @@ if st.button("Find marker genes", type="primary"):
                 cluster_column=cluster_column,
                 top_n=int(top_n),
                 min_pct=float(min_pct),
+                min_cells_expressing=int(min_cells_expressing),
+                min_cluster_mean=float(min_cluster_mean),
+                min_mean_difference=float(min_mean_difference),
+                max_other_mean=(
+                    float(max_other_mean) if limit_other_mean else None
+                ),
+                max_cells_expressing_out=(
+                    int(max_cells_expressing_out)
+                    if limit_cells_expressing_out else None
+                ),
+                max_pct_out=float(max_pct_out),
+                rank_by=rank_by,
+                min_pct_difference=float(min_pct_difference),
                 min_log2fc=float(min_log2fc),
                 max_p_adj=float(max_p_adj),
+                target_clusters=target_clusters,
+                excluded_genes=excluded_genes,
+                excluded_prefixes=excluded_prefixes,
+                min_cluster_size=int(min_cluster_size),
             )
         else:
             markers = find_markers(
@@ -485,8 +819,25 @@ if st.button("Find marker genes", type="primary"):
                 top_n=int(top_n),
                 pseudocount=float(pseudocount),
                 min_pct=float(min_pct),
+                min_cells_expressing=int(min_cells_expressing),
+                min_cluster_mean=float(min_cluster_mean),
+                min_mean_difference=float(min_mean_difference),
+                max_other_mean=(
+                    float(max_other_mean) if limit_other_mean else None
+                ),
+                max_cells_expressing_out=(
+                    int(max_cells_expressing_out)
+                    if limit_cells_expressing_out else None
+                ),
+                max_pct_out=float(max_pct_out),
+                rank_by=rank_by,
+                min_pct_difference=float(min_pct_difference),
                 min_log2fc=float(min_log2fc),
                 max_p_adj=float(max_p_adj),
+                target_clusters=target_clusters,
+                excluded_genes=excluded_genes,
+                excluded_prefixes=excluded_prefixes,
+                min_cluster_size=int(min_cluster_size),
             )
     except ValueError as error:
         elapsed = perf_counter() - started_at
@@ -501,6 +852,7 @@ if st.button("Find marker genes", type="primary"):
         st.session_state["marker_results"] = markers
         st.session_state["analysis_settings"] = {
             "schema_version": 1,
+            "app_version": APP_VERSION,
             "input_file": Path(file_name).name,
             "example_data": bool(use_example_data),
             "engine": analysis_engine,
@@ -518,7 +870,21 @@ if st.button("Find marker genes", type="primary"):
                 cell_column if file_suffix == ".csv" else "AnnData.obs_names"
             ),
             "top_n": int(top_n),
+            "filter_preset": filter_preset,
+            "rank_by": rank_by,
             "min_pct": float(min_pct),
+            "min_cells_expressing": int(min_cells_expressing),
+            "min_cluster_mean": float(min_cluster_mean),
+            "min_mean_difference": float(min_mean_difference),
+            "max_other_mean": (
+                float(max_other_mean) if limit_other_mean else None
+            ),
+            "max_cells_expressing_out": (
+                int(max_cells_expressing_out)
+                if limit_cells_expressing_out else None
+            ),
+            "max_pct_out": float(max_pct_out),
+            "min_pct_difference": float(min_pct_difference),
             "min_log2fc": float(min_log2fc),
             "max_p_adj": float(max_p_adj),
             "pseudocount": (
@@ -527,6 +893,10 @@ if st.button("Find marker genes", type="primary"):
             "cells": cell_count,
             "genes": gene_count,
             "clusters": cluster_count,
+            "target_clusters": [str(cluster) for cluster in target_clusters],
+            "min_cluster_size": int(min_cluster_size),
+            "excluded_genes": excluded_genes,
+            "excluded_prefixes": excluded_prefixes,
             "marker_rows": int(len(markers)),
         }
         analysis_status.write(
@@ -540,6 +910,7 @@ if st.button("Find marker genes", type="primary"):
 
 if "marker_results" in st.session_state:
     markers = st.session_state["marker_results"]
+    expression_summary_for_bundle = None
 
     st.subheader("Marker-gene results")
     if "analysis_settings" in st.session_state:
@@ -770,6 +1141,7 @@ if "marker_results" in st.session_state:
                 )
 
                 summary_csv = dot_data.to_csv(index=False).encode("utf-8")
+                expression_summary_for_bundle = dot_data
                 st.download_button(
                     "Download expression summary as CSV",
                     data=summary_csv,
@@ -791,6 +1163,21 @@ if "marker_results" in st.session_state:
             file_name="marker_gene_results.csv",
             mime="text/csv",
         )
+
+        if "analysis_settings" in st.session_state:
+            analysis_bundle = build_analysis_bundle(
+                markers,
+                st.session_state["analysis_settings"],
+                expression_summary_for_bundle,
+                cluster_summary,
+            )
+            st.download_button(
+                "Download analysis bundle as ZIP",
+                data=analysis_bundle,
+                file_name="marker_gene_analysis.zip",
+                mime="application/zip",
+                key="analysis_bundle_download",
+            )
 
 st.caption(
     "This tool ranks markers using log2 fold change and reports "

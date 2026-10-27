@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from scipy import sparse
 
-from src.marker_finder import build_parser, run
+from src.marker_finder import build_parser, estimate_dense_expression_bytes, run
 
 
 @pytest.fixture
@@ -64,6 +64,35 @@ def test_layer_selection_changes_markers(layered_input, tmp_path, engine):
         rtol=1e-6,
         atol=1e-8,
     )
+
+
+def test_dense_memory_estimate_uses_selected_layer(layered_input):
+    data = ad.read_h5ad(layered_input, backed="r")
+    try:
+        layer = data.layers["alternate"]
+        expected = layer.shape[0] * layer.shape[1] * layer.dtype.itemsize
+    finally:
+        data.file.close()
+
+    assert (
+        estimate_dense_expression_bytes(layered_input, layer="alternate")
+        == expected
+    )
+
+
+def test_scanpy_does_not_apply_native_dense_memory_limit(
+    layered_input,
+    tmp_path,
+):
+    markers = run(
+        layered_input,
+        tmp_path / "scanpy.csv",
+        engine="scanpy",
+        top_n=1,
+        max_dense_memory_mb=0.00001,
+    )
+
+    assert len(markers) == 2
 
 
 @pytest.mark.parametrize("engine", ["native", "scanpy"])
