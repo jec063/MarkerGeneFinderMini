@@ -11,6 +11,7 @@ from src.marker_finder import (
     _benjamini_hochberg,
     benchmark_analysis,
     build_analysis_plan,
+    build_batch_plan,
     build_parser,
     compare_benchmarks,
     estimate_dense_expression_bytes,
@@ -139,6 +140,43 @@ def test_parser_accepts_batch_recovery_and_benchmark_options() -> None:
     assert batch.resume and batch.retry_failed and batch.fail_fast
     assert benchmark.benchmark_json == "benchmark.json"
     assert benchmark.benchmark_repeats == 2
+
+
+def test_parser_accepts_batch_selection_and_dry_run_plan() -> None:
+    args = build_parser().parse_args(
+        [
+            "--input-dir", "inputs",
+            "--output-dir", "outputs",
+            "--include-pattern", "sample-*.csv",
+            "--include-pattern", "*.h5ad",
+            "--exclude-pattern", "*-draft.csv",
+            "--resume",
+            "--batch-plan-json", "batch-plan.json",
+        ]
+    )
+
+    assert args.include_pattern == ["sample-*.csv", "*.h5ad"]
+    assert args.exclude_pattern == ["*-draft.csv"]
+    assert args.batch_plan_json == "batch-plan.json"
+
+
+def test_main_rejects_batch_selection_for_single_input(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "marker-gene-finder",
+            "--input", "expression.csv",
+            "--output", "markers.csv",
+            "--include-pattern", "*.csv",
+        ],
+    )
+
+    from src.marker_finder import main
+
+    with pytest.raises(SystemExit, match="require --input-dir"):
+        main()
 
 
 def test_parser_accepts_verification_and_benchmark_comparison() -> None:
@@ -409,6 +447,84 @@ def test_run_batch_resumes_unchanged_completed_input(tmp_path: Path) -> None:
     assert manifest["completed"] == 1
     assert manifest["skipped"] == 1
     assert manifest["failed"] == 0
+
+
+def test_batch_patterns_select_inputs_in_filename_order(tmp_path: Path) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "outputs"
+    input_dir.mkdir()
+    frame = pd.DataFrame({
+        "cluster": ["A", "A", "B", "B"],
+        "G1": [4.0, 3.0, 0.0, 0.0],
+    })
+    for name in ("sample-b.csv", "sample-a.csv", "sample-draft.csv", "other.csv"):
+        frame.to_csv(input_dir / name, index=False)
+
+    runs = run_batch(
+        input_dir,
+        output_dir,
+        include_patterns=["sample-*.csv"],
+        exclude_patterns=["*-draft.csv"],
+        cell_column=None,
+        top_n=1,
+    )
+
+    assert [Path(run["input"]).name for run in runs] == [
+        "sample-a.csv", "sample-b.csv",
+    ]
+    manifest = json.loads((output_dir / "batch_manifest.json").read_text())
+    assert manifest["include_patterns"] == ["sample-*.csv"]
+    assert manifest["exclude_patterns"] == ["*-draft.csv"]
+
+
+def test_build_batch_plan_predicts_resume_actions_without_writing(
+    tmp_path: Path,
+) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "outputs"
+    input_dir.mkdir()
+    pd.DataFrame({
+        "cluster": ["A", "A", "B", "B"],
+        "G1": [4.0, 3.0, 0.0, 0.0],
+    }).to_csv(input_dir / "sample.csv", index=False)
+
+    initial = build_batch_plan(
+        input_dir, output_dir, resume=True, cell_column=None, top_n=1
+    )
+    assert initial["schema_version"] == 1
+    assert initial["run"] == 1
+    assert initial["skip"] == 0
+    assert initial["entries"][0]["reason"] == "new_input"
+    assert not output_dir.exists()
+
+    run_batch(input_dir, output_dir, cell_column=None, top_n=1)
+    resumed = build_batch_plan(
+        input_dir, output_dir, resume=True, cell_column=None, top_n=1
+    )
+
+    assert resumed["run"] == 0
+    assert resumed["skip"] == 1
+    assert resumed["entries"][0]["action"] == "skip"
+    assert resumed["entries"][0]["reason"] == "unchanged_success"
+
+
+def test_build_batch_plan_explains_changed_output(tmp_path: Path) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "outputs"
+    input_dir.mkdir()
+    pd.DataFrame({
+        "cluster": ["A", "A", "B", "B"],
+        "G1": [4.0, 3.0, 0.0, 0.0],
+    }).to_csv(input_dir / "sample.csv", index=False)
+    run_batch(input_dir, output_dir, cell_column=None, top_n=1)
+    (output_dir / "sample.csv.markers.csv").write_text("changed\n")
+
+    plan = build_batch_plan(
+        input_dir, output_dir, resume=True, cell_column=None, top_n=1
+    )
+
+    assert plan["entries"][0]["action"] == "run"
+    assert plan["entries"][0]["reason"] == "output_changed"
 
 
 def test_run_batch_resume_invalidates_changed_settings(tmp_path: Path) -> None:
