@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **1.11.0**. The version is shown in the web
+Current application version: **1.13.0**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -295,6 +295,30 @@ For automation that should emit only its final summary, add `--quiet`.
 Durations use a monotonic high-resolution clock and are intended for runtime
 comparison and troubleshooting, not as stable performance assertions. Native
 diagnostics also record the resolved gene chunk size.
+
+Batch output is written atomically. Use `--resume` to skip unchanged completed
+inputs, `--retry-failed` to retry failures while retaining unchanged successes,
+or `--fail-fast` to stop after the first error. The versioned manifest records
+input size and modification-time fingerprints, a settings fingerprint, and
+`complete`, `skipped`, `failed`, or `pending` status for every input. Changing
+an input, analysis setting, or missing output invalidates the saved success and
+causes that input to run again.
+
+Benchmark a complete single-input analysis without retaining marker output:
+
+```bash
+marker-gene-finder \
+  --input expression.h5ad \
+  --engine auto \
+  --benchmark-repeats 3 \
+  --benchmark-json benchmark.json
+```
+
+The versioned benchmark report records the platform, Python and application
+versions, per-repeat runtime diagnostics, and minimum, median, and maximum
+total durations. Benchmarks are intended for comparing configurations on the
+same machine; shared-runner timings should not be treated as strict performance
+guarantees.
 They also record the configured worker count.
 
 ## Web interface

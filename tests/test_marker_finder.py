@@ -9,6 +9,7 @@ from scipy import sparse
 
 from src.marker_finder import (
     _benjamini_hochberg,
+    benchmark_analysis,
     build_analysis_plan,
     build_parser,
     estimate_dense_expression_bytes,
@@ -116,6 +117,26 @@ def test_parser_accepts_analysis_plan_and_auto_engine() -> None:
     assert args.output is None
     assert args.engine == "auto"
     assert args.plan_json == "plan.json"
+
+
+def test_parser_accepts_batch_recovery_and_benchmark_options() -> None:
+    batch = build_parser().parse_args(
+        [
+            "--input-dir", "inputs", "--output-dir", "outputs",
+            "--resume", "--retry-failed", "--fail-fast",
+        ]
+    )
+    benchmark = build_parser().parse_args(
+        [
+            "--input", "expression.csv",
+            "--benchmark-json", "benchmark.json",
+            "--benchmark-repeats", "2",
+        ]
+    )
+
+    assert batch.resume and batch.retry_failed and batch.fail_fast
+    assert benchmark.benchmark_json == "benchmark.json"
+    assert benchmark.benchmark_repeats == 2
 
 
 def test_inspect_csv_reports_dimensions_and_dense_memory() -> None:
@@ -330,12 +351,100 @@ def test_run_batch_continues_after_an_input_failure(tmp_path: Path) -> None:
         (output_dir / "batch_manifest.json").read_text(encoding="utf-8")
     )
     assert manifest["app_version"] == APP_VERSION
+    assert manifest["schema_version"] == 1
     assert manifest["inputs"] == 2
     assert manifest["completed"] == 1
     assert manifest["failed"] == 1
     assert manifest["duration_seconds"] >= 0
     assert manifest["runs"] == runs
     assert manifest["runs"][1]["diagnostics"]["marker_rows"] == 2
+
+
+def test_run_batch_resumes_unchanged_completed_input(tmp_path: Path) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "outputs"
+    input_dir.mkdir()
+    source = pd.DataFrame(
+        {
+            "cluster": ["A", "A", "B", "B"],
+            "G1": [4.0, 3.0, 0.0, 0.0],
+            "G2": [0.0, 0.0, 4.0, 3.0],
+        }
+    )
+    source.to_csv(input_dir / "sample.csv", index=False)
+
+    first = run_batch(input_dir, output_dir, cell_column=None, top_n=1)
+    resumed = run_batch(
+        input_dir, output_dir, resume=True, cell_column=None, top_n=1
+    )
+
+    assert first[0]["status"] == "complete"
+    assert resumed[0]["status"] == "skipped"
+    assert resumed[0]["duration_seconds"] == 0.0
+    manifest = json.loads((output_dir / "batch_manifest.json").read_text())
+    assert manifest["completed"] == 1
+    assert manifest["skipped"] == 1
+    assert manifest["failed"] == 0
+
+
+def test_run_batch_resume_invalidates_changed_settings(tmp_path: Path) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "outputs"
+    input_dir.mkdir()
+    pd.DataFrame(
+        {
+            "cluster": ["A", "A", "B", "B"],
+            "G1": [4.0, 3.0, 0.0, 0.0],
+        }
+    ).to_csv(input_dir / "sample.csv", index=False)
+
+    run_batch(input_dir, output_dir, cell_column=None, top_n=1)
+    rerun = run_batch(
+        input_dir, output_dir, resume=True, cell_column=None, top_n=2
+    )
+
+    assert rerun[0]["status"] == "complete"
+
+
+def test_run_batch_fail_fast_marks_remaining_inputs_pending(
+    tmp_path: Path,
+) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "outputs"
+    input_dir.mkdir()
+    pd.DataFrame({"G1": [1.0]}).to_csv(
+        input_dir / "a-invalid.csv", index=False
+    )
+    pd.DataFrame(
+        {"cluster": ["A", "A", "B", "B"], "G1": [1, 1, 0, 0]}
+    ).to_csv(input_dir / "b-valid.csv", index=False)
+
+    runs = run_batch(
+        input_dir, output_dir, fail_fast=True, cell_column=None
+    )
+
+    assert [run["status"] for run in runs] == ["failed", "pending"]
+    manifest = json.loads((output_dir / "batch_manifest.json").read_text())
+    assert manifest["failed"] == 1
+    assert manifest["pending"] == 1
+
+
+def test_benchmark_analysis_reports_repeated_timings() -> None:
+    benchmark = benchmark_analysis(
+        EXAMPLE_DATA,
+        repeats=2,
+        cell_column="cell",
+        top_n=1,
+        progress_callback=None,
+    )
+
+    assert benchmark["schema_version"] == 1
+    assert benchmark["app_version"] == APP_VERSION
+    assert benchmark["repeats"] == 2
+    assert len(benchmark["runs"]) == 2
+    assert benchmark["min_seconds"] <= benchmark["median_seconds"]
+    assert benchmark["median_seconds"] <= benchmark["max_seconds"]
+    json.dumps(benchmark, allow_nan=False)
 
 
 def test_run_populates_runtime_diagnostics(tmp_path: Path) -> None:
