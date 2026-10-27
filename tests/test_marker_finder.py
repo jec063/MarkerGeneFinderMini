@@ -12,12 +12,14 @@ from src.marker_finder import (
     benchmark_analysis,
     build_analysis_plan,
     build_parser,
+    compare_benchmarks,
     estimate_dense_expression_bytes,
     find_markers,
     inspect_input,
     load_expression,
     run,
     run_batch,
+    verify_batch_manifest,
 )
 from src.version import APP_VERSION
 
@@ -137,6 +139,28 @@ def test_parser_accepts_batch_recovery_and_benchmark_options() -> None:
     assert batch.resume and batch.retry_failed and batch.fail_fast
     assert benchmark.benchmark_json == "benchmark.json"
     assert benchmark.benchmark_repeats == 2
+
+
+def test_parser_accepts_verification_and_benchmark_comparison() -> None:
+    verification = build_parser().parse_args(
+        [
+            "--verify-batch-manifest", "batch_manifest.json",
+            "--verification-json", "verification.json",
+        ]
+    )
+    comparison = build_parser().parse_args(
+        [
+            "--compare-benchmarks", "baseline.json", "candidate.json",
+            "--comparison-json", "comparison.json",
+            "--max-regression-percent", "15",
+        ]
+    )
+
+    assert verification.verify_batch_manifest == "batch_manifest.json"
+    assert verification.verification_json == "verification.json"
+    assert comparison.compare_benchmarks == ["baseline.json", "candidate.json"]
+    assert comparison.comparison_json == "comparison.json"
+    assert comparison.max_regression_percent == 15
 
 
 def test_inspect_csv_reports_dimensions_and_dense_memory() -> None:
@@ -351,7 +375,7 @@ def test_run_batch_continues_after_an_input_failure(tmp_path: Path) -> None:
         (output_dir / "batch_manifest.json").read_text(encoding="utf-8")
     )
     assert manifest["app_version"] == APP_VERSION
-    assert manifest["schema_version"] == 1
+    assert manifest["schema_version"] == 2
     assert manifest["inputs"] == 2
     assert manifest["completed"] == 1
     assert manifest["failed"] == 1
@@ -445,6 +469,93 @@ def test_benchmark_analysis_reports_repeated_timings() -> None:
     assert benchmark["min_seconds"] <= benchmark["median_seconds"]
     assert benchmark["median_seconds"] <= benchmark["max_seconds"]
     json.dumps(benchmark, allow_nan=False)
+
+
+def test_compare_benchmarks_reports_regression_and_compatibility(
+    tmp_path: Path,
+) -> None:
+    baseline_path = tmp_path / "baseline.json"
+    candidate_path = tmp_path / "candidate.json"
+    baseline_path.write_text(json.dumps({
+        "schema_version": 1,
+        "median_seconds": 10.0,
+        "platform": "same",
+        "python_version": "3.12",
+        "input": "expression.csv",
+    }))
+    candidate_path.write_text(json.dumps({
+        "schema_version": 1,
+        "median_seconds": 12.0,
+        "platform": "different",
+        "python_version": "3.12",
+        "input": "expression.csv",
+    }))
+
+    comparison = compare_benchmarks(
+        baseline_path, candidate_path, max_regression_percent=15
+    )
+
+    assert comparison["schema_version"] == 1
+    assert comparison["ratio"] == pytest.approx(1.2)
+    assert comparison["change_percent"] == pytest.approx(20)
+    assert comparison["regression"] is True
+    assert comparison["passed"] is False
+    assert comparison["compatibility_warnings"] == ["platform_mismatch"]
+
+
+@pytest.mark.parametrize("threshold", [-1, float("nan"), float("inf")])
+def test_compare_benchmarks_rejects_invalid_threshold(
+    tmp_path: Path, threshold: float,
+) -> None:
+    report = tmp_path / "benchmark.json"
+    report.write_text(json.dumps({"schema_version": 1, "median_seconds": 1}))
+
+    with pytest.raises(ValueError, match="finite and non-negative"):
+        compare_benchmarks(report, report, threshold)
+
+
+def test_verify_batch_manifest_detects_output_tampering(tmp_path: Path) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "outputs"
+    input_dir.mkdir()
+    pd.DataFrame({
+        "cluster": ["A", "A", "B", "B"],
+        "G1": [3.0, 2.0, 0.0, 0.0],
+    }).to_csv(input_dir / "sample.csv", index=False)
+    run_batch(input_dir, output_dir, cell_column=None, top_n=1)
+    manifest_path = output_dir / "batch_manifest.json"
+
+    valid = verify_batch_manifest(manifest_path)
+    assert valid["valid"] is True
+    assert valid["invalid"] == 0
+
+    output_path = output_dir / "sample.csv.markers.csv"
+    output_path.write_text(output_path.read_text() + "tampered\n")
+    invalid = verify_batch_manifest(manifest_path)
+
+    assert invalid["valid"] is False
+    assert invalid["invalid"] == 1
+    assert invalid["entries"][0]["issues"] == ["output_sha256_mismatch"]
+
+
+def test_run_batch_resume_reruns_tampered_output(tmp_path: Path) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "outputs"
+    input_dir.mkdir()
+    pd.DataFrame({
+        "cluster": ["A", "A", "B", "B"],
+        "G1": [3.0, 2.0, 0.0, 0.0],
+    }).to_csv(input_dir / "sample.csv", index=False)
+    run_batch(input_dir, output_dir, cell_column=None, top_n=1)
+    output_path = output_dir / "sample.csv.markers.csv"
+    output_path.write_text("tampered\n")
+
+    resumed = run_batch(
+        input_dir, output_dir, resume=True, cell_column=None, top_n=1
+    )
+
+    assert resumed[0]["status"] == "complete"
+    assert output_path.read_text() != "tampered\n"
 
 
 def test_run_populates_runtime_diagnostics(tmp_path: Path) -> None:
