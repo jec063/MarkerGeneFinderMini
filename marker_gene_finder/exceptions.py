@@ -15,4 +15,3 @@ class InputValidationError(MarkerFinderError, ValueError):
 
 class SchemaError(MarkerFinderError, ValueError):
     """A serialized v2 document has an unsupported or invalid schema."""
-

@@ -22,4 +22,3 @@ class MarkerResult:
     def to_csv(self, path: str | Path) -> None:
         """Write marker rows without a DataFrame index."""
         self.markers.to_csv(path, index=False)
-

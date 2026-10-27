@@ -61,4 +61,3 @@ def analyze_file(
     except ValueError as error:
         raise InputValidationError(str(error)) from error
     return MarkerResult(markers=markers, config=config, metadata=diagnostics)
-

@@ -169,4 +169,3 @@ class AnalysisConfig:
         except (OSError, json.JSONDecodeError) as error:
             raise SchemaError(f"Cannot load analysis configuration: {error}") from error
         return cls.from_dict(document)
-
