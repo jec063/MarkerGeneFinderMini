@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **1.13.0**. The version is shown in the web
+Current application version: **1.15.0**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -320,6 +320,35 @@ total durations. Benchmarks are intended for comparing configurations on the
 same machine; shared-runner timings should not be treated as strict performance
 guarantees.
 They also record the configured worker count.
+
+Compare a candidate benchmark with a baseline and fail when its median runtime
+regresses by more than an allowed percentage:
+
+```bash
+marker-gene-finder \
+  --compare-benchmarks baseline.json candidate.json \
+  --max-regression-percent 10 \
+  --comparison-json comparison.json
+```
+
+The comparison records the median ratio and percentage change. It also warns
+when the platform, Python version, or input differs, since those differences
+can make timings unsuitable for direct comparison. A detected regression is
+written to JSON before the command exits with a nonzero status.
+
+Batch manifests now record SHA-256 digests for every input and successful
+marker output. Verify that a completed batch still matches those recorded
+artifacts without rerunning the analysis:
+
+```bash
+marker-gene-finder \
+  --verify-batch-manifest batch_outputs/batch_manifest.json \
+  --verification-json batch-verification.json
+```
+
+Verification reports missing or modified inputs and outputs and exits nonzero
+after writing its JSON report when any completed record is invalid. Resume mode
+also reruns an input when its prior marker output no longer matches its digest.
 
 ## Web interface
 

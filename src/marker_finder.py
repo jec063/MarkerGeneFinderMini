@@ -58,8 +58,19 @@ DEFAULT_GENE_CHUNK_SIZE = 1000
 CSV_INSPECTION_CHUNK_ROWS = 10_000
 ProgressCallback = Callable[[int, int, object], None]
 PLAN_SCHEMA_VERSION = 1
-BATCH_MANIFEST_SCHEMA_VERSION = 1
+BATCH_MANIFEST_SCHEMA_VERSION = 2
 BENCHMARK_SCHEMA_VERSION = 1
+BENCHMARK_COMPARISON_SCHEMA_VERSION = 1
+BATCH_VERIFICATION_SCHEMA_VERSION = 1
+
+
+def _sha256_file(path: str | Path) -> str:
+    """Return a streaming SHA-256 digest for a file."""
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _validate_workers(workers: int) -> None:
@@ -1330,6 +1341,7 @@ def run_batch(
         input_fingerprint = {
             "size": stat.st_size,
             "mtime_ns": stat.st_mtime_ns,
+            "sha256": _sha256_file(input_path),
         }
         record: dict[str, object] = {
             "input": str(input_path),
@@ -1346,18 +1358,25 @@ def run_batch(
             manifest.append(record)
             continue
         previous = previous_runs.get(str(input_path))
+        output_matches = (
+            output_path.is_file()
+            and previous is not None
+            and previous.get("output_sha256") is not None
+            and previous.get("output_sha256") == _sha256_file(output_path)
+        )
         if (
             previous
             and previous.get("status") in {"complete", "skipped"}
             and previous.get("input_fingerprint") == input_fingerprint
             and previous.get("settings_fingerprint") == settings_fingerprint
-            and output_path.is_file()
+            and output_matches
         ):
             record.update(
                 status="skipped",
                 marker_rows=previous.get("marker_rows", 0),
                 error=None,
                 diagnostics=previous.get("diagnostics", {}),
+                output_sha256=previous["output_sha256"],
                 duration_seconds=0.0,
             )
             manifest.append(record)
@@ -1384,6 +1403,7 @@ def run_batch(
                 marker_rows=len(markers),
                 error=None,
                 diagnostics=run_diagnostics,
+                output_sha256=_sha256_file(output_path),
             )
         record["duration_seconds"] = perf_counter() - attempt_started
         manifest.append(record)
@@ -1409,6 +1429,68 @@ def run_batch(
     )
     temporary_manifest.replace(manifest_path)
     return manifest
+
+
+def verify_batch_manifest(manifest_path: str | Path) -> dict[str, object]:
+    """Verify completed batch inputs and outputs against recorded hashes."""
+    manifest_path = Path(manifest_path)
+    document = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if document.get("schema_version") != BATCH_MANIFEST_SCHEMA_VERSION:
+        raise ValueError("Unsupported batch manifest schema version.")
+    if not isinstance(document.get("runs"), list):
+        raise ValueError("Batch manifest runs must be a list.")
+
+    entries: list[dict[str, object]] = []
+    for record in document["runs"]:
+        status = record.get("status")
+        entry: dict[str, object] = {
+            "input": record.get("input"),
+            "output": record.get("output"),
+            "batch_status": status,
+            "valid": True,
+            "issues": [],
+        }
+        issues = entry["issues"]
+        if status in {"complete", "skipped"}:
+            input_path = Path(str(record.get("input", "")))
+            output_path = Path(str(record.get("output", "")))
+            fingerprint = record.get("input_fingerprint", {})
+            if not input_path.is_file():
+                issues.append("input_missing")
+            elif not isinstance(fingerprint, dict):
+                issues.append("input_fingerprint_missing")
+            else:
+                stat = input_path.stat()
+                if fingerprint.get("size") != stat.st_size:
+                    issues.append("input_size_mismatch")
+                if fingerprint.get("mtime_ns") != stat.st_mtime_ns:
+                    issues.append("input_mtime_mismatch")
+                expected_input_hash = fingerprint.get("sha256")
+                if not expected_input_hash:
+                    issues.append("input_sha256_missing")
+                elif expected_input_hash != _sha256_file(input_path):
+                    issues.append("input_sha256_mismatch")
+            if not output_path.is_file():
+                issues.append("output_missing")
+            else:
+                expected_output_hash = record.get("output_sha256")
+                if not expected_output_hash:
+                    issues.append("output_sha256_missing")
+                elif expected_output_hash != _sha256_file(output_path):
+                    issues.append("output_sha256_mismatch")
+        entry["valid"] = not issues
+        entries.append(entry)
+
+    invalid = sum(not bool(entry["valid"]) for entry in entries)
+    return {
+        "schema_version": BATCH_VERIFICATION_SCHEMA_VERSION,
+        "app_version": APP_VERSION,
+        "manifest": str(manifest_path),
+        "valid": invalid == 0,
+        "checked": len(entries),
+        "invalid": invalid,
+        "entries": entries,
+    }
 
 
 def benchmark_analysis(
@@ -1441,6 +1523,59 @@ def benchmark_analysis(
     }
 
 
+def compare_benchmarks(
+    baseline_path: str | Path,
+    candidate_path: str | Path,
+    max_regression_percent: float = 10.0,
+) -> dict[str, object]:
+    """Compare benchmark medians against an allowed regression threshold."""
+    if (
+        isinstance(max_regression_percent, bool)
+        or not np.isfinite(max_regression_percent)
+        or max_regression_percent < 0
+    ):
+        raise ValueError("max_regression_percent must be finite and non-negative.")
+
+    def load(path: str | Path) -> tuple[Path, dict[str, object]]:
+        normalized = Path(path)
+        report = json.loads(normalized.read_text(encoding="utf-8"))
+        if report.get("schema_version") != BENCHMARK_SCHEMA_VERSION:
+            raise ValueError(f"Unsupported benchmark schema: {normalized}.")
+        value = report.get("median_seconds")
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f"Benchmark median is missing: {normalized}.")
+        if not np.isfinite(value) or value <= 0:
+            raise ValueError(f"Benchmark median must be positive: {normalized}.")
+        return normalized, report
+
+    baseline_path, baseline = load(baseline_path)
+    candidate_path, candidate = load(candidate_path)
+    baseline_median = float(baseline["median_seconds"])
+    candidate_median = float(candidate["median_seconds"])
+    ratio = candidate_median / baseline_median
+    change_percent = (ratio - 1.0) * 100.0
+    warnings = [
+        f"{field}_mismatch"
+        for field in ("platform", "python_version", "input")
+        if baseline.get(field) != candidate.get(field)
+    ]
+    regression = change_percent > float(max_regression_percent)
+    return {
+        "schema_version": BENCHMARK_COMPARISON_SCHEMA_VERSION,
+        "app_version": APP_VERSION,
+        "baseline": str(baseline_path),
+        "candidate": str(candidate_path),
+        "baseline_median_seconds": baseline_median,
+        "candidate_median_seconds": candidate_median,
+        "ratio": ratio,
+        "change_percent": change_percent,
+        "max_regression_percent": float(max_regression_percent),
+        "regression": regression,
+        "passed": not regression,
+        "compatibility_warnings": warnings,
+    }
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Create the command-line argument parser."""
 
@@ -1466,6 +1601,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--input-dir",
         help="Directory of CSV or H5AD files to analyze as a batch.",
     )
+    inputs.add_argument(
+        "--verify-batch-manifest",
+        help="Verify batch input and output checksums and exit.",
+    )
+    inputs.add_argument(
+        "--compare-benchmarks",
+        nargs=2,
+        metavar=("BASELINE", "CANDIDATE"),
+        help="Compare two versioned benchmark JSON reports and exit.",
+    )
 
     outputs = parser.add_mutually_exclusive_group()
     outputs.add_argument(
@@ -1475,6 +1620,14 @@ def build_parser() -> argparse.ArgumentParser:
     outputs.add_argument(
         "--output-dir",
         help="Directory for batch marker CSVs and batch_manifest.json.",
+    )
+    outputs.add_argument(
+        "--verification-json",
+        help="Output JSON path for --verify-batch-manifest.",
+    )
+    outputs.add_argument(
+        "--comparison-json",
+        help="Output JSON path for --compare-benchmarks.",
     )
 
     parser.add_argument(
@@ -1558,6 +1711,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=3,
         help="Number of benchmark repetitions (default: 3).",
+    )
+    parser.add_argument(
+        "--max-regression-percent",
+        type=float,
+        default=10.0,
+        help="Maximum allowed benchmark median regression (default: 10).",
     )
     parser.add_argument(
         "--resume",
@@ -1721,6 +1880,41 @@ def main() -> None:
     """Run the command-line application."""
 
     args = build_parser().parse_args()
+
+    if args.verify_batch_manifest:
+        if not args.verification_json:
+            raise SystemExit(
+                "--verify-batch-manifest requires --verification-json."
+            )
+        verification = verify_batch_manifest(args.verify_batch_manifest)
+        verification_path = Path(args.verification_json)
+        verification_path.parent.mkdir(parents=True, exist_ok=True)
+        verification_path.write_text(
+            json.dumps(verification, indent=2, allow_nan=False) + "\n",
+            encoding="utf-8",
+        )
+        print(f"Saved batch verification to {verification_path}")
+        if not verification["valid"]:
+            raise SystemExit(1)
+        return
+
+    if args.compare_benchmarks:
+        if not args.comparison_json:
+            raise SystemExit("--compare-benchmarks requires --comparison-json.")
+        comparison = compare_benchmarks(
+            *args.compare_benchmarks,
+            max_regression_percent=args.max_regression_percent,
+        )
+        comparison_path = Path(args.comparison_json)
+        comparison_path.parent.mkdir(parents=True, exist_ok=True)
+        comparison_path.write_text(
+            json.dumps(comparison, indent=2, allow_nan=False) + "\n",
+            encoding="utf-8",
+        )
+        print(f"Saved benchmark comparison to {comparison_path}")
+        if not comparison["passed"]:
+            raise SystemExit(1)
+        return
 
     exclusive_modes = [args.inspect_json, args.plan_json, args.benchmark_json]
     if sum(value is not None for value in exclusive_modes) > 1:
