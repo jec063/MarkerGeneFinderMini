@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **1.15.0**. The version is shown in the web
+Current application version: **1.17.0**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -349,6 +349,34 @@ marker-gene-finder \
 Verification reports missing or modified inputs and outputs and exits nonzero
 after writing its JSON report when any completed record is invalid. Resume mode
 also reruns an input when its prior marker output no longer matches its digest.
+
+Select a batch subset with repeatable filename globs. Include patterns are
+combined with OR logic, then matching exclude patterns are removed:
+
+```bash
+marker-gene-finder \
+  --input-dir batch_inputs \
+  --output-dir batch_outputs \
+  --include-pattern 'sample-*.csv' \
+  --include-pattern '*.h5ad' \
+  --exclude-pattern '*-draft.csv'
+```
+
+Preview the exact selected files and whether resume mode would run or skip each
+one without executing marker analysis or changing the batch manifest:
+
+```bash
+marker-gene-finder \
+  --input-dir batch_inputs \
+  --output-dir batch_outputs \
+  --include-pattern 'sample-*.csv' \
+  --resume \
+  --batch-plan-json batch-plan.json
+```
+
+The versioned plan records input fingerprints, the settings fingerprint, run or
+skip actions, and explicit reasons such as `new_input`, `input_changed`,
+`settings_changed`, `output_missing`, `output_changed`, or `unchanged_success`.
 
 ## Web interface
 

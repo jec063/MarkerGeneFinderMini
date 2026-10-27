@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import hashlib
 import json
 import platform
@@ -62,6 +63,7 @@ BATCH_MANIFEST_SCHEMA_VERSION = 2
 BENCHMARK_SCHEMA_VERSION = 1
 BENCHMARK_COMPARISON_SCHEMA_VERSION = 1
 BATCH_VERIFICATION_SCHEMA_VERSION = 1
+BATCH_PLAN_SCHEMA_VERSION = 1
 
 
 def _sha256_file(path: str | Path) -> str:
@@ -71,6 +73,47 @@ def _sha256_file(path: str | Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _select_batch_inputs(
+    input_dir: Path,
+    include_patterns: Sequence[str] = (),
+    exclude_patterns: Sequence[str] = (),
+) -> list[Path]:
+    """Select supported batch inputs using ordered filename filtering."""
+    inputs = sorted(
+        path for path in input_dir.iterdir()
+        if path.is_file() and path.suffix.lower() in {".csv", ".h5ad"}
+    )
+    if include_patterns:
+        inputs = [
+            path for path in inputs
+            if any(fnmatch.fnmatchcase(path.name, pattern) for pattern in include_patterns)
+        ]
+    if exclude_patterns:
+        inputs = [
+            path for path in inputs
+            if not any(
+                fnmatch.fnmatchcase(path.name, pattern)
+                for pattern in exclude_patterns
+            )
+        ]
+    return inputs
+
+
+def _batch_settings_fingerprint(analysis_options: dict[str, object]) -> str:
+    """Hash analysis settings while excluding non-serializable callbacks."""
+    fingerprint_options = {
+        key: value for key, value in analysis_options.items()
+        if key != "progress_callback"
+    }
+    settings_json = json.dumps(
+        fingerprint_options,
+        sort_keys=True,
+        default=str,
+        allow_nan=False,
+    )
+    return hashlib.sha256(settings_json.encode()).hexdigest()
 
 
 def _validate_workers(workers: int) -> None:
@@ -1291,12 +1334,92 @@ def run(
     return markers
 
 
+def build_batch_plan(
+    input_dir: str | Path,
+    output_dir: str | Path,
+    resume: bool = False,
+    retry_failed: bool = False,
+    include_patterns: Sequence[str] = (),
+    exclude_patterns: Sequence[str] = (),
+    **analysis_options,
+) -> dict[str, object]:
+    """Describe which batch inputs would run or be skipped without analysis."""
+    input_dir = Path(input_dir)
+    output_dir = Path(output_dir)
+    if not input_dir.is_dir():
+        raise ValueError(f"Batch input directory does not exist: {input_dir}")
+    inputs = _select_batch_inputs(input_dir, include_patterns, exclude_patterns)
+    if not inputs:
+        raise ValueError("Batch selection contains no CSV or H5AD files.")
+
+    manifest_path = output_dir / "batch_manifest.json"
+    previous_runs: dict[str, dict[str, object]] = {}
+    if (resume or retry_failed) and manifest_path.is_file():
+        previous = json.loads(manifest_path.read_text(encoding="utf-8"))
+        previous_runs = {
+            str(row["input"]): row for row in previous.get("runs", [])
+        }
+    settings_fingerprint = _batch_settings_fingerprint(analysis_options)
+    entries: list[dict[str, object]] = []
+    for input_path in inputs:
+        output_path = output_dir / f"{input_path.name}.markers.csv"
+        stat = input_path.stat()
+        input_fingerprint = {
+            "size": stat.st_size,
+            "mtime_ns": stat.st_mtime_ns,
+            "sha256": _sha256_file(input_path),
+        }
+        previous = previous_runs.get(str(input_path))
+        action = "run"
+        reason = "resume_disabled"
+        if resume or retry_failed:
+            if previous is None:
+                reason = "new_input"
+            elif previous.get("status") not in {"complete", "skipped"}:
+                reason = f"previous_{previous.get('status', 'unknown')}"
+            elif previous.get("input_fingerprint") != input_fingerprint:
+                reason = "input_changed"
+            elif previous.get("settings_fingerprint") != settings_fingerprint:
+                reason = "settings_changed"
+            elif not output_path.is_file():
+                reason = "output_missing"
+            elif not previous.get("output_sha256"):
+                reason = "output_hash_missing"
+            elif previous["output_sha256"] != _sha256_file(output_path):
+                reason = "output_changed"
+            else:
+                action = "skip"
+                reason = "unchanged_success"
+        entries.append({
+            "input": str(input_path),
+            "output": str(output_path),
+            "action": action,
+            "reason": reason,
+            "input_fingerprint": input_fingerprint,
+        })
+    return {
+        "schema_version": BATCH_PLAN_SCHEMA_VERSION,
+        "app_version": APP_VERSION,
+        "input_dir": str(input_dir),
+        "output_dir": str(output_dir),
+        "settings_fingerprint": settings_fingerprint,
+        "include_patterns": list(include_patterns),
+        "exclude_patterns": list(exclude_patterns),
+        "selected": len(entries),
+        "run": sum(entry["action"] == "run" for entry in entries),
+        "skip": sum(entry["action"] == "skip" for entry in entries),
+        "entries": entries,
+    }
+
+
 def run_batch(
     input_dir: str | Path,
     output_dir: str | Path,
     resume: bool = False,
     retry_failed: bool = False,
     fail_fast: bool = False,
+    include_patterns: Sequence[str] = (),
+    exclude_patterns: Sequence[str] = (),
     **analysis_options,
 ) -> list[dict[str, object]]:
     """Analyze supported files with resumable, atomic manifest tracking."""
@@ -1306,12 +1429,9 @@ def run_batch(
     if not input_dir.is_dir():
         raise ValueError(f"Batch input directory does not exist: {input_dir}")
 
-    inputs = sorted(
-        path for path in input_dir.iterdir()
-        if path.is_file() and path.suffix.lower() in {".csv", ".h5ad"}
-    )
+    inputs = _select_batch_inputs(input_dir, include_patterns, exclude_patterns)
     if not inputs:
-        raise ValueError("Batch input directory contains no CSV or H5AD files.")
+        raise ValueError("Batch selection contains no CSV or H5AD files.")
 
     output_dir.mkdir(parents=True, exist_ok=True)
     manifest_path = output_dir / "batch_manifest.json"
@@ -1322,17 +1442,7 @@ def run_batch(
             str(row["input"]): row for row in previous.get("runs", [])
         }
 
-    fingerprint_options = {
-        key: value for key, value in analysis_options.items()
-        if key != "progress_callback"
-    }
-    settings_json = json.dumps(
-        fingerprint_options,
-        sort_keys=True,
-        default=str,
-        allow_nan=False,
-    )
-    settings_fingerprint = hashlib.sha256(settings_json.encode()).hexdigest()
+    settings_fingerprint = _batch_settings_fingerprint(analysis_options)
     manifest: list[dict[str, object]] = []
     stopped = False
     for input_path in inputs:
@@ -1412,6 +1522,8 @@ def run_batch(
         "schema_version": BATCH_MANIFEST_SCHEMA_VERSION,
         "app_version": APP_VERSION,
         "settings_fingerprint": settings_fingerprint,
+        "include_patterns": list(include_patterns),
+        "exclude_patterns": list(exclude_patterns),
         "inputs": len(inputs),
         "completed": sum(
             row["status"] in {"complete", "skipped"} for row in manifest
@@ -1734,6 +1846,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Stop a batch after its first failed input.",
     )
     parser.add_argument(
+        "--include-pattern",
+        action="append",
+        default=[],
+        help="Batch filename glob to include; repeat to combine patterns.",
+    )
+    parser.add_argument(
+        "--exclude-pattern",
+        action="append",
+        default=[],
+        help="Batch filename glob to exclude; repeat to combine patterns.",
+    )
+    parser.add_argument(
+        "--batch-plan-json",
+        help="Write a batch run/skip plan without running analyses.",
+    )
+    parser.add_argument(
         "--quiet",
         action="store_true",
         help="Suppress per-cluster progress messages.",
@@ -1881,6 +2009,19 @@ def main() -> None:
 
     args = build_parser().parse_args()
 
+    batch_only_options = (
+        args.resume,
+        args.retry_failed,
+        args.fail_fast,
+        bool(args.include_pattern),
+        bool(args.exclude_pattern),
+        bool(args.batch_plan_json),
+    )
+    if any(batch_only_options) and not args.input_dir:
+        raise SystemExit(
+            "Batch recovery, selection, and planning options require --input-dir."
+        )
+
     if args.verify_batch_manifest:
         if not args.verification_json:
             raise SystemExit(
@@ -2016,6 +2157,38 @@ def main() -> None:
         workers=args.workers,
     )
 
+    if args.batch_plan_json:
+        if not args.input_dir or not args.output_dir or args.input or args.output:
+            raise SystemExit(
+                "--batch-plan-json requires --input-dir and --output-dir."
+            )
+        if args.diagnostics_json:
+            raise SystemExit(
+                "--batch-plan-json cannot be combined with --diagnostics-json."
+            )
+        if args.inspect_json or args.plan_json or args.benchmark_json:
+            raise SystemExit(
+                "--batch-plan-json cannot be combined with another planning, "
+                "inspection, or benchmark mode."
+            )
+        batch_plan = build_batch_plan(
+            args.input_dir,
+            args.output_dir,
+            resume=args.resume,
+            retry_failed=args.retry_failed,
+            include_patterns=args.include_pattern,
+            exclude_patterns=args.exclude_pattern,
+            **analysis_options,
+        )
+        batch_plan_path = Path(args.batch_plan_json)
+        batch_plan_path.parent.mkdir(parents=True, exist_ok=True)
+        batch_plan_path.write_text(
+            json.dumps(batch_plan, indent=2, allow_nan=False) + "\n",
+            encoding="utf-8",
+        )
+        print(f"Saved batch plan to {batch_plan_path}")
+        return
+
     if args.benchmark_json:
         if not args.input or args.output or args.input_dir or args.output_dir:
             raise SystemExit(
@@ -2061,6 +2234,8 @@ def main() -> None:
             resume=args.resume,
             retry_failed=args.retry_failed,
             fail_fast=args.fail_fast,
+            include_patterns=args.include_pattern,
+            exclude_patterns=args.exclude_pattern,
             **analysis_options,
         )
         completed = sum(
