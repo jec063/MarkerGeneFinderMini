@@ -12,6 +12,10 @@ from src.settings_import import (
     load_analysis_profile_upload,
     load_analysis_settings_upload,
 )
+from marker_gene_finder.settings import (
+    SETTINGS_SCHEMA_NAME,
+    migrate_settings_document,
+)
 
 
 def encode(settings: dict) -> bytes:
@@ -75,7 +79,7 @@ def test_null_optional_limits_disable_their_controls() -> None:
 @pytest.mark.parametrize(
     ("settings", "message"),
     [
-        ({"schema_version": 2}, "schema version 1"),
+        ({"schema_version": 2}, "schema_name"),
         ({"schema_version": 1, "top_n": 0}, "top_n"),
         ({"schema_version": 1, "min_pct": 1.1}, "min_pct"),
         ({"schema_version": 1, "rank_by": "unknown"}, "rank_by"),
@@ -91,6 +95,35 @@ def test_invalid_analysis_settings_are_rejected(settings: dict, message: str) ->
 def test_invalid_json_is_rejected() -> None:
     with pytest.raises(ValueError, match="valid UTF-8 JSON"):
         load_analysis_settings(b"not-json")
+
+
+def test_v1_document_is_migrated_to_v2_envelope() -> None:
+    migrated = migrate_settings_document(
+        {"schema_version": 1, "app_version": "1.9.1", "top_n": 7}
+    )
+
+    assert migrated == {
+        "schema_name": SETTINGS_SCHEMA_NAME,
+        "schema_version": 2,
+        "app_version": "1.9.1",
+        "settings": {"top_n": 7},
+    }
+
+
+def test_v2_document_loads_nested_settings() -> None:
+    restored = load_analysis_settings(
+        encode(
+            {
+                "schema_name": SETTINGS_SCHEMA_NAME,
+                "schema_version": 2,
+                "app_version": "2.2.0",
+                "settings": {"top_n": 11, "min_pct": 0.2},
+            }
+        )
+    )
+
+    assert restored["top_n"] == 11
+    assert restored["min_pct"] == 0.2
 
 
 def make_bundle(files: dict[str, bytes]) -> bytes:

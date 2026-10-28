@@ -11,24 +11,27 @@ import anndata as ad
 import pandas as pd
 import streamlit as st
 
-from src.analysis_profiles import (
+from marker_gene_finder.profiles import (
     PROFILE_DEFAULTS,
     build_analysis_profile,
     compare_profile_state,
     is_newer_app_version,
     reset_profile_state,
 )
-from src.expression_summary import summarize_clusters, summarize_expression
-from src.filter_presets import FILTER_PRESETS, get_filter_preset
+from marker_gene_finder.expression_summary import summarize_clusters, summarize_expression
+from marker_gene_finder.filter_presets import FILTER_PRESETS, get_filter_preset
 
-from src.marker_finder import (
+from marker_gene_finder.analysis import (
     find_markers,
     find_markers_scanpy,
     load_expression,
 )
-from src.report_bundle import build_analysis_bundle
-from src.settings_import import load_analysis_profile_upload
-from src.version import APP_VERSION
+from marker_gene_finder.report_bundle import build_analysis_bundle
+from marker_gene_finder.settings import (
+    build_settings_document,
+    load_analysis_profile_upload,
+)
+from marker_gene_finder.version import APP_VERSION
 from time import perf_counter
 
 
@@ -850,9 +853,7 @@ if st.button("Find marker genes", type="primary"):
     else:
         elapsed = perf_counter() - started_at
         st.session_state["marker_results"] = markers
-        st.session_state["analysis_settings"] = {
-            "schema_version": 1,
-            "app_version": APP_VERSION,
+        st.session_state["analysis_settings"] = build_settings_document({
             "input_file": Path(file_name).name,
             "example_data": bool(use_example_data),
             "engine": analysis_engine,
@@ -898,7 +899,7 @@ if st.button("Find marker genes", type="primary"):
             "excluded_genes": excluded_genes,
             "excluded_prefixes": excluded_prefixes,
             "marker_rows": int(len(markers)),
-        }
+        })
         analysis_status.write(
             f"Produced {len(markers):,} marker rows after filtering."
         )

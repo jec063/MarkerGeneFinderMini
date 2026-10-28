@@ -41,29 +41,30 @@ def test_example_data_flow():
     assert {"CD3D", "MS4A1", "LST1", "PECAM1"}.issubset(set(markers["gene"]))
 
     settings = app.session_state["analysis_settings"]
-    assert settings["input_file"] == "example_expression.csv"
+    assert settings["schema_version"] == 2
+    assert settings["settings"]["input_file"] == "example_expression.csv"
     assert settings["app_version"] == APP_VERSION
-    assert settings["example_data"] is True
-    assert settings["engine"] == "native"
-    assert settings["expression_source"] == "CSV"
-    assert settings["layer"] is None
-    assert settings["use_raw"] is False
-    assert settings["cluster_column"] == "cluster"
-    assert settings["pseudocount"] == 0.1
-    assert settings["clusters"] == 4
-    assert settings["min_cluster_size"] == 1
-    assert settings["min_cells_expressing"] == 0
-    assert settings["min_cluster_mean"] == 0.0
-    assert settings["min_mean_difference"] == 0.0
-    assert settings["max_other_mean"] is None
-    assert settings["max_cells_expressing_out"] is None
-    assert settings["marker_rows"] == len(markers)
+    assert settings["settings"]["example_data"] is True
+    assert settings["settings"]["engine"] == "native"
+    assert settings["settings"]["expression_source"] == "CSV"
+    assert settings["settings"]["layer"] is None
+    assert settings["settings"]["use_raw"] is False
+    assert settings["settings"]["cluster_column"] == "cluster"
+    assert settings["settings"]["pseudocount"] == 0.1
+    assert settings["settings"]["clusters"] == 4
+    assert settings["settings"]["min_cluster_size"] == 1
+    assert settings["settings"]["min_cells_expressing"] == 0
+    assert settings["settings"]["min_cluster_mean"] == 0.0
+    assert settings["settings"]["min_mean_difference"] == 0.0
+    assert settings["settings"]["max_other_mean"] is None
+    assert settings["settings"]["max_cells_expressing_out"] is None
+    assert settings["settings"]["marker_rows"] == len(markers)
 
     top_n_widget = next(
         item for item in app.number_input if item.label == "Markers per cluster"
     )
-    assert settings["top_n"] == int(top_n_widget.value)
-    assert settings["filter_preset"] == "Permissive"
+    assert settings["settings"]["top_n"] == int(top_n_widget.value)
+    assert settings["settings"]["filter_preset"] == "Permissive"
     top_n_widget.set_value(1).run()
     assert len(app.exception) == 0
     assert "marker_results" not in app.session_state
@@ -74,7 +75,7 @@ def test_example_data_flow():
     ).click().run(timeout=30)
     assert len(app.exception) == 0
     assert len(app.error) == 0
-    assert app.session_state["analysis_settings"]["top_n"] == 1
+    assert app.session_state["analysis_settings"]["settings"]["top_n"] == 1
 
     app.checkbox(key="use_example_data").uncheck().run()
 
