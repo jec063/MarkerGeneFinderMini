@@ -1,5 +1,5 @@
-"""Public import for the shared Marker Gene Finder version."""
+"""Marker Gene Finder public version."""
 
-from src.version import APP_VERSION
+APP_VERSION = "2.1.0"
 
 __all__ = ["APP_VERSION"]

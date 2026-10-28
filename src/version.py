@@ -1,3 +1,5 @@
-"""Application version shared by the legacy engine and v2 package."""
+"""Compatibility import for the v2 package version."""
 
-APP_VERSION = "2.0.0"
+from marker_gene_finder.version import APP_VERSION
+
+__all__ = ["APP_VERSION"]
