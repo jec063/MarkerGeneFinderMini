@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.marker_finder import find_markers, run
+from .analysis import find_markers, run
 
 from .config import AnalysisConfig
 from .exceptions import InputValidationError

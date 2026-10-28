@@ -8,17 +8,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from src.marker_finder import (
-    benchmark_analysis,
-    build_analysis_plan,
-    build_batch_plan,
-    compare_benchmarks,
-    inspect_input,
-    run_batch,
-    verify_batch_manifest,
-)
-
 from .api import analyze_file
+from .batch import build_batch_plan, run_batch, verify_batch_manifest
+from .benchmark import benchmark_analysis, compare_benchmarks
+from .inspection import build_analysis_plan, inspect_input
 from .config import AnalysisConfig
 from .exceptions import MarkerFinderError
 from .version import APP_VERSION

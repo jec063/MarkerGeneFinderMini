@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **2.0.0**. The version is shown in the web
+Current application version: **2.1.0**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -230,6 +230,12 @@ Version 2 provides a stable `marker_gene_finder` Python package, a validated
 explicit subcommand CLI. The established analysis engines remain available
 behind this interface, so the release changes orchestration without changing
 the marker calculations.
+
+Version 2.1 moves the analysis, inspection, batch, and benchmark services into
+the `marker_gene_finder` package. The historical `src.marker_finder` module is
+now a compatibility entry point, so existing imports and its flat CLI continue
+to work during the v2 migration window without remaining a dependency of the
+public package.
 
 ```python
 import pandas as pd

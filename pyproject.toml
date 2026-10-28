@@ -24,7 +24,7 @@ test = ["pytest>=7.0,<9.0"]
 marker-gene-finder = "marker_gene_finder.cli:main"
 
 [tool.setuptools.dynamic]
-version = {attr = "src.version.APP_VERSION"}
+version = {attr = "marker_gene_finder.version.APP_VERSION"}
 
 [tool.setuptools.packages.find]
 include = ["marker_gene_finder", "marker_gene_finder.*", "src", "src.*"]
