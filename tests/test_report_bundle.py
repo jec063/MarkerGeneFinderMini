@@ -31,8 +31,10 @@ def test_bundle_contains_results_settings_and_optional_summary():
         saved_markers = pd.read_csv(archive.open("marker_gene_results.csv"))
         pd.testing.assert_frame_equal(saved_markers, markers)
         assert json.load(archive.open("analysis_settings.json")) == {
-            "engine": "native",
+            "schema_name": "marker-gene-finder-analysis-settings",
+            "schema_version": 2,
             "app_version": APP_VERSION,
+            "settings": {"engine": "native"},
         }
         assert (
             f"Application version: {APP_VERSION}"

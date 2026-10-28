@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **2.1.0**. The version is shown in the web
+Current application version: **2.2.0**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -237,6 +237,12 @@ now a compatibility entry point, so existing imports and its flat CLI continue
 to work during the v2 migration window without remaining a dependency of the
 public package.
 
+Version 2.2 moves profiles, presets, expression summaries, settings import,
+and report bundles into the public package. New exports use analysis-settings
+schema 2, while schema-1 JSON and ZIP bundles are migrated automatically on
+import. The Streamlit application now imports only public
+`marker_gene_finder` services.
+
 ```python
 import pandas as pd
 
@@ -290,6 +296,20 @@ with the `analyze` command above and set `top_n` to `10` in the configuration.
 The original flat parser remains temporarily available through
 `python src/marker_finder.py` for migration, but new automation should use the
 v2 subcommands and public package.
+
+Analysis profiles and bundle settings now use a named envelope:
+
+```json
+{
+  "schema_name": "marker-gene-finder-analysis-settings",
+  "schema_version": 2,
+  "app_version": "2.2.0",
+  "settings": {"top_n": 10, "min_pct": 0.25}
+}
+```
+
+Imports still accept the flat schema-1 document and migrate it in memory.
+Unsupported future schemas and malformed schema-2 envelopes are rejected.
 
 ## Legacy v1 command-line reference
 

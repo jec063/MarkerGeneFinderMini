@@ -9,6 +9,13 @@ from .exceptions import (
     SchemaError,
 )
 from .models import MarkerResult
+from .settings import (
+    SETTINGS_SCHEMA_NAME,
+    SETTINGS_SCHEMA_VERSION,
+    build_settings_document,
+    load_analysis_settings,
+    migrate_settings_document,
+)
 from .version import APP_VERSION
 
 __all__ = [
@@ -20,6 +27,11 @@ __all__ = [
     "MarkerFinderError",
     "MarkerResult",
     "SchemaError",
+    "SETTINGS_SCHEMA_NAME",
+    "SETTINGS_SCHEMA_VERSION",
     "analyze",
     "analyze_file",
+    "build_settings_document",
+    "load_analysis_settings",
+    "migrate_settings_document",
 ]

@@ -25,12 +25,13 @@ def test_build_analysis_profile_serializes_portable_state() -> None:
 
     profile = json.loads(build_analysis_profile(state, "Focused markers"))
 
-    assert profile["schema_version"] == 1
+    assert profile["schema_version"] == 2
+    assert profile["schema_name"] == "marker-gene-finder-analysis-settings"
     assert profile["app_version"] == APP_VERSION
     assert profile["profile_name"] == "Focused markers"
-    assert profile["top_n"] == 9
-    assert profile["max_other_mean"] == 0.25
-    assert profile["excluded_genes"] == ["MALAT1", "GAPDH"]
+    assert profile["settings"]["top_n"] == 9
+    assert profile["settings"]["max_other_mean"] == 0.25
+    assert profile["settings"]["excluded_genes"] == ["MALAT1", "GAPDH"]
     assert "input_file" not in profile
 
 
