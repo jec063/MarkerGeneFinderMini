@@ -9,7 +9,7 @@ from typing import Protocol, runtime_checkable
 import pandas as pd
 
 from . import _core
-from .config import AnalysisConfig
+from .config import AnalysisConfig, validate_engine_name
 from .exceptions import ConfigurationError, InputValidationError
 
 
@@ -139,9 +139,7 @@ class EngineRegistry:
 
     def register(self, engine: AnalysisEngine, *, replace: bool = False) -> None:
         """Register an engine, rejecting invalid or duplicate names."""
-        name = getattr(engine, "name", None)
-        if not isinstance(name, str) or not name.strip():
-            raise ConfigurationError("Engine names must be nonempty strings.")
+        name = validate_engine_name(getattr(engine, "name", None))
         if not isinstance(engine, AnalysisEngine):
             raise ConfigurationError(
                 f"Engine {name!r} does not implement the AnalysisEngine contract."

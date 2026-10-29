@@ -29,7 +29,7 @@ def expression_table() -> pd.DataFrame:
 
 
 class RecordingEngine:
-    name = "native"
+    name = "recording"
 
     def __init__(self) -> None:
         self.config: AnalysisConfig | None = None
@@ -50,7 +50,7 @@ class RecordingEngine:
 def test_public_api_dispatches_through_engine_registry() -> None:
     engine = RecordingEngine()
     registry = EngineRegistry((engine,))
-    config = AnalysisConfig(top_n=1)
+    config = AnalysisConfig(engine="recording", top_n=1)
 
     result = analyze(expression_table(), config, registry=registry)
 
@@ -70,6 +70,54 @@ def test_registry_rejects_duplicates_and_incomplete_engines() -> None:
         registry.register(RecordingEngine())
     with pytest.raises(ConfigurationError, match="contract"):
         registry.register(type("Incomplete", (), {"name": "broken"})())
+
+
+def test_registry_rejects_invalid_names_and_reports_unknown_engines() -> None:
+    registry = EngineRegistry()
+
+    with pytest.raises(ConfigurationError, match="lowercase"):
+        registry.register(type("BadName", (), {"name": "Not Valid"})())
+    with pytest.raises(ConfigurationError, match="Unknown analysis engine"):
+        analyze(
+            expression_table(),
+            AnalysisConfig(engine="missing"),
+            registry=registry,
+        )
+
+
+def test_public_api_rejects_invalid_custom_engine_output() -> None:
+    class InvalidOutputEngine(RecordingEngine):
+        name = "invalid"
+
+        def analyze_dataframe(self, expression, config):
+            return expression
+
+    with pytest.raises(ConfigurationError, match="expected EngineOutput"):
+        analyze(
+            expression_table(),
+            AnalysisConfig(engine="invalid"),
+            registry=EngineRegistry((InvalidOutputEngine(),)),
+        )
+
+
+def test_public_api_keeps_authoritative_result_metadata() -> None:
+    class MisleadingEngine(RecordingEngine):
+        name = "misleading"
+
+        def analyze_dataframe(self, expression, config):
+            return EngineOutput(
+                markers=pd.DataFrame({"gene": ["real"]}),
+                diagnostics={"app_version": "0.0.0", "marker_rows": 99},
+            )
+
+    result = analyze(
+        expression_table(),
+        AnalysisConfig(engine="misleading"),
+        registry=EngineRegistry((MisleadingEngine(),)),
+    )
+
+    assert result.metadata["app_version"] == "2.3.1"
+    assert result.metadata["marker_rows"] == 1
 
 
 def test_legacy_import_emits_deprecation_notice() -> None:

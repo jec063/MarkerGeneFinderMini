@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,17 @@ RANK_BY_CHOICES = {
     "pct_difference",
     "p_adj",
 }
+ENGINE_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_-]*$")
+
+
+def validate_engine_name(value: object) -> str:
+    """Return a normalized engine identifier or raise a public config error."""
+    if not isinstance(value, str) or not ENGINE_NAME_PATTERN.fullmatch(value):
+        raise ConfigurationError(
+            "engine must start with a lowercase letter and contain only "
+            "lowercase letters, digits, underscores, or hyphens."
+        )
+    return value
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,8 +71,7 @@ class AnalysisConfig:
             raise ConfigurationError("cell_column must be a string or null.")
         if self.layer is not None and not isinstance(self.layer, str):
             raise ConfigurationError("layer must be a string or null.")
-        if self.engine not in {"native", "scanpy", "auto"}:
-            raise ConfigurationError("engine must be native, scanpy, or auto.")
+        validate_engine_name(self.engine)
         if self.rank_by not in RANK_BY_CHOICES:
             raise ConfigurationError(f"Unsupported rank_by value: {self.rank_by}.")
         for name in ("top_n", "min_cluster_size", "gene_chunk_size", "workers"):
