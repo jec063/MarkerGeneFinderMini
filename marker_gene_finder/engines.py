@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from importlib import metadata
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
@@ -11,6 +13,8 @@ import pandas as pd
 from . import _core
 from .config import AnalysisConfig, validate_engine_name
 from .exceptions import ConfigurationError, InputValidationError
+
+ENGINE_ENTRY_POINT_GROUP = "marker_gene_finder.engines"
 
 
 @dataclass(frozen=True, slots=True)
@@ -162,18 +166,72 @@ class EngineRegistry:
         """Return registered names in deterministic order."""
         return tuple(sorted(self._engines))
 
+    def copy(self) -> "EngineRegistry":
+        """Return an independent registry containing the same engines."""
+        return EngineRegistry(tuple(self._engines.values()))
+
 
 DEFAULT_ENGINE_REGISTRY = EngineRegistry(
     (NativeEngine(), ScanpyEngine(), AutoEngine())
 )
 
 
+def _entry_points(group: str) -> Iterable[metadata.EntryPoint]:
+    """Return entry points using the supported importlib metadata APIs."""
+    discovered = metadata.entry_points()
+    if hasattr(discovered, "select"):
+        return discovered.select(group=group)
+    return discovered.get(group, ())
+
+
+def _plugin_engine(entry_point: metadata.EntryPoint) -> AnalysisEngine:
+    """Load one engine instance from an entry point."""
+    try:
+        candidate = entry_point.load()
+        if isinstance(candidate, type):
+            candidate = candidate()
+        elif not isinstance(candidate, AnalysisEngine) and isinstance(
+            candidate, Callable
+        ):
+            candidate = candidate()
+    except Exception as error:
+        raise ConfigurationError(
+            f"Cannot load engine plugin {entry_point.name!r}: {error}"
+        ) from error
+    if not isinstance(candidate, AnalysisEngine):
+        raise ConfigurationError(
+            f"Engine plugin {entry_point.name!r} does not implement the "
+            "AnalysisEngine contract."
+        )
+    if candidate.name != entry_point.name:
+        raise ConfigurationError(
+            f"Engine plugin entry point {entry_point.name!r} returned engine "
+            f"{candidate.name!r}; the names must match."
+        )
+    return candidate
+
+
+def load_engine_plugins(
+    registry: EngineRegistry | None = None,
+    *,
+    group: str = ENGINE_ENTRY_POINT_GROUP,
+    replace: bool = False,
+) -> EngineRegistry:
+    """Load installed engine entry points into an independent registry."""
+    result = (registry or DEFAULT_ENGINE_REGISTRY).copy()
+    for entry_point in sorted(_entry_points(group), key=lambda item: item.name):
+        result.register(_plugin_engine(entry_point), replace=replace)
+    return result
+
+
 __all__ = [
     "DEFAULT_ENGINE_REGISTRY",
+    "ENGINE_ENTRY_POINT_GROUP",
     "AnalysisEngine",
     "AutoEngine",
     "EngineOutput",
     "EngineRegistry",
     "NativeEngine",
     "ScanpyEngine",
+    "load_engine_plugins",
 ]

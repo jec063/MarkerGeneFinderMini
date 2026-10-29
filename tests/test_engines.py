@@ -14,8 +14,9 @@ from marker_gene_finder import (
     EngineOutput,
     EngineRegistry,
     analyze,
+    load_engine_plugins,
 )
-from marker_gene_finder.engines import DEFAULT_ENGINE_REGISTRY
+from marker_gene_finder.engines import DEFAULT_ENGINE_REGISTRY, metadata
 
 
 def expression_table() -> pd.DataFrame:
@@ -116,8 +117,74 @@ def test_public_api_keeps_authoritative_result_metadata() -> None:
         registry=EngineRegistry((MisleadingEngine(),)),
     )
 
-    assert result.metadata["app_version"] == "2.3.1"
+    assert result.metadata["app_version"] == "2.4.0"
     assert result.metadata["marker_rows"] == 1
+
+
+class FakeEntryPoint:
+    def __init__(self, name, value=None, error=None):
+        self.name = name
+        self.value = value
+        self.error = error
+
+    def load(self):
+        if self.error is not None:
+            raise self.error
+        return self.value
+
+
+class FakeEntryPoints(list):
+    def select(self, *, group):
+        assert group == "marker_gene_finder.engines"
+        return self
+
+
+def test_engine_plugins_are_loaded_without_mutating_defaults(monkeypatch) -> None:
+    class PluginEngine(RecordingEngine):
+        name = "plugin"
+
+    monkeypatch.setattr(
+        metadata,
+        "entry_points",
+        lambda: FakeEntryPoints([FakeEntryPoint("plugin", PluginEngine)]),
+    )
+
+    registry = load_engine_plugins()
+
+    assert registry.names() == ("auto", "native", "plugin", "scanpy")
+    assert DEFAULT_ENGINE_REGISTRY.names() == ("auto", "native", "scanpy")
+    result = analyze(
+        expression_table(),
+        AnalysisConfig(engine="plugin"),
+        registry=registry,
+    )
+    assert result.metadata["engine"] == "recording"
+
+
+def test_engine_plugin_names_must_match(monkeypatch) -> None:
+    monkeypatch.setattr(
+        metadata,
+        "entry_points",
+        lambda: FakeEntryPoints(
+            [FakeEntryPoint("different", RecordingEngine())]
+        ),
+    )
+
+    with pytest.raises(ConfigurationError, match="names must match"):
+        load_engine_plugins()
+
+
+def test_engine_plugin_load_failures_are_public_errors(monkeypatch) -> None:
+    monkeypatch.setattr(
+        metadata,
+        "entry_points",
+        lambda: FakeEntryPoints(
+            [FakeEntryPoint("broken", error=RuntimeError("unavailable"))]
+        ),
+    )
+
+    with pytest.raises(ConfigurationError, match="broken.*unavailable"):
+        load_engine_plugins()
 
 
 def test_legacy_import_emits_deprecation_notice() -> None:
