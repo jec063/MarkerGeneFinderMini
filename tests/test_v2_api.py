@@ -38,7 +38,7 @@ def test_v2_config_round_trip_and_public_result(tmp_path) -> None:
     restored = AnalysisConfig.from_json(path)
     result = analyze(expression_table(), restored)
 
-    assert APP_VERSION == "2.3.0"
+    assert APP_VERSION == "2.3.1"
     assert restored == config
     assert isinstance(result, MarkerResult)
     assert result.markers["cluster"].tolist() == ["A"]
@@ -48,7 +48,7 @@ def test_v2_config_round_trip_and_public_result(tmp_path) -> None:
 
 def test_v2_config_rejects_invalid_and_unknown_values() -> None:
     with pytest.raises(ConfigurationError, match="engine"):
-        AnalysisConfig(engine="unknown")
+        AnalysisConfig(engine="Not Valid")
     with pytest.raises(ConfigurationError, match="cluster_column"):
         AnalysisConfig(cluster_column=1)  # type: ignore[arg-type]
     with pytest.raises(ConfigurationError, match="only strings"):

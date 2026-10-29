@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **2.3.0**. The version is shown in the web
+Current application version: **2.3.1**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -249,6 +249,12 @@ automatic file analysis through this interface, and callers can inject a
 registry for controlled integrations and tests. Legacy `src.*` imports now
 emit deprecation notices and are scheduled for removal in version 3.0.
 
+Version 2.3.1 completes the custom-engine contract: portable configurations
+may name registered third-party engines, unknown engines remain configuration
+errors, and public API calls validate custom `EngineOutput` objects before
+building a result. Engine identifiers use lowercase letters, digits,
+underscores, and hyphens.
+
 ```python
 import pandas as pd
 
@@ -309,7 +315,7 @@ Analysis profiles and bundle settings now use a named envelope:
 {
   "schema_name": "marker-gene-finder-analysis-settings",
   "schema_version": 2,
-  "app_version": "2.3.0",
+  "app_version": "2.3.1",
   "settings": {"top_n": 10, "min_pct": 0.25}
 }
 ```
