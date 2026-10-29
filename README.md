@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **2.2.0**. The version is shown in the web
+Current application version: **2.3.0**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -243,6 +243,12 @@ schema 2, while schema-1 JSON and ZIP bundles are migrated automatically on
 import. The Streamlit application now imports only public
 `marker_gene_finder` services.
 
+Version 2.3 adds a formal `AnalysisEngine` protocol, normalized `EngineOutput`,
+and a validated `EngineRegistry`. The public API dispatches Native, Scanpy, and
+automatic file analysis through this interface, and callers can inject a
+registry for controlled integrations and tests. Legacy `src.*` imports now
+emit deprecation notices and are scheduled for removal in version 3.0.
+
 ```python
 import pandas as pd
 
@@ -303,7 +309,7 @@ Analysis profiles and bundle settings now use a named envelope:
 {
   "schema_name": "marker-gene-finder-analysis-settings",
   "schema_version": 2,
-  "app_version": "2.2.0",
+  "app_version": "2.3.0",
   "settings": {"top_n": 10, "min_pct": 0.25}
 }
 ```

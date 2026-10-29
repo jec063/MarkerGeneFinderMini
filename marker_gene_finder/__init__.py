@@ -9,6 +9,15 @@ from .exceptions import (
     SchemaError,
 )
 from .models import MarkerResult
+from .engines import (
+    DEFAULT_ENGINE_REGISTRY,
+    AnalysisEngine,
+    AutoEngine,
+    EngineOutput,
+    EngineRegistry,
+    NativeEngine,
+    ScanpyEngine,
+)
 from .settings import (
     SETTINGS_SCHEMA_NAME,
     SETTINGS_SCHEMA_VERSION,
@@ -23,9 +32,16 @@ __all__ = [
     "CONFIG_SCHEMA_VERSION",
     "AnalysisConfig",
     "ConfigurationError",
+    "DEFAULT_ENGINE_REGISTRY",
+    "AnalysisEngine",
+    "AutoEngine",
+    "EngineOutput",
+    "EngineRegistry",
     "InputValidationError",
     "MarkerFinderError",
     "MarkerResult",
+    "NativeEngine",
+    "ScanpyEngine",
     "SchemaError",
     "SETTINGS_SCHEMA_NAME",
     "SETTINGS_SCHEMA_VERSION",
