@@ -38,7 +38,7 @@ def test_v2_config_round_trip_and_public_result(tmp_path) -> None:
     restored = AnalysisConfig.from_json(path)
     result = analyze(expression_table(), restored)
 
-    assert APP_VERSION == "2.3.1"
+    assert APP_VERSION == "2.4.0"
     assert restored == config
     assert isinstance(result, MarkerResult)
     assert result.markers["cluster"].tolist() == ["A"]
@@ -82,6 +82,16 @@ def test_v2_cli_analyze_inspect_and_plan(tmp_path, capsys) -> None:
     plan = json.loads(plan_path.read_text())
     assert plan["can_execute"] is True
     assert plan["resolved_engine"] == "native"
+
+
+def test_v2_cli_accepts_opt_in_engine_plugin_discovery() -> None:
+    from marker_gene_finder.cli import build_parser
+
+    args = build_parser().parse_args(
+        ["analyze", "input.csv", "output.csv", "--load-engine-plugins"]
+    )
+
+    assert args.load_engine_plugins is True
 
 
 def test_v2_cli_reports_bad_config_without_traceback(tmp_path, capsys) -> None:

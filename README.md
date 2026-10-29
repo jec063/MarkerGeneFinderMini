@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **2.3.1**. The version is shown in the web
+Current application version: **2.4.0**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -255,6 +255,26 @@ errors, and public API calls validate custom `EngineOutput` objects before
 building a result. Engine identifiers use lowercase letters, digits,
 underscores, and hyphens.
 
+Version 2.4 adds opt-in engine plugin discovery through Python entry points.
+Plugins register under the `marker_gene_finder.engines` group and must expose
+an engine whose name matches its entry-point name. Library callers use
+`load_engine_plugins()`; the `analyze` command enables discovery with
+`--load-engine-plugins`. Discovery returns an independent registry and never
+mutates the built-in global registry.
+
+Plugin packages declare their engine class or zero-argument factory in
+`pyproject.toml`:
+
+```toml
+[project.entry-points."marker_gene_finder.engines"]
+my-engine = "my_package.engine:MyEngine"
+```
+
+The object must implement `AnalysisEngine` and report `name = "my-engine"`.
+Use it with an analysis configuration whose `engine` is `my-engine`, then run
+`marker-gene-finder analyze input.csv output.csv --config config.json
+--load-engine-plugins`.
+
 ```python
 import pandas as pd
 
@@ -315,7 +335,7 @@ Analysis profiles and bundle settings now use a named envelope:
 {
   "schema_name": "marker-gene-finder-analysis-settings",
   "schema_version": 2,
-  "app_version": "2.3.1",
+  "app_version": "2.4.0",
   "settings": {"top_n": 10, "min_pct": 0.25}
 }
 ```

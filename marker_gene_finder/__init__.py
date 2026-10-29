@@ -11,12 +11,14 @@ from .exceptions import (
 from .models import MarkerResult
 from .engines import (
     DEFAULT_ENGINE_REGISTRY,
+    ENGINE_ENTRY_POINT_GROUP,
     AnalysisEngine,
     AutoEngine,
     EngineOutput,
     EngineRegistry,
     NativeEngine,
     ScanpyEngine,
+    load_engine_plugins,
 )
 from .settings import (
     SETTINGS_SCHEMA_NAME,
@@ -28,11 +30,13 @@ from .settings import (
 from .version import APP_VERSION
 
 __all__ = [
+    "load_engine_plugins",
     "APP_VERSION",
     "CONFIG_SCHEMA_VERSION",
     "AnalysisConfig",
     "ConfigurationError",
     "DEFAULT_ENGINE_REGISTRY",
+    "ENGINE_ENTRY_POINT_GROUP",
     "AnalysisEngine",
     "AutoEngine",
     "EngineOutput",

@@ -12,6 +12,7 @@ from .api import analyze_file
 from .batch import build_batch_plan, run_batch, verify_batch_manifest
 from .benchmark import benchmark_analysis, compare_benchmarks
 from .inspection import build_analysis_plan, inspect_input
+from .engines import load_engine_plugins
 from .config import AnalysisConfig
 from .exceptions import MarkerFinderError
 from .version import APP_VERSION
@@ -50,6 +51,11 @@ def build_parser() -> argparse.ArgumentParser:
     analyze.add_argument("input", type=Path)
     analyze.add_argument("output", type=Path)
     _add_config_argument(analyze)
+    analyze.add_argument(
+        "--load-engine-plugins",
+        action="store_true",
+        help="Load installed marker_gene_finder.engines entry points.",
+    )
 
     inspect = commands.add_parser("inspect", help="Inspect an input without analysis.")
     inspect.add_argument("input", type=Path)
@@ -116,7 +122,11 @@ def execute(args: argparse.Namespace) -> int:
     """Execute one parsed v2 command and return its process status."""
     command = args.command
     if command == "analyze":
-        result = analyze_file(args.input, args.output, _config(args.config))
+        registry = load_engine_plugins() if args.load_engine_plugins else None
+        options = {"registry": registry} if registry is not None else {}
+        result = analyze_file(
+            args.input, args.output, _config(args.config), **options
+        )
         print(f"Wrote {len(result.markers)} marker rows to {args.output}.")
         return 0
     if command == "inspect":
