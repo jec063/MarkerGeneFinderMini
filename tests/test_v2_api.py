@@ -38,7 +38,7 @@ def test_v2_config_round_trip_and_public_result(tmp_path) -> None:
     restored = AnalysisConfig.from_json(path)
     result = analyze(expression_table(), restored)
 
-    assert APP_VERSION == "2.5.0"
+    assert APP_VERSION == "2.6.0"
     assert restored == config
     assert isinstance(result, MarkerResult)
     assert result.markers["cluster"].tolist() == ["A"]
@@ -100,7 +100,7 @@ def test_v2_cli_lists_engines_as_json(tmp_path) -> None:
     assert main(["list-engines", "--output", str(output)]) == 0
 
     document = json.loads(output.read_text())
-    assert document["app_version"] == "2.5.0"
+    assert document["app_version"] == "2.6.0"
     assert [row["name"] for row in document["engines"]] == [
         "auto",
         "native",

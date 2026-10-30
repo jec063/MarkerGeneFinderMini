@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **2.5.0**. The version is shown in the web
+Current application version: **2.6.0**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -743,3 +743,37 @@ For Scanpy, use appropriately normalized, log-transformed expression.
 ```bash
 pytest -q
 ```
+
+## Version 2.6 engine workflows
+
+Plugins can now be used with `analyze`, `plan`, `batch-plan`, `batch`, and
+`benchmark`: pass `--load-engine-plugins` and a `--config` file naming the
+engine. Python callers can pass `registry=...` to `analyze`, `analyze_file`,
+`build_analysis_plan`, `build_batch_plan`, `run_batch`, and `benchmark_analysis`.
+Registries remain local to the call; discovery never modifies built-in defaults.
+
+Engines may declare an optional `capabilities = EngineCapabilities(...)`:
+
+| Capability | Default | Meaning |
+| --- | --- | --- |
+| `input_formats` | `("csv", "h5ad", "dataframe")` | Accepted input kinds |
+| `supports_layers` | `True` | Named H5AD layers |
+| `supports_raw` | `True` | H5AD raw expression |
+| `supports_workers` | `True` | Worker counts greater than one |
+
+Import `EngineCapabilities` from `marker_gene_finder`. Scanpy declares H5AD-only
+input and one worker. Unsupported declared combinations are rejected before
+engine execution. Plans report capability conflicts through `can_execute` and
+`warnings`; a CLI batch plan exits unsuccessfully if any input cannot execute.
+Resource recommendations still describe Native versus Scanpy, not plugin
+performance. Plugins without declarations retain the permissive v2 contract;
+they must validate any additional engine-specific restrictions themselves.
+
+Plugin marker tables must have unique columns including non-null `cluster` and
+`gene`. Additional statistical columns remain optional for v2 compatibility,
+but known numeric columns must be finite, probabilities and expression fractions
+must be in [0, 1], and counts/ranks must be valid integers. Diagnostics must be
+JSON-compatible with finite numbers. Batch execution validates results before
+promoting temporary output to a successful artifact, and benchmarks measure
+elapsed time independently of plugin diagnostics. Built-in statistical defaults
+are unchanged.

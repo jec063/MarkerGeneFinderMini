@@ -100,6 +100,8 @@ def build_parser() -> argparse.ArgumentParser:
     compare.add_argument("candidate", type=Path)
     compare.add_argument("--output", type=Path, required=True)
     compare.add_argument("--max-regression-percent", type=float, default=10.0)
+    for command_parser in (plan, batch, batch_plan, benchmark):
+        command_parser.add_argument("--load-engine-plugins", action="store_true")
     return parser
 
 
@@ -127,8 +129,8 @@ def _inspection_options(config: AnalysisConfig) -> dict[str, Any]:
 def execute(args: argparse.Namespace) -> int:
     """Execute one parsed v2 command and return its process status."""
     command = args.command
+    registry = load_engine_plugins() if getattr(args, "load_engine_plugins", False) else None
     if command == "analyze":
-        registry = load_engine_plugins() if args.load_engine_plugins else None
         options = {"registry": registry} if registry is not None else {}
         result = analyze_file(
             args.input, args.output, _config(args.config), **options
@@ -155,6 +157,7 @@ def execute(args: argparse.Namespace) -> int:
         document = build_analysis_plan(
             args.input,
             requested_engine=config.engine,
+            registry=registry,
             gene_chunk_size=config.gene_chunk_size,
             workers=config.workers,
             **_inspection_options(config),
@@ -164,6 +167,7 @@ def execute(args: argparse.Namespace) -> int:
     if command in {"batch", "batch-plan"}:
         config = _config(args.config)
         options = {
+            "registry": registry,
             "resume": args.resume,
             "retry_failed": args.retry_failed,
             "include_patterns": args.include_pattern,
@@ -173,7 +177,7 @@ def execute(args: argparse.Namespace) -> int:
         if command == "batch-plan":
             document = build_batch_plan(args.input_dir, args.output_dir, **options)
             _write_json(args.output, document)
-            return 0
+            return 0 if all(row["can_execute"] for row in document["entries"]) else 1
         records = run_batch(
             args.input_dir, args.output_dir, fail_fast=args.fail_fast, **options
         )
@@ -184,7 +188,7 @@ def execute(args: argparse.Namespace) -> int:
         return 0 if document["valid"] else 1
     if command == "benchmark":
         document = benchmark_analysis(
-            args.input, repeats=args.repeats, **_config(args.config).to_analysis_kwargs()
+            args.input, repeats=args.repeats, registry=registry, **_config(args.config).to_analysis_kwargs()
         )
         _write_json(args.output, document)
         return 0
