@@ -19,6 +19,9 @@ from .engines import (
     NativeEngine,
     ScanpyEngine,
     load_engine_plugins,
+    EngineInfo,
+    inspect_engines,
+    validate_engine,
 )
 from .settings import (
     SETTINGS_SCHEMA_NAME,
@@ -54,4 +57,7 @@ __all__ = [
     "build_settings_document",
     "load_analysis_settings",
     "migrate_settings_document",
+    "EngineInfo",
+    "inspect_engines",
+    "validate_engine",
 ]

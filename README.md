@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **2.4.0**. The version is shown in the web
+Current application version: **2.5.0**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -274,6 +274,13 @@ The object must implement `AnalysisEngine` and report `name = "my-engine"`.
 Use it with an analysis configuration whose `engine` is `my-engine`, then run
 `marker-gene-finder analyze input.csv output.csv --config config.json
 --load-engine-plugins`.
+
+Version 2.5 adds plugin diagnostics and contract validation. Run
+`marker-gene-finder list-engines` to list built-ins, or add `--load-plugins`
+to inspect installed entry points without stopping at the first broken plugin.
+The command prints JSON by default and accepts `--output engines.json` for
+automation. Plugin authors can use the public `validate_engine()` helper to
+check the engine protocol and its advertised name.
 
 ```python
 import pandas as pd

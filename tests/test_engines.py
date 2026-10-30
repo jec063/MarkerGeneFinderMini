@@ -14,7 +14,9 @@ from marker_gene_finder import (
     EngineOutput,
     EngineRegistry,
     analyze,
+    inspect_engines,
     load_engine_plugins,
+    validate_engine,
 )
 from marker_gene_finder.engines import DEFAULT_ENGINE_REGISTRY, metadata
 
@@ -117,7 +119,7 @@ def test_public_api_keeps_authoritative_result_metadata() -> None:
         registry=EngineRegistry((MisleadingEngine(),)),
     )
 
-    assert result.metadata["app_version"] == "2.4.0"
+    assert result.metadata["app_version"] == "2.5.0"
     assert result.metadata["marker_rows"] == 1
 
 
@@ -185,6 +187,42 @@ def test_engine_plugin_load_failures_are_public_errors(monkeypatch) -> None:
 
     with pytest.raises(ConfigurationError, match="broken.*unavailable"):
         load_engine_plugins()
+
+
+def test_engine_inspection_reports_plugins_and_failures(monkeypatch) -> None:
+    class PluginEngine(RecordingEngine):
+        name = "plugin"
+
+    monkeypatch.setattr(
+        metadata,
+        "entry_points",
+        lambda: FakeEntryPoints(
+            [
+                FakeEntryPoint("plugin", PluginEngine),
+                FakeEntryPoint("broken", error=RuntimeError("unavailable")),
+            ]
+        ),
+    )
+
+    records = inspect_engines(load_plugins=True)
+
+    assert [record.name for record in records] == [
+        "auto",
+        "native",
+        "scanpy",
+        "broken",
+        "plugin",
+    ]
+    assert records[3].status == "error"
+    assert records[3].error is not None
+    assert "unavailable" in records[3].error
+    assert records[4].status == "available"
+
+
+def test_public_engine_validator_checks_expected_name() -> None:
+    assert validate_engine(RecordingEngine()).name == "recording"
+    with pytest.raises(ConfigurationError, match="names must match"):
+        validate_engine(RecordingEngine(), expected_name="different")
 
 
 def test_legacy_import_emits_deprecation_notice() -> None:

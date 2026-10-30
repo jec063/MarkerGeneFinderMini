@@ -25,6 +25,31 @@ class EngineOutput:
     diagnostics: dict[str, object]
 
 
+@dataclass(frozen=True, slots=True)
+class EngineInfo:
+    """Serializable discovery details for one built-in or plugin engine."""
+
+    name: str
+    source: str
+    status: str
+    entry_point: str | None = None
+    distribution: str | None = None
+    version: str | None = None
+    error: str | None = None
+
+    def to_dict(self) -> dict[str, str | None]:
+        """Return a stable JSON-compatible representation."""
+        return {
+            "name": self.name,
+            "source": self.source,
+            "status": self.status,
+            "entry_point": self.entry_point,
+            "distribution": self.distribution,
+            "version": self.version,
+            "error": self.error,
+        }
+
+
 @runtime_checkable
 class AnalysisEngine(Protocol):
     """Contract implemented by marker-analysis backends."""
@@ -133,6 +158,23 @@ class AutoEngine:
         return _run_file(self.name, input_path, output_path, config)
 
 
+def validate_engine(
+    engine: object, *, expected_name: str | None = None
+) -> AnalysisEngine:
+    """Validate an engine contract and optionally its advertised name."""
+    name = validate_engine_name(getattr(engine, "name", None))
+    if not isinstance(engine, AnalysisEngine):
+        raise ConfigurationError(
+            f"Engine {name!r} does not implement the AnalysisEngine contract."
+        )
+    if expected_name is not None and name != expected_name:
+        raise ConfigurationError(
+            f"Engine plugin entry point {expected_name!r} returned engine "
+            f"{name!r}; the names must match."
+        )
+    return engine
+
+
 class EngineRegistry:
     """Validated collection of engines used by the public API."""
 
@@ -143,11 +185,8 @@ class EngineRegistry:
 
     def register(self, engine: AnalysisEngine, *, replace: bool = False) -> None:
         """Register an engine, rejecting invalid or duplicate names."""
-        name = validate_engine_name(getattr(engine, "name", None))
-        if not isinstance(engine, AnalysisEngine):
-            raise ConfigurationError(
-                f"Engine {name!r} does not implement the AnalysisEngine contract."
-            )
+        engine = validate_engine(engine)
+        name = engine.name
         if name in self._engines and not replace:
             raise ConfigurationError(f"Engine {name!r} is already registered.")
         self._engines[name] = engine
@@ -198,17 +237,64 @@ def _plugin_engine(entry_point: metadata.EntryPoint) -> AnalysisEngine:
         raise ConfigurationError(
             f"Cannot load engine plugin {entry_point.name!r}: {error}"
         ) from error
-    if not isinstance(candidate, AnalysisEngine):
-        raise ConfigurationError(
-            f"Engine plugin {entry_point.name!r} does not implement the "
-            "AnalysisEngine contract."
-        )
-    if candidate.name != entry_point.name:
-        raise ConfigurationError(
-            f"Engine plugin entry point {entry_point.name!r} returned engine "
-            f"{candidate.name!r}; the names must match."
-        )
-    return candidate
+    return validate_engine(candidate, expected_name=entry_point.name)
+
+
+def _entry_point_distribution(
+    entry_point: metadata.EntryPoint,
+) -> tuple[str | None, str | None]:
+    distribution = getattr(entry_point, "dist", None)
+    if distribution is None:
+        return None, None
+    return (
+        getattr(distribution, "name", None),
+        getattr(distribution, "version", None),
+    )
+
+
+def inspect_engines(
+    *, load_plugins: bool = False, group: str = ENGINE_ENTRY_POINT_GROUP
+) -> tuple[EngineInfo, ...]:
+    """Inspect built-ins and plugins without aborting on broken plugins."""
+    records = [
+        EngineInfo(name=name, source="built-in", status="available")
+        for name in DEFAULT_ENGINE_REGISTRY.names()
+    ]
+    if not load_plugins:
+        return tuple(records)
+    registered = set(DEFAULT_ENGINE_REGISTRY.names())
+    for entry_point in sorted(_entry_points(group), key=lambda item: item.name):
+        distribution, version = _entry_point_distribution(entry_point)
+        try:
+            engine = _plugin_engine(entry_point)
+            if engine.name in registered:
+                raise ConfigurationError(
+                    f"Engine {engine.name!r} is already registered."
+                )
+            registered.add(engine.name)
+            records.append(
+                EngineInfo(
+                    name=engine.name,
+                    source="plugin",
+                    status="available",
+                    entry_point=getattr(entry_point, "value", None),
+                    distribution=distribution,
+                    version=version,
+                )
+            )
+        except ConfigurationError as error:
+            records.append(
+                EngineInfo(
+                    name=entry_point.name,
+                    source="plugin",
+                    status="error",
+                    entry_point=getattr(entry_point, "value", None),
+                    distribution=distribution,
+                    version=version,
+                    error=str(error),
+                )
+            )
+    return tuple(records)
 
 
 def load_engine_plugins(
@@ -229,9 +315,12 @@ __all__ = [
     "ENGINE_ENTRY_POINT_GROUP",
     "AnalysisEngine",
     "AutoEngine",
+    "EngineInfo",
     "EngineOutput",
     "EngineRegistry",
     "NativeEngine",
     "ScanpyEngine",
+    "inspect_engines",
     "load_engine_plugins",
+    "validate_engine",
 ]
