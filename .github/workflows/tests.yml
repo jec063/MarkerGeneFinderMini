@@ -45,5 +45,6 @@ jobs:
           marker-gene-finder --version
           marker-gene-finder --help
           marker-gene-finder analyze --help
+          marker-gene-finder list-engines
           (cd /tmp && python -c "import marker_gene_finder; from marker_gene_finder.analysis import run")
           python src/marker_finder.py --version

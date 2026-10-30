@@ -12,7 +12,7 @@ from .api import analyze_file
 from .batch import build_batch_plan, run_batch, verify_batch_manifest
 from .benchmark import benchmark_analysis, compare_benchmarks
 from .inspection import build_analysis_plan, inspect_input
-from .engines import load_engine_plugins
+from .engines import inspect_engines, load_engine_plugins
 from .config import AnalysisConfig
 from .exceptions import MarkerFinderError
 from .version import APP_VERSION
@@ -56,6 +56,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Load installed marker_gene_finder.engines entry points.",
     )
+
+    list_engines = commands.add_parser(
+        "list-engines", help="List built-in engines and inspect installed plugins."
+    )
+    list_engines.add_argument("--load-plugins", action="store_true")
+    list_engines.add_argument("--output", type=Path)
 
     inspect = commands.add_parser("inspect", help="Inspect an input without analysis.")
     inspect.add_argument("input", type=Path)
@@ -129,6 +135,17 @@ def execute(args: argparse.Namespace) -> int:
         )
         print(f"Wrote {len(result.markers)} marker rows to {args.output}.")
         return 0
+    if command == "list-engines":
+        records = [
+            record.to_dict()
+            for record in inspect_engines(load_plugins=args.load_plugins)
+        ]
+        document = {"app_version": APP_VERSION, "engines": records}
+        if args.output is not None:
+            _write_json(args.output, document)
+        else:
+            print(json.dumps(document, indent=2, allow_nan=False))
+        return 1 if any(row["status"] == "error" for row in records) else 0
     if command == "inspect":
         document = inspect_input(args.input, **_inspection_options(_config(args.config)))
         _write_json(args.output, document)
