@@ -13,6 +13,7 @@ from .exceptions import ConfigurationError, InputValidationError
 from .engines import DEFAULT_ENGINE_REGISTRY, EngineOutput, EngineRegistry, check_capabilities
 from .models import MarkerResult
 from .version import APP_VERSION
+from .provenance import build_provenance, hash_input
 
 
 def _validated_output(engine_name: str, output: object) -> EngineOutput:
@@ -67,10 +68,15 @@ def analyze(
             raise
         raise InputValidationError(str(error)) from error
     output = _validated_output(config.engine, output)
+    provenance = build_provenance(
+        config, resolved_engine=("native" if config.engine == "auto" else config.engine),
+        input_kind="dataframe", engine=engine,
+    )
     metadata = {
         **output.diagnostics,
         "app_version": APP_VERSION,
         "marker_rows": len(output.markers),
+        "provenance": provenance,
     }
     return MarkerResult(
         markers=output.markers,
@@ -85,8 +91,12 @@ def analyze_file(
     config: AnalysisConfig | None = None,
     *,
     registry: EngineRegistry = DEFAULT_ENGINE_REGISTRY,
+    hash_input_file: bool = False,
 ) -> MarkerResult:
     """Analyze a CSV or H5AD file and write its marker table."""
+    if not isinstance(hash_input_file, bool):
+        raise ConfigurationError("hash_input_file must be boolean.")
+    input_digest = hash_input(input_path) if hash_input_file else None
     config = config or AnalysisConfig()
     engine = registry.get(config.engine)
     check_capabilities(engine, Path(input_path).suffix.lower().lstrip("."), config)
@@ -97,10 +107,17 @@ def analyze_file(
             raise
         raise InputValidationError(str(error)) from error
     output = _validated_output(config.engine, output)
+    provenance = build_provenance(
+        config, resolved_engine=(str(output.diagnostics["resolved_engine"])
+            if config.engine == "auto" else config.engine),
+        input_kind=Path(input_path).suffix.lower().lstrip("."),
+        engine=engine, input_sha256=input_digest,
+    )
     metadata = {
         **output.diagnostics,
         "app_version": APP_VERSION,
         "marker_rows": len(output.markers),
+        "provenance": provenance,
     }
     return MarkerResult(
         markers=output.markers, config=config, metadata=metadata

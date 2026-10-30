@@ -14,6 +14,9 @@ def build_analysis_bundle(
     settings: dict,
     expression_summary: pd.DataFrame | None = None,
     cluster_summary: pd.DataFrame | None = None,
+    *,
+    provenance: dict | None = None,
+    config: dict | None = None,
 ) -> bytes:
     """Return a ZIP containing results, settings, and an optional summary."""
     buffer = io.BytesIO()
@@ -21,6 +24,8 @@ def build_analysis_bundle(
         settings = build_settings_document(settings)
     else:
         settings = migrate_settings_document(settings)
+    provenance = provenance if provenance is not None else settings.get("provenance")
+    config = config if config is not None else settings.get("analysis_config")
     app_version = settings.get("app_version", "unknown")
     files = {
         "marker_gene_results.csv": markers.to_csv(index=False),
@@ -36,6 +41,16 @@ def build_analysis_bundle(
             "contains cluster cell counts and dataset percentages.\n"
         ),
     }
+    if provenance is not None:
+        files["provenance.json"] = json.dumps(provenance, indent=2, allow_nan=False) + "\n"
+    if config is not None:
+        files["analysis_config.json"] = json.dumps(config, indent=2, allow_nan=False) + "\n"
+    if provenance is not None or config is not None:
+        files["README.md"] += (
+            "\n`provenance.json` records the execution environment and effective settings. "
+            "`analysis_config.json` is the requested configuration, reusable with --config. "
+            "Input hashes are optional; the expression matrix is not included.\n"
+        )
     if expression_summary is not None:
         files["expression_summary.csv"] = expression_summary.to_csv(index=False)
     if cluster_summary is not None:

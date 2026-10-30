@@ -119,7 +119,7 @@ def test_public_api_keeps_authoritative_result_metadata() -> None:
         registry=EngineRegistry((MisleadingEngine(),)),
     )
 
-    assert result.metadata["app_version"] == "2.6.0"
+    assert result.metadata["app_version"] == "2.7.0"
     assert result.metadata["marker_rows"] == 1
 
 

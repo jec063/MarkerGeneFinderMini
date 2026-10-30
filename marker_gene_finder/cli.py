@@ -51,6 +51,9 @@ def build_parser() -> argparse.ArgumentParser:
     analyze.add_argument("input", type=Path)
     analyze.add_argument("output", type=Path)
     _add_config_argument(analyze)
+    analyze.add_argument("--bundle", type=Path, help="Write a reproducibility ZIP.")
+    analyze.add_argument("--metadata", type=Path, help="Write result metadata as JSON.")
+    analyze.add_argument("--hash-input", action="store_true", help="Include the input SHA-256 digest.")
     analyze.add_argument(
         "--load-engine-plugins",
         action="store_true",
@@ -132,9 +135,17 @@ def execute(args: argparse.Namespace) -> int:
     registry = load_engine_plugins() if getattr(args, "load_engine_plugins", False) else None
     if command == "analyze":
         options = {"registry": registry} if registry is not None else {}
+        paths = [args.input, args.output, args.bundle, args.metadata, args.config]
+        resolved = [path.resolve() for path in paths if path is not None]
+        if len(resolved) != len(set(resolved)):
+            raise ValueError("Input, config, output, bundle and metadata paths must be distinct.")
         result = analyze_file(
-            args.input, args.output, _config(args.config), **options
+            args.input, args.output, _config(args.config), hash_input_file=args.hash_input, **options
         )
+        if args.bundle is not None:
+            result.to_bundle(args.bundle)
+        if args.metadata is not None:
+            _write_json(args.metadata, result.metadata)
         print(f"Wrote {len(result.markers)} marker rows to {args.output}.")
         return 0
     if command == "list-engines":

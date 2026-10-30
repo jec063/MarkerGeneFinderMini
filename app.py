@@ -27,6 +27,9 @@ from marker_gene_finder.analysis import (
     load_expression,
 )
 from marker_gene_finder.report_bundle import build_analysis_bundle
+from marker_gene_finder.config import AnalysisConfig
+from marker_gene_finder.provenance import build_provenance
+from dataclasses import fields
 from marker_gene_finder.settings import (
     build_settings_document,
     load_analysis_profile_upload,
@@ -900,6 +903,20 @@ if st.button("Find marker genes", type="primary"):
             "excluded_prefixes": excluded_prefixes,
             "marker_rows": int(len(markers)),
         })
+        saved_settings = st.session_state["analysis_settings"]
+        values = {field.name: saved_settings["settings"][field.name]
+                  for field in fields(AnalysisConfig)
+                  if field.name in saved_settings["settings"]}
+        if values.get("pseudocount") is None:
+            values["pseudocount"] = 0.1
+        for name in ("target_clusters", "excluded_genes", "excluded_prefixes"):
+            values[name] = tuple(values.get(name) or ())
+        replay_config = AnalysisConfig(**values)
+        saved_settings["analysis_config"] = replay_config.to_dict()
+        saved_settings["provenance"] = build_provenance(
+            replay_config, resolved_engine=analysis_engine,
+            input_kind=file_suffix.lstrip("."),
+        )
         analysis_status.write(
             f"Produced {len(markers):,} marker rows after filtering."
         )

@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **2.6.0**. The version is shown in the web
+Current application version: **2.7.0**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -777,3 +777,38 @@ JSON-compatible with finite numbers. Batch execution validates results before
 promoting temporary output to a successful artifact, and benchmarks measure
 elapsed time independently of plugin diagnostics. Built-in statistical defaults
 are unchanged.
+
+## Version 2.7 reproducibility exports
+
+Python API results now capture versioned provenance in `result.metadata["provenance"]`:
+requested and resolved engines, engine version, effective configuration, expression
+source/layer, Python and scientific dependency versions, and an optional input
+SHA-256. Native reports the application version; Scanpy reports its installed
+version. Plugins may expose a string `version` attribute; unknown versions are
+recorded as null. Effective settings mark unused Scanpy controls as null.
+
+```bash
+marker-gene-finder analyze data/example_expression.csv markers.csv \
+  --bundle analysis.zip --metadata metadata.json --hash-input
+```
+
+```python
+from marker_gene_finder import AnalysisConfig, analyze_file
+result = analyze_file("expression.h5ad", "markers.csv",
+                      AnalysisConfig(engine="auto"), hash_input_file=True)
+result.to_bundle("analysis.zip")
+```
+
+Hashing is opt-in to avoid an additional full read of large inputs. It records
+file bytes at analysis start; callers must keep the input unchanged during a run.
+In-memory and web analyses do not hash inputs. Captured metadata describes the
+execution environment; matching versions does not guarantee bitwise-identical
+results across platforms.
+
+API, CLI, and web bundles share `marker_gene_results.csv`, `analysis_settings.json`,
+`analysis_config.json`, and `provenance.json`. The config file preserves requested
+settings and can be passed back to `--config`; provenance records effective
+settings and actual engine selection. Web bundles retain their optional cluster
+and expression summaries. Existing settings schemas, older bundles, and batch
+manifests remain supported. Legacy calls to `build_analysis_bundle` without
+provenance or configuration retain their existing archive layout.

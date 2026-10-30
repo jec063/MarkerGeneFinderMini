@@ -137,7 +137,12 @@ class NativeEngine:
     def analyze_dataframe(
         self, expression: pd.DataFrame, config: AnalysisConfig
     ) -> EngineOutput:
-        markers = _core.find_markers(expression, **_dataframe_kwargs(config))
+        options = _dataframe_kwargs(config)
+        if config.target_clusters and config.cluster_column in expression.columns:
+            options["target_clusters"] = _core._resolve_cluster_arguments(
+                expression[config.cluster_column], list(config.target_clusters)
+            )
+        markers = _core.find_markers(expression, **options)
         return EngineOutput(
             markers=markers,
             diagnostics={"engine": self.name, "input_kind": "dataframe"},
