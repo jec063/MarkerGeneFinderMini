@@ -18,6 +18,39 @@ ENGINE_ENTRY_POINT_GROUP = "marker_gene_finder.engines"
 
 
 @dataclass(frozen=True, slots=True)
+class EngineCapabilities:
+    """Optional v2.6 declarations; omitted declarations retain v2 compatibility."""
+
+    input_formats: tuple[str, ...] = ("csv", "h5ad", "dataframe")
+    supports_layers: bool = True
+    supports_raw: bool = True
+    supports_workers: bool = True
+
+    def __post_init__(self):
+        if (not isinstance(self.input_formats, tuple) or not self.input_formats
+                or any(x not in {"csv", "h5ad", "dataframe"} for x in self.input_formats)):
+            raise ConfigurationError("input_formats must be a nonempty tuple of csv, h5ad, dataframe.")
+        for name in ("supports_layers", "supports_raw", "supports_workers"):
+            if not isinstance(getattr(self, name), bool):
+                raise ConfigurationError(f"{name} must be boolean.")
+
+
+def check_capabilities(engine, input_kind, config):
+    """Reject unsupported requests before invoking the engine."""
+    caps = getattr(engine, "capabilities", EngineCapabilities())
+    if not isinstance(caps, EngineCapabilities):
+        raise ConfigurationError("capabilities must be EngineCapabilities.")
+    if input_kind not in caps.input_formats:
+        raise InputValidationError(f"Engine {engine.name!r} does not support {input_kind} input.")
+    if config.layer is not None and (input_kind != "h5ad" or not caps.supports_layers):
+        raise InputValidationError(f"Engine {engine.name!r} does not support layers for this input.")
+    if config.use_raw and (input_kind != "h5ad" or not caps.supports_raw):
+        raise InputValidationError(f"Engine {engine.name!r} does not support raw for this input.")
+    if config.workers != 1 and not caps.supports_workers:
+        raise InputValidationError(f"Engine {engine.name!r} requires workers=1.")
+
+
+@dataclass(frozen=True, slots=True)
 class EngineOutput:
     """Normalized output returned by every analysis engine."""
 
@@ -99,6 +132,7 @@ class NativeEngine:
     """Built-in engine for native one-versus-rest marker statistics."""
 
     name = "native"
+    capabilities = EngineCapabilities()
 
     def analyze_dataframe(
         self, expression: pd.DataFrame, config: AnalysisConfig
@@ -122,6 +156,7 @@ class ScanpyEngine:
     """Built-in engine backed by Scanpy rank_genes_groups."""
 
     name = "scanpy"
+    capabilities = EngineCapabilities(input_formats=("h5ad",), supports_workers=False)
 
     def analyze_dataframe(
         self, expression: pd.DataFrame, config: AnalysisConfig
@@ -143,6 +178,7 @@ class AutoEngine:
     """Built-in engine that follows the resource-aware execution plan."""
 
     name = "auto"
+    capabilities = EngineCapabilities()
 
     def analyze_dataframe(
         self, expression: pd.DataFrame, config: AnalysisConfig
@@ -163,6 +199,8 @@ def validate_engine(
 ) -> AnalysisEngine:
     """Validate an engine contract and optionally its advertised name."""
     name = validate_engine_name(getattr(engine, "name", None))
+    if not isinstance(getattr(engine, "capabilities", EngineCapabilities()), EngineCapabilities):
+        raise ConfigurationError("capabilities must be EngineCapabilities.")
     if not isinstance(engine, AnalysisEngine):
         raise ConfigurationError(
             f"Engine {name!r} does not implement the AnalysisEngine contract."
@@ -317,6 +355,7 @@ __all__ = [
     "AutoEngine",
     "EngineInfo",
     "EngineOutput",
+    "EngineCapabilities",
     "EngineRegistry",
     "NativeEngine",
     "ScanpyEngine",

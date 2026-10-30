@@ -355,10 +355,13 @@ def build_analysis_plan(
     max_dense_memory_mb: float | None = DEFAULT_MAX_DENSE_MEMORY_MB,
     gene_chunk_size: int = DEFAULT_GENE_CHUNK_SIZE,
     workers: int = 1,
+    registry=None,
 ) -> dict[str, object]:
     """Build a non-destructive, machine-readable analysis execution plan."""
-    if requested_engine not in {"native", "scanpy", "auto"}:
-        raise ValueError("requested_engine must be native, scanpy, or auto.")
+    from .engines import DEFAULT_ENGINE_REGISTRY, check_capabilities
+    from .config import AnalysisConfig
+    selected = (registry or DEFAULT_ENGINE_REGISTRY).get(requested_engine)
+
     _validate_gene_chunk_size(gene_chunk_size)
     _validate_workers(workers)
     inspection = inspect_input(
@@ -375,6 +378,12 @@ def build_analysis_plan(
     )
     warnings: list[str] = []
     can_execute = True
+    try:
+        check_capabilities(selected, Path(input_path).suffix.lower().lstrip("."), AnalysisConfig(
+            engine=requested_engine, layer=layer, use_raw=use_raw, workers=workers))
+    except ValueError as error:
+        warnings.append(str(error))
+        can_execute = False
 
     if requested_engine != "auto" and requested_engine != recommended_engine:
         warnings.append(
@@ -1331,6 +1340,25 @@ def run(
     return markers
 
 
+def _registered_run(input_path, output_path, *, registry=None, diagnostics, **options):
+    if registry is None and options.get("engine", "native") in {"native", "scanpy", "auto"}:
+        return run(input_path, output_path, diagnostics=diagnostics, **options)
+    from .api import analyze_file
+    from .config import AnalysisConfig
+    from .engines import DEFAULT_ENGINE_REGISTRY
+    values = dict(options)
+    for key in ("target_clusters", "excluded_genes", "excluded_prefixes"):
+        if key in values:
+            values[key] = tuple(values[key] or ())
+    started = perf_counter()
+    result = analyze_file(input_path, output_path, AnalysisConfig(**values),
+                          registry=registry or DEFAULT_ENGINE_REGISTRY)
+    result.to_csv(output_path)
+    diagnostics.update(result.metadata)
+    diagnostics["total_seconds"] = perf_counter() - started
+    return result.markers
+
+
 def build_batch_plan(
     input_dir: str | Path,
     output_dir: str | Path,
@@ -1338,6 +1366,7 @@ def build_batch_plan(
     retry_failed: bool = False,
     include_patterns: Sequence[str] = (),
     exclude_patterns: Sequence[str] = (),
+    registry=None,
     **analysis_options,
 ) -> dict[str, object]:
     """Describe which batch inputs would run or be skipped without analysis."""
@@ -1387,7 +1416,11 @@ def build_batch_plan(
             else:
                 action = "skip"
                 reason = "unchanged_success"
+        execution = build_analysis_plan(input_path, requested_engine=analysis_options.get("engine", "native"), registry=registry,
+            **{key: value for key, value in analysis_options.items() if key in {"cluster_column", "cell_column", "layer", "use_raw", "workers", "gene_chunk_size", "max_dense_memory_mb"}})
         entries.append({
+            "can_execute": execution["can_execute"],
+            "warnings": execution["warnings"],
             "input": str(input_path),
             "output": str(output_path),
             "action": action,
@@ -1417,6 +1450,7 @@ def run_batch(
     fail_fast: bool = False,
     include_patterns: Sequence[str] = (),
     exclude_patterns: Sequence[str] = (),
+    registry=None,
     **analysis_options,
 ) -> list[dict[str, object]]:
     """Analyze supported files with resumable, atomic manifest tracking."""
@@ -1492,9 +1526,10 @@ def run_batch(
         attempt_started = perf_counter()
         temporary_output = output_path.with_suffix(output_path.suffix + ".tmp")
         try:
-            markers = run(
+            markers = _registered_run(
                 input_path,
                 temporary_output,
+                registry=registry,
                 diagnostics=run_diagnostics,
                 **analysis_options,
             )
@@ -1605,6 +1640,7 @@ def verify_batch_manifest(manifest_path: str | Path) -> dict[str, object]:
 def benchmark_analysis(
     input_path: str | Path,
     repeats: int = 3,
+    registry=None,
     **analysis_options,
 ) -> dict[str, object]:
     """Benchmark repeated analyses and return machine-readable timings."""
@@ -1615,7 +1651,7 @@ def benchmark_analysis(
         for index in range(repeats):
             diagnostics: dict[str, object] = {}
             output = Path(temporary_directory) / f"run-{index + 1}.csv"
-            run(input_path, output, diagnostics=diagnostics, **analysis_options)
+            _registered_run(input_path, output, registry=registry, diagnostics=diagnostics, **analysis_options)
             runs.append({"repeat": index + 1, **diagnostics})
     totals = [float(item["total_seconds"]) for item in runs]
     return {

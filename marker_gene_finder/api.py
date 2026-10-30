@@ -5,10 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+import numpy as np
+import json
 
 from .config import AnalysisConfig
 from .exceptions import ConfigurationError, InputValidationError
-from .engines import DEFAULT_ENGINE_REGISTRY, EngineOutput, EngineRegistry
+from .engines import DEFAULT_ENGINE_REGISTRY, EngineOutput, EngineRegistry, check_capabilities
 from .models import MarkerResult
 from .version import APP_VERSION
 
@@ -28,6 +30,23 @@ def _validated_output(engine_name: str, output: object) -> EngineOutput:
         raise ConfigurationError(
             f"Engine {engine_name!r} returned non-dictionary diagnostics."
         )
+    try:
+        json.dumps(output.diagnostics, allow_nan=False)
+    except (TypeError, ValueError) as error:
+        raise ConfigurationError("Engine diagnostics must be finite JSON-compatible values.") from error
+    table = output.markers
+    if not table.columns.is_unique or not {"cluster", "gene"}.issubset(table.columns):
+        raise ConfigurationError(f"Engine {engine_name!r} markers require unique cluster and gene columns.")
+    if table[["cluster", "gene"]].isna().any().any():
+        raise ConfigurationError("Marker cluster and gene values cannot be null.")
+    for column in table.columns.intersection(["rank", "cluster_size", "reference_size", "cluster_mean", "other_mean", "mean_difference", "pct_in", "pct_out", "cells_expressing_in", "cells_expressing_out", "pct_difference", "log2FC", "p_value", "p_adj"]):
+        values = table[column]
+        if len(values) and (not pd.api.types.is_numeric_dtype(values) or pd.api.types.is_bool_dtype(values) or not np.isfinite(values).all()):
+            raise ConfigurationError(f"Marker {column} must contain finite numeric values.")
+        if column in {"p_value", "p_adj", "pct_in", "pct_out"} and not values.between(0, 1).all():
+            raise ConfigurationError(f"Marker {column} must be between 0 and 1.")
+        if column in {"rank", "cluster_size", "reference_size", "cells_expressing_in", "cells_expressing_out"} and ((values < (1 if column == "rank" else 0)).any() or (values % 1 != 0).any()):
+            raise ConfigurationError(f"Marker {column} must contain valid integer counts.")
     return output
 
 
@@ -40,6 +59,7 @@ def analyze(
     """Analyze an in-memory expression table through a registered engine."""
     config = config or AnalysisConfig()
     engine = registry.get(config.engine)
+    check_capabilities(engine, "dataframe", config)
     try:
         output = engine.analyze_dataframe(expression, config)
     except ValueError as error:
@@ -69,6 +89,7 @@ def analyze_file(
     """Analyze a CSV or H5AD file and write its marker table."""
     config = config or AnalysisConfig()
     engine = registry.get(config.engine)
+    check_capabilities(engine, Path(input_path).suffix.lower().lstrip("."), config)
     try:
         output = engine.analyze_file(input_path, output_path, config)
     except ValueError as error:

@@ -109,7 +109,7 @@ def test_public_api_keeps_authoritative_result_metadata() -> None:
 
         def analyze_dataframe(self, expression, config):
             return EngineOutput(
-                markers=pd.DataFrame({"gene": ["real"]}),
+                markers=pd.DataFrame({"cluster": ["A"], "gene": ["real"]}),
                 diagnostics={"app_version": "0.0.0", "marker_rows": 99},
             )
 
@@ -119,7 +119,7 @@ def test_public_api_keeps_authoritative_result_metadata() -> None:
         registry=EngineRegistry((MisleadingEngine(),)),
     )
 
-    assert result.metadata["app_version"] == "2.5.0"
+    assert result.metadata["app_version"] == "2.6.0"
     assert result.metadata["marker_rows"] == 1
 
 
