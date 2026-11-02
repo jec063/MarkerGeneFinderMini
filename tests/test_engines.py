@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from marker_gene_finder.version import APP_VERSION
+
 import subprocess
 import sys
 
@@ -119,7 +121,7 @@ def test_public_api_keeps_authoritative_result_metadata() -> None:
         registry=EngineRegistry((MisleadingEngine(),)),
     )
 
-    assert result.metadata["app_version"] == "2.7.0"
+    assert result.metadata["app_version"] == APP_VERSION
     assert result.metadata["marker_rows"] == 1
 
 

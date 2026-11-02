@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import json
 
+from ._atomic import atomic_path
 from .config import AnalysisConfig
 from .exceptions import ConfigurationError, InputValidationError
 from .engines import DEFAULT_ENGINE_REGISTRY, EngineOutput, EngineRegistry, check_capabilities
@@ -100,25 +101,29 @@ def analyze_file(
     config = config or AnalysisConfig()
     engine = registry.get(config.engine)
     check_capabilities(engine, Path(input_path).suffix.lower().lstrip("."), config)
-    try:
-        output = engine.analyze_file(input_path, output_path, config)
-    except ValueError as error:
-        if isinstance(error, InputValidationError):
-            raise
-        raise InputValidationError(str(error)) from error
-    output = _validated_output(config.engine, output)
-    provenance = build_provenance(
-        config, resolved_engine=(str(output.diagnostics["resolved_engine"])
-            if config.engine == "auto" else config.engine),
-        input_kind=Path(input_path).suffix.lower().lstrip("."),
-        engine=engine, input_sha256=input_digest,
-    )
-    metadata = {
-        **output.diagnostics,
-        "app_version": APP_VERSION,
-        "marker_rows": len(output.markers),
-        "provenance": provenance,
-    }
+    with atomic_path(output_path) as temporary_output:
+        try:
+            output = engine.analyze_file(input_path, temporary_output, config)
+        except ValueError as error:
+            if isinstance(error, InputValidationError):
+                raise
+            raise InputValidationError(str(error)) from error
+        output = _validated_output(config.engine, output)
+        provenance = build_provenance(
+            config, resolved_engine=(str(output.diagnostics["resolved_engine"])
+                if config.engine == "auto" else config.engine),
+            input_kind=Path(input_path).suffix.lower().lstrip("."),
+            engine=engine, input_sha256=input_digest,
+        )
+        metadata = {
+            **output.diagnostics,
+            "app_version": APP_VERSION,
+            "marker_rows": len(output.markers),
+            "provenance": provenance,
+        }
+        output.markers.to_csv(temporary_output, index=False)
+    if "output" in metadata:
+        metadata["output"] = str(output_path)
     return MarkerResult(
         markers=output.markers, config=config, metadata=metadata
     )

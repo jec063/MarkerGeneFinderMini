@@ -10,7 +10,8 @@ from typing import Protocol, runtime_checkable
 
 import pandas as pd
 
-from . import _core
+from . import analysis
+from .statistics import _resolve_cluster_arguments
 from .config import AnalysisConfig, validate_engine_name
 from .exceptions import ConfigurationError, InputValidationError
 
@@ -119,7 +120,7 @@ def _run_file(
     diagnostics: dict[str, object] = {}
     values = config.to_analysis_kwargs()
     values["engine"] = engine
-    markers = _core.run(
+    markers = analysis.run(
         input_path=input_path,
         output_path=output_path,
         diagnostics=diagnostics,
@@ -139,10 +140,10 @@ class NativeEngine:
     ) -> EngineOutput:
         options = _dataframe_kwargs(config)
         if config.target_clusters and config.cluster_column in expression.columns:
-            options["target_clusters"] = _core._resolve_cluster_arguments(
+            options["target_clusters"] = _resolve_cluster_arguments(
                 expression[config.cluster_column], list(config.target_clusters)
             )
-        markers = _core.find_markers(expression, **options)
+        markers = analysis.find_markers(expression, **options)
         return EngineOutput(
             markers=markers,
             diagnostics={"engine": self.name, "input_kind": "dataframe"},

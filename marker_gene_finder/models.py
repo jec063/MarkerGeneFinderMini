@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from ._atomic import write_csv, write_bytes
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -21,7 +23,7 @@ class MarkerResult:
 
     def to_csv(self, path: str | Path) -> None:
         """Write marker rows without a DataFrame index."""
-        self.markers.to_csv(path, index=False)
+        write_csv(path, self.markers)
 
     def to_bundle(self, path: str | Path | None = None) -> bytes:
         """Export results, replayable config, settings, and captured provenance."""
@@ -37,5 +39,5 @@ class MarkerResult:
             provenance=self.metadata["provenance"], config=self.config.to_dict(),
         )
         if path is not None:
-            Path(path).write_bytes(contents)
+            write_bytes(path, contents)
         return contents

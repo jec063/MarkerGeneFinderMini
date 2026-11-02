@@ -2,13 +2,37 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **2.7.0**. The version is shown in the web
+Current application version: **2.8.0**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
 **Live app:** [Launch the CellCoPilot Marker Gene Finder](https://cellcopilot-marker-finder.streamlit.app/)
 
 The program compares gene expression inside each cluster with all other cells and ranks genes using log2 fold change.
+
+## v2.8 execution core
+
+Input loading, statistics, inspection, analysis, batch execution, and benchmarking
+now have focused implementations. Existing public imports, the flat CLI, and
+deprecated `src.*` shims remain available throughout v2. Statistical defaults and
+saved-artifact schemas are unchanged.
+
+CSV results, JSON exports, configuration files, and ZIP bundles are written to
+unique sibling files and published by atomic replacement. An exception or
+interruption before replacement leaves the prior destination intact (or absent
+for a new file). A hard process kill may leave a hidden temporary file. This is
+per-file protection on filesystems supporting atomic replacement, not a
+transaction across an entire batch or a power-loss durability guarantee.
+Plugins receive a staging output path; their returned marker table is validated
+before the public API publishes it.
+
+Native and Scanpy use the same progress callback contract: one event per
+completed cluster, in selection order, on the calling thread. The existing
+`callback(completed, total, cluster)` signature is preserved, including Native
+worker runs; callback exceptions propagate to the caller.
+
+The [v2.8 validation record](benchmarks/README.md) documents independent Native
+and Scanpy regression fixtures, numerical tolerances, and runtime/memory checks.
 
 ## Input
 

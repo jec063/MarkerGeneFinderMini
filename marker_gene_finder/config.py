@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from ._atomic import write_text
+
 import json
 import math
 import re
@@ -128,7 +130,7 @@ class AnalysisConfig:
 
     def to_json(self, path: str | Path) -> None:
         """Write this configuration as formatted JSON."""
-        Path(path).write_text(
+        write_text(Path(path),
             json.dumps(self.to_dict(), indent=2, allow_nan=False) + "\n",
             encoding="utf-8",
         )

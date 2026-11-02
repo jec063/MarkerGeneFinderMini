@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from ._atomic import write_text
+
 import argparse
 import json
 import sys
@@ -114,7 +116,7 @@ def _config(path: Path | None) -> AnalysisConfig:
 
 def _write_json(path: Path, document: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
+    write_text(path,
         json.dumps(document, indent=2, allow_nan=False) + "\n", encoding="utf-8"
     )
 

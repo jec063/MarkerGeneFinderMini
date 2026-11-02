@@ -12,6 +12,7 @@ import pytest
 from streamlit.testing.v1 import AppTest
 
 from marker_gene_finder import AnalysisConfig, analyze, analyze_file
+from marker_gene_finder.version import APP_VERSION
 from marker_gene_finder.cli import main
 from marker_gene_finder.provenance import build_provenance
 from marker_gene_finder.settings import load_analysis_settings_upload
@@ -26,7 +27,7 @@ def test_api_bundle_round_trip_and_hash(tmp_path):
     provenance = result.metadata["provenance"]
     assert provenance["requested_engine"] == "auto"
     assert provenance["resolved_engine"] == "native"
-    assert provenance["engine_version"] == "2.7.0"
+    assert provenance["engine_version"] == APP_VERSION
     assert provenance["input_sha256"] == hashlib.sha256(EXAMPLE.read_bytes()).hexdigest()
     assert provenance["expression_source"] == "CSV"
     assert all(provenance["dependency_versions"].values())
