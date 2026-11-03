@@ -2,3 +2,7 @@ include app.py pytest.ini requirements.txt
 recursive-include data *.csv
 recursive-include tests/fixtures *.csv
 recursive-include benchmarks *.py *.json *.md
+recursive-include docs *.md *.json
+recursive-include examples *.py
+recursive-include scripts *.py
+recursive-include tests *.py

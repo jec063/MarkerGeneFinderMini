@@ -4,8 +4,8 @@ import zipfile
 
 import pandas as pd
 
-from src.report_bundle import build_analysis_bundle
-from src.version import APP_VERSION
+from marker_gene_finder.report_bundle import build_analysis_bundle
+from marker_gene_finder.version import APP_VERSION
 
 
 def test_bundle_contains_results_settings_and_optional_summary():

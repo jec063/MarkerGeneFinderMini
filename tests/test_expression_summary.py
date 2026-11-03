@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from scipy import sparse
 
-from src.expression_summary import summarize_clusters, summarize_expression
+from marker_gene_finder.expression_summary import summarize_clusters, summarize_expression
 
 
 def test_cluster_summary_reports_counts_and_percentages():

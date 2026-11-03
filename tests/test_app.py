@@ -4,7 +4,7 @@ from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
-from src.version import APP_VERSION
+from marker_gene_finder.version import APP_VERSION
 
 
 APP_PATH = Path(__file__).resolve().parents[1] / "app.py"

@@ -2,14 +2,14 @@
 
 import json
 
-from src.analysis_profiles import (
+from marker_gene_finder.profiles import (
     PROFILE_DEFAULTS,
     build_analysis_profile,
     compare_profile_state,
     is_newer_app_version,
     reset_profile_state,
 )
-from src.version import APP_VERSION
+from marker_gene_finder.version import APP_VERSION
 
 
 def test_build_analysis_profile_serializes_portable_state() -> None:

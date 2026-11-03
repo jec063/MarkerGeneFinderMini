@@ -1,0 +1,1457 @@
+{
+  "exports": [
+    "APP_VERSION",
+    "AnalysisConfig",
+    "AnalysisEngine",
+    "AutoEngine",
+    "CONFIG_SCHEMA_VERSION",
+    "ConfigurationError",
+    "DEFAULT_ENGINE_REGISTRY",
+    "ENGINE_ENTRY_POINT_GROUP",
+    "EngineCapabilities",
+    "EngineInfo",
+    "EngineOutput",
+    "EngineRegistry",
+    "InputValidationError",
+    "MarkerFinderError",
+    "MarkerResult",
+    "NativeEngine",
+    "SETTINGS_SCHEMA_NAME",
+    "SETTINGS_SCHEMA_VERSION",
+    "ScanpyEngine",
+    "SchemaError",
+    "analyze",
+    "analyze_file",
+    "build_settings_document",
+    "inspect_engines",
+    "load_analysis_settings",
+    "load_engine_plugins",
+    "migrate_settings_document",
+    "validate_engine"
+  ],
+  "callables": {
+    "load_engine_plugins": [
+      {
+        "name": "registry",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "group",
+        "kind": "KEYWORD_ONLY",
+        "default": "marker_gene_finder.engines"
+      },
+      {
+        "name": "replace",
+        "kind": "KEYWORD_ONLY",
+        "default": false
+      }
+    ],
+    "analyze": [
+      {
+        "name": "expression",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "config",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "registry",
+        "kind": "KEYWORD_ONLY",
+        "default": "marker_gene_finder.engines.EngineRegistry"
+      }
+    ],
+    "analyze_file": [
+      {
+        "name": "input_path",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "output_path",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "config",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "registry",
+        "kind": "KEYWORD_ONLY",
+        "default": "marker_gene_finder.engines.EngineRegistry"
+      },
+      {
+        "name": "hash_input_file",
+        "kind": "KEYWORD_ONLY",
+        "default": false
+      }
+    ],
+    "build_settings_document": [
+      {
+        "name": "settings",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "profile_name",
+        "kind": "KEYWORD_ONLY",
+        "default": null
+      },
+      {
+        "name": "app_version",
+        "kind": "KEYWORD_ONLY",
+        "default": null
+      }
+    ],
+    "load_analysis_settings": [
+      {
+        "name": "contents",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "migrate_settings_document": [
+      {
+        "name": "document",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "inspect_engines": [
+      {
+        "name": "load_plugins",
+        "kind": "KEYWORD_ONLY",
+        "default": false
+      },
+      {
+        "name": "group",
+        "kind": "KEYWORD_ONLY",
+        "default": "marker_gene_finder.engines"
+      }
+    ],
+    "validate_engine": [
+      {
+        "name": "engine",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "expected_name",
+        "kind": "KEYWORD_ONLY",
+        "default": null
+      }
+    ],
+    "AnalysisConfig": [
+      {
+        "name": "cluster_column",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "cluster"
+      },
+      {
+        "name": "cell_column",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "cell"
+      },
+      {
+        "name": "engine",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "native"
+      },
+      {
+        "name": "top_n",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 5
+      },
+      {
+        "name": "pseudocount",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.1
+      },
+      {
+        "name": "min_pct",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.0
+      },
+      {
+        "name": "min_pct_difference",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.0
+      },
+      {
+        "name": "min_log2fc",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.0
+      },
+      {
+        "name": "max_p_adj",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 1.0
+      },
+      {
+        "name": "max_pct_out",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 1.0
+      },
+      {
+        "name": "rank_by",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "log2FC"
+      },
+      {
+        "name": "min_cluster_size",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 1
+      },
+      {
+        "name": "min_cells_expressing",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0
+      },
+      {
+        "name": "min_cluster_mean",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.0
+      },
+      {
+        "name": "min_mean_difference",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.0
+      },
+      {
+        "name": "max_other_mean",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "max_cells_expressing_out",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "layer",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "use_raw",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": false
+      },
+      {
+        "name": "target_clusters",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": []
+      },
+      {
+        "name": "excluded_genes",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": []
+      },
+      {
+        "name": "excluded_prefixes",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": []
+      },
+      {
+        "name": "max_dense_memory_mb",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 2048.0
+      },
+      {
+        "name": "gene_chunk_size",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 1000
+      },
+      {
+        "name": "workers",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 1
+      }
+    ],
+    "MarkerResult": [
+      {
+        "name": "markers",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "config",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "metadata",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "EngineCapabilities": [
+      {
+        "name": "input_formats",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": [
+          "csv",
+          "h5ad",
+          "dataframe"
+        ]
+      },
+      {
+        "name": "supports_layers",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": true
+      },
+      {
+        "name": "supports_raw",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": true
+      },
+      {
+        "name": "supports_workers",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": true
+      }
+    ],
+    "EngineOutput": [
+      {
+        "name": "markers",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "diagnostics",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "EngineInfo": [
+      {
+        "name": "name",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "source",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "status",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "entry_point",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "distribution",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "version",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "error",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      }
+    ],
+    "EngineRegistry": [
+      {
+        "name": "engines",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": []
+      }
+    ],
+    "AnalysisConfig.to_dict": [
+      {
+        "name": "self",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "AnalysisConfig.to_json": [
+      {
+        "name": "self",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "path",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "AnalysisConfig.from_dict": [
+      {
+        "name": "document",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "AnalysisConfig.from_json": [
+      {
+        "name": "path",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "AnalysisConfig.to_analysis_kwargs": [
+      {
+        "name": "self",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "MarkerResult.to_csv": [
+      {
+        "name": "self",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "path",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "MarkerResult.to_bundle": [
+      {
+        "name": "self",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "path",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      }
+    ],
+    "EngineRegistry.get": [
+      {
+        "name": "self",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "name",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "EngineRegistry.register": [
+      {
+        "name": "self",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "engine",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "replace",
+        "kind": "KEYWORD_ONLY",
+        "default": false
+      }
+    ],
+    "EngineRegistry.names": [
+      {
+        "name": "self",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "EngineRegistry.copy": [
+      {
+        "name": "self",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "AnalysisEngine.analyze_dataframe": [
+      {
+        "name": "self",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "expression",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "config",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "AnalysisEngine.analyze_file": [
+      {
+        "name": "self",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "input_path",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "output_path",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "config",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "analysis.run": [
+      {
+        "name": "input_path",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "output_path",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "cluster_column",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "cluster"
+      },
+      {
+        "name": "cell_column",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "cell"
+      },
+      {
+        "name": "top_n",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 5
+      },
+      {
+        "name": "pseudocount",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.1
+      },
+      {
+        "name": "min_pct",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.0
+      },
+      {
+        "name": "min_pct_difference",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.0
+      },
+      {
+        "name": "min_log2fc",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.0
+      },
+      {
+        "name": "max_p_adj",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 1.0
+      },
+      {
+        "name": "engine",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "native"
+      },
+      {
+        "name": "layer",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "use_raw",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": false
+      },
+      {
+        "name": "target_clusters",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "excluded_genes",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "excluded_prefixes",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "max_pct_out",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 1.0
+      },
+      {
+        "name": "rank_by",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "log2FC"
+      },
+      {
+        "name": "min_cluster_size",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 1
+      },
+      {
+        "name": "min_cells_expressing",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0
+      },
+      {
+        "name": "min_cluster_mean",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.0
+      },
+      {
+        "name": "min_mean_difference",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.0
+      },
+      {
+        "name": "max_other_mean",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "max_cells_expressing_out",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "max_dense_memory_mb",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 2048.0
+      },
+      {
+        "name": "gene_chunk_size",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 1000
+      },
+      {
+        "name": "progress_callback",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "workers",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 1
+      },
+      {
+        "name": "diagnostics",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      }
+    ],
+    "analysis.load_expression": [
+      {
+        "name": "input_path",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "cluster_column",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "cluster"
+      },
+      {
+        "name": "cell_column",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "cell_id"
+      },
+      {
+        "name": "layer",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "use_raw",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": false
+      },
+      {
+        "name": "max_dense_memory_mb",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 2048.0
+      }
+    ],
+    "analysis.find_markers": [
+      {
+        "name": "expression",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "cluster_column",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "cluster"
+      },
+      {
+        "name": "cell_column",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "cell"
+      },
+      {
+        "name": "top_n",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 5
+      },
+      {
+        "name": "pseudocount",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.1
+      },
+      {
+        "name": "min_pct",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.0
+      },
+      {
+        "name": "min_pct_difference",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.0
+      },
+      {
+        "name": "min_log2fc",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.0
+      },
+      {
+        "name": "max_p_adj",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 1.0
+      },
+      {
+        "name": "target_clusters",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "excluded_genes",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "excluded_prefixes",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "max_pct_out",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 1.0
+      },
+      {
+        "name": "rank_by",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "log2FC"
+      },
+      {
+        "name": "min_cluster_size",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 1
+      },
+      {
+        "name": "min_cells_expressing",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0
+      },
+      {
+        "name": "min_cluster_mean",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.0
+      },
+      {
+        "name": "min_mean_difference",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.0
+      },
+      {
+        "name": "max_other_mean",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "max_cells_expressing_out",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "gene_chunk_size",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 1000
+      },
+      {
+        "name": "progress_callback",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "workers",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 1
+      }
+    ],
+    "analysis.find_markers_scanpy": [
+      {
+        "name": "adata",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "cluster_column",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "cluster"
+      },
+      {
+        "name": "top_n",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 5
+      },
+      {
+        "name": "min_pct",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.0
+      },
+      {
+        "name": "min_pct_difference",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.0
+      },
+      {
+        "name": "min_log2fc",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.0
+      },
+      {
+        "name": "max_p_adj",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 1.0
+      },
+      {
+        "name": "layer",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "use_raw",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": false
+      },
+      {
+        "name": "target_clusters",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "excluded_genes",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "excluded_prefixes",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "max_pct_out",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 1.0
+      },
+      {
+        "name": "rank_by",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "log2FC"
+      },
+      {
+        "name": "min_cluster_size",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 1
+      },
+      {
+        "name": "min_cells_expressing",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0
+      },
+      {
+        "name": "min_cluster_mean",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.0
+      },
+      {
+        "name": "min_mean_difference",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 0.0
+      },
+      {
+        "name": "max_other_mean",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "max_cells_expressing_out",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "progress_callback",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      }
+    ],
+    "inspection.inspect_input": [
+      {
+        "name": "input_path",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "cluster_column",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "cluster"
+      },
+      {
+        "name": "cell_column",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "cell"
+      },
+      {
+        "name": "layer",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "use_raw",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": false
+      },
+      {
+        "name": "max_dense_memory_mb",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 2048.0
+      }
+    ],
+    "inspection.build_analysis_plan": [
+      {
+        "name": "input_path",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "requested_engine",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "native"
+      },
+      {
+        "name": "cluster_column",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "cluster"
+      },
+      {
+        "name": "cell_column",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "cell"
+      },
+      {
+        "name": "layer",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "use_raw",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": false
+      },
+      {
+        "name": "max_dense_memory_mb",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 2048.0
+      },
+      {
+        "name": "gene_chunk_size",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 1000
+      },
+      {
+        "name": "workers",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 1
+      },
+      {
+        "name": "registry",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      }
+    ],
+    "inspection.estimate_dense_expression_bytes": [
+      {
+        "name": "input_path",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "layer",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "use_raw",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": false
+      }
+    ],
+    "batch.run_batch": [
+      {
+        "name": "input_dir",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "output_dir",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "resume",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": false
+      },
+      {
+        "name": "retry_failed",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": false
+      },
+      {
+        "name": "fail_fast",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": false
+      },
+      {
+        "name": "include_patterns",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": []
+      },
+      {
+        "name": "exclude_patterns",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": []
+      },
+      {
+        "name": "registry",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "analysis_options",
+        "kind": "VAR_KEYWORD"
+      }
+    ],
+    "batch.build_batch_plan": [
+      {
+        "name": "input_dir",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "output_dir",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "resume",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": false
+      },
+      {
+        "name": "retry_failed",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": false
+      },
+      {
+        "name": "include_patterns",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": []
+      },
+      {
+        "name": "exclude_patterns",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": []
+      },
+      {
+        "name": "registry",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "analysis_options",
+        "kind": "VAR_KEYWORD"
+      }
+    ],
+    "batch.verify_batch_manifest": [
+      {
+        "name": "manifest_path",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "benchmark.benchmark_analysis": [
+      {
+        "name": "input_path",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "repeats",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 3
+      },
+      {
+        "name": "registry",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "analysis_options",
+        "kind": "VAR_KEYWORD"
+      }
+    ],
+    "benchmark.compare_benchmarks": [
+      {
+        "name": "baseline_path",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "candidate_path",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "max_regression_percent",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": 10.0
+      }
+    ],
+    "expression_summary.summarize_expression": [
+      {
+        "name": "data",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "genes",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "cluster_column",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": "cluster"
+      },
+      {
+        "name": "layer",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "use_raw",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": false
+      }
+    ],
+    "expression_summary.summarize_clusters": [
+      {
+        "name": "labels",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "filter_presets.get_filter_preset": [
+      {
+        "name": "name",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "profiles.reset_profile_state": [
+      {
+        "name": "state",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "profiles.build_analysis_profile": [
+      {
+        "name": "state",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "name",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "profiles.compare_profile_state": [
+      {
+        "name": "state",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "restored",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "profiles.is_newer_app_version": [
+      {
+        "name": "imported",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "settings.build_settings_document": [
+      {
+        "name": "settings",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "profile_name",
+        "kind": "KEYWORD_ONLY",
+        "default": null
+      },
+      {
+        "name": "app_version",
+        "kind": "KEYWORD_ONLY",
+        "default": null
+      }
+    ],
+    "settings.migrate_settings_document": [
+      {
+        "name": "document",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "settings.extract_analysis_settings_upload": [
+      {
+        "name": "contents",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "filename",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "settings.load_analysis_settings_upload": [
+      {
+        "name": "contents",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "filename",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "settings.load_analysis_profile_upload": [
+      {
+        "name": "contents",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "filename",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "settings.load_analysis_settings": [
+      {
+        "name": "contents",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ],
+    "report_bundle.build_analysis_bundle": [
+      {
+        "name": "markers",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "settings",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "expression_summary",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "cluster_summary",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      },
+      {
+        "name": "provenance",
+        "kind": "KEYWORD_ONLY",
+        "default": null
+      },
+      {
+        "name": "config",
+        "kind": "KEYWORD_ONLY",
+        "default": null
+      }
+    ],
+    "cli.main": [
+      {
+        "name": "argv",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "default": null
+      }
+    ],
+    "cli.build_parser": [],
+    "progress.console_progress": [
+      {
+        "name": "completed",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "total",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      },
+      {
+        "name": "cluster",
+        "kind": "POSITIONAL_OR_KEYWORD"
+      }
+    ]
+  },
+  "service_exports": {
+    "analysis": [
+      "DEFAULT_GENE_CHUNK_SIZE",
+      "DEFAULT_MAX_DENSE_MEMORY_MB",
+      "RANK_BY_CHOICES",
+      "RESULT_COLUMNS",
+      "find_markers",
+      "find_markers_scanpy",
+      "load_expression",
+      "run"
+    ],
+    "inspection": [
+      "CSV_INSPECTION_CHUNK_ROWS",
+      "PLAN_SCHEMA_VERSION",
+      "build_analysis_plan",
+      "estimate_dense_expression_bytes",
+      "inspect_input"
+    ],
+    "batch": [
+      "BATCH_MANIFEST_SCHEMA_VERSION",
+      "BATCH_PLAN_SCHEMA_VERSION",
+      "BATCH_VERIFICATION_SCHEMA_VERSION",
+      "build_batch_plan",
+      "run_batch",
+      "verify_batch_manifest"
+    ],
+    "benchmark": [
+      "BENCHMARK_COMPARISON_SCHEMA_VERSION",
+      "BENCHMARK_SCHEMA_VERSION",
+      "benchmark_analysis",
+      "compare_benchmarks"
+    ]
+  },
+  "schemas": {
+    "inspection.PLAN_SCHEMA_VERSION": 1,
+    "batch.BATCH_MANIFEST_SCHEMA_VERSION": 2,
+    "batch.BATCH_PLAN_SCHEMA_VERSION": 1,
+    "batch.BATCH_VERIFICATION_SCHEMA_VERSION": 1,
+    "benchmark.BENCHMARK_COMPARISON_SCHEMA_VERSION": 1,
+    "benchmark.BENCHMARK_SCHEMA_VERSION": 1,
+    "settings.SETTINGS_SCHEMA_VERSION": 2
+  },
+  "analysis_defaults": {
+    "cluster_column": "cluster",
+    "cell_column": "cell",
+    "engine": "native",
+    "top_n": 5,
+    "pseudocount": 0.1,
+    "min_pct": 0.0,
+    "min_pct_difference": 0.0,
+    "min_log2fc": 0.0,
+    "max_p_adj": 1.0,
+    "max_pct_out": 1.0,
+    "rank_by": "log2FC",
+    "min_cluster_size": 1,
+    "min_cells_expressing": 0,
+    "min_cluster_mean": 0.0,
+    "min_mean_difference": 0.0,
+    "max_other_mean": null,
+    "max_cells_expressing_out": null,
+    "layer": null,
+    "use_raw": false,
+    "target_clusters": [],
+    "excluded_genes": [],
+    "excluded_prefixes": [],
+    "max_dense_memory_mb": 2048.0,
+    "gene_chunk_size": 1000,
+    "workers": 1
+  },
+  "engine_capability_defaults": {
+    "input_formats": [
+      "csv",
+      "h5ad",
+      "dataframe"
+    ],
+    "supports_layers": true,
+    "supports_raw": true,
+    "supports_workers": true
+  },
+  "result_columns": [
+    "cluster",
+    "gene",
+    "rank",
+    "cluster_size",
+    "reference_size",
+    "cluster_mean",
+    "other_mean",
+    "mean_difference",
+    "pct_in",
+    "pct_out",
+    "cells_expressing_in",
+    "cells_expressing_out",
+    "pct_difference",
+    "log2FC",
+    "p_value",
+    "p_adj"
+  ],
+  "commands": {
+    "analyze": [
+      "help",
+      "input",
+      "output",
+      "config",
+      "bundle",
+      "metadata",
+      "hash_input",
+      "load_engine_plugins"
+    ],
+    "list-engines": [
+      "help",
+      "load_plugins",
+      "output"
+    ],
+    "inspect": [
+      "help",
+      "input",
+      "output",
+      "config"
+    ],
+    "plan": [
+      "help",
+      "input",
+      "output",
+      "config",
+      "load_engine_plugins"
+    ],
+    "batch": [
+      "help",
+      "input_dir",
+      "output_dir",
+      "config",
+      "resume",
+      "retry_failed",
+      "include_pattern",
+      "exclude_pattern",
+      "fail_fast",
+      "load_engine_plugins"
+    ],
+    "batch-plan": [
+      "help",
+      "input_dir",
+      "output_dir",
+      "config",
+      "resume",
+      "retry_failed",
+      "include_pattern",
+      "exclude_pattern",
+      "output",
+      "load_engine_plugins"
+    ],
+    "verify": [
+      "help",
+      "manifest",
+      "output"
+    ],
+    "benchmark": [
+      "help",
+      "input",
+      "output",
+      "repeats",
+      "config",
+      "load_engine_plugins"
+    ],
+    "compare-benchmarks": [
+      "help",
+      "baseline",
+      "candidate",
+      "output",
+      "max_regression_percent"
+    ]
+  },
+  "config_schema": 2,
+  "settings_schema": 2
+}

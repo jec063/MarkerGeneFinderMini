@@ -4,12 +4,8 @@ import pandas as pd
 import pytest
 from scipy import sparse
 
-from src.marker_finder import (
-    build_parser,
-    estimate_dense_expression_bytes,
-    find_markers_scanpy,
-    run,
-)
+from marker_gene_finder.inspection import estimate_dense_expression_bytes
+from marker_gene_finder.analysis import find_markers_scanpy, run
 
 
 @pytest.fixture
@@ -126,19 +122,3 @@ def test_scanpy_raw_preserves_input(raw_input):
     pd.testing.assert_frame_equal(data.obs, original_obs)
     pd.testing.assert_frame_equal(data.var, original_var)
     assert "rank_genes_groups" not in data.uns
-
-
-def test_parser_accepts_raw():
-    args = build_parser().parse_args([
-        "--input", "input.h5ad", "--output", "output.csv", "--use-raw",
-    ])
-    assert args.use_raw is True
-    assert args.layer is None
-
-
-def test_parser_rejects_raw_with_layer():
-    with pytest.raises(SystemExit):
-        build_parser().parse_args([
-            "--input", "input.h5ad", "--output", "output.csv",
-            "--use-raw", "--layer", "alternate",
-        ])

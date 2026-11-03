@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from src.version import APP_VERSION
+from marker_gene_finder.version import APP_VERSION
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
