@@ -4,7 +4,8 @@ import pandas as pd
 import pytest
 from scipy import sparse
 
-from src.marker_finder import build_parser, estimate_dense_expression_bytes, run
+from marker_gene_finder.inspection import estimate_dense_expression_bytes
+from marker_gene_finder.analysis import run
 
 
 @pytest.fixture
@@ -116,12 +117,3 @@ def test_csv_rejects_layer_selection(tmp_path):
     with pytest.raises(ValueError, match="Layer selection requires H5AD"):
         run(source, output, layer="alternate")
     assert not output.exists()
-
-
-def test_parser_accepts_layer():
-    args = build_parser().parse_args([
-        "--input", "expression.h5ad",
-        "--output", "markers.csv",
-        "--layer", "alternate",
-    ])
-    assert args.layer == "alternate"

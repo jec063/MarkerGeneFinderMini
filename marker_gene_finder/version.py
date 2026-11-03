@@ -1,5 +1,5 @@
 """Marker Gene Finder public version."""
 
-APP_VERSION = "2.8.0"
+APP_VERSION = "2.9.0"
 
 __all__ = ["APP_VERSION"]

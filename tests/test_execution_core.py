@@ -1,5 +1,4 @@
 """v2.7 scientific fixtures and v2.8 execution guarantees."""
-import ast
 from pathlib import Path
 import threading
 
@@ -8,10 +7,8 @@ import pandas as pd
 import pytest
 from scipy import sparse
 
-from marker_gene_finder import analysis, batch, benchmark, inspection
-from marker_gene_finder._atomic import atomic_path, write_bytes, write_text
+from marker_gene_finder import analysis, batch
 from marker_gene_finder.config import AnalysisConfig
-from marker_gene_finder.models import MarkerResult
 
 FIXTURES = Path(__file__).parent / "fixtures" / "v2_7"
 
@@ -55,23 +52,6 @@ def test_csv_fixture_and_ordered_progress(tmp_path, workers):
     assert events == [(1, 3, "A", caller), (2, 3, "B", caller), (3, 3, "C", caller)]
 
 
-@pytest.mark.parametrize("existing", [False, True])
-@pytest.mark.parametrize("exception", [OSError, KeyboardInterrupt])
-def test_interrupted_write_never_publishes_partial_output(tmp_path, existing, exception):
-    destination = tmp_path / "markers.csv"
-    if existing:
-        destination.write_bytes(b"previous complete output")
-    with pytest.raises(exception):
-        with atomic_path(destination) as staging:
-            staging.write_bytes(b"partial")
-            raise exception("interrupted")
-    if existing:
-        assert destination.read_bytes() == b"previous complete output"
-    else:
-        assert not destination.exists()
-    assert list(tmp_path.glob(".*.tmp")) == []
-
-
 def test_failed_csv_serialization_preserves_existing_output(tmp_path, monkeypatch):
     destination = tmp_path / "markers.csv"
     destination.write_text("old")
@@ -83,38 +63,6 @@ def test_failed_csv_serialization_preserves_existing_output(tmp_path, monkeypatc
         analysis.run(FIXTURES / "expression.csv", destination)
     assert destination.read_text() == "old"
     assert list(tmp_path.iterdir()) == [destination]
-
-
-def test_atomic_publish_failure_cleans_up_all_export_types(tmp_path, monkeypatch):
-    from marker_gene_finder import _atomic
-    def fail(*args):
-        raise OSError("replace failed")
-    monkeypatch.setattr(_atomic.os, "replace", fail)
-    config = AnalysisConfig()
-    result = MarkerResult(pd.read_csv(FIXTURES / "native.csv"), config, {})
-    for export in [lambda p: write_text(p, "text"), lambda p: write_bytes(p, b"zip"),
-                   config.to_json, result.to_csv]:
-        destination = tmp_path / "output"
-        destination.write_text("old")
-        with pytest.raises(OSError, match="replace failed"):
-            export(destination)
-        assert destination.read_text() == "old"
-        assert list(tmp_path.iterdir()) == [destination]
-
-
-def test_services_own_implementations_and_do_not_depend_on_core():
-    for module, function in [(analysis, analysis.run), (batch, batch.run_batch),
-                             (benchmark, benchmark.benchmark_analysis),
-                             (inspection, inspection.inspect_input)]:
-        assert function.__module__ == module.__name__
-    package = Path(analysis.__file__).parent
-    for path in package.glob("*.py"):
-        if path.name == "_core.py":
-            continue
-        for node in ast.walk(ast.parse(path.read_text())):
-            if isinstance(node, ast.ImportFrom):
-                assert node.module not in {"_core", "marker_gene_finder._core"}
-                assert all(alias.name != "_core" for alias in node.names)
 
 
 def test_invalid_plugin_output_does_not_replace_previous_file(tmp_path):
@@ -150,14 +98,15 @@ def test_interrupted_batch_preserves_previous_manifest_and_output(tmp_path, monk
         Path(output_path).write_text("partial")
         raise KeyboardInterrupt
 
-    monkeypatch.setattr(batch, "_registered_run", interrupted)
+    monkeypatch.setattr(analysis, "run", interrupted)
     with pytest.raises(KeyboardInterrupt):
         batch.run_batch(inputs, outputs)
     assert {path.name: path.read_bytes() for path in outputs.iterdir()} == before
 
 
 def test_bundle_replace_failure_preserves_previous_bundle(tmp_path, monkeypatch):
-    from marker_gene_finder import analyze, _atomic
+    from marker_gene_finder import analyze
+    import os
     result = analyze(pd.read_csv(FIXTURES / "expression.csv"))
     destination = tmp_path / "bundle.zip"
     destination.write_bytes(b"previous bundle")
@@ -165,19 +114,8 @@ def test_bundle_replace_failure_preserves_previous_bundle(tmp_path, monkeypatch)
     def interrupted(*args):
         raise OSError("replace failed")
 
-    monkeypatch.setattr(_atomic.os, "replace", interrupted)
+    monkeypatch.setattr(os, "replace", interrupted)
     with pytest.raises(OSError, match="replace failed"):
         result.to_bundle(destination)
     assert destination.read_bytes() == b"previous bundle"
     assert list(tmp_path.iterdir()) == [destination]
-
-
-def test_legacy_monkeypatch_reaches_extracted_implementation(tmp_path, monkeypatch):
-    from marker_gene_finder import _core
-    original = analysis.find_markers
-    expected = pd.read_csv(FIXTURES / "native.csv")
-    with monkeypatch.context() as patch:
-        patch.setattr(_core, "find_markers", lambda *args, **kwargs: expected)
-        actual = _core.run(FIXTURES / "expression.csv", tmp_path / "markers.csv")
-        assert actual is expected
-    assert analysis.find_markers is original

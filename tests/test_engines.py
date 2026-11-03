@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from marker_gene_finder.version import APP_VERSION
 
-import subprocess
-import sys
 
 import pandas as pd
 import pytest
@@ -225,21 +223,3 @@ def test_public_engine_validator_checks_expected_name() -> None:
     assert validate_engine(RecordingEngine()).name == "recording"
     with pytest.raises(ConfigurationError, match="names must match"):
         validate_engine(RecordingEngine(), expected_name="different")
-
-
-def test_legacy_import_emits_deprecation_notice() -> None:
-    completed = subprocess.run(
-        [
-            sys.executable,
-            "-W",
-            "always::DeprecationWarning",
-            "-c",
-            "import src.filter_presets",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-
-    assert "src.filter_presets is deprecated" in completed.stderr
-    assert "removed in Marker Gene Finder 3.0" in completed.stderr

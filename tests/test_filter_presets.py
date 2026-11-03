@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.filter_presets import FILTER_DEFAULTS, FILTER_PRESETS, get_filter_preset
+from marker_gene_finder.filter_presets import FILTER_DEFAULTS, FILTER_PRESETS, get_filter_preset
 
 
 def test_permissive_preset_matches_backward_compatible_defaults() -> None:

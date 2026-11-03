@@ -2,13 +2,21 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **2.8.0**. The version is shown in the web
+Current application version: **2.9.0**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
 **Live app:** [Launch the CellCoPilot Marker Gene Finder](https://cellcopilot-marker-finder.streamlit.app/)
 
 The program compares gene expression inside each cluster with all other cells and ranks genes using log2 fold change.
+
+## v2.9 migration readiness
+
+The [migration guide](docs/migration.md) maps every supported legacy command
+and import to its replacement. The [v3 public contract](docs/public-api-v3.md)
+freezes supported entry points, configuration, result, and engine contracts.
+Executable examples live in [examples/migration.py](examples/migration.py).
+Legacy interfaces remain available in v2.9; their removal belongs to v3.
 
 ## v2.8 execution core
 
@@ -63,32 +71,29 @@ Before the Native engine materializes an H5AD expression matrix, it estimates
 the dense matrix size from its shape and numeric data type. Conversion stops
 when the estimate exceeds the default 2,048 MiB safety limit, avoiding a large
 unexpected allocation. Use Scanpy to preserve sparse storage, change the CLI
-limit with `--max-dense-memory-mb`, or explicitly pass `0` to disable the
+limit with `max_dense_memory_mb`, or explicitly set it to `null` to disable the
 guard. CSV inputs and Scanpy analysis are not subject to this dense-conversion
 limit. Negative, non-finite, Boolean, and non-numeric limits are rejected.
 
 The Native engine also calculates gene statistics in chunks of 1,000 genes to
-limit temporary per-cluster arrays. Use `--gene-chunk-size` to tune this for
+limit temporary per-cluster arrays. Use `gene_chunk_size` in the configuration to tune this for
 the available memory. Benjamini-Hochberg correction is still applied across
 all tested genes in a cluster, so changing the chunk size does not change
 marker values, ordering, or adjusted p-values.
 
-Command-line analyses report completed clusters to standard error, including
-the current and total cluster counts. This keeps CSV output and diagnostics
-machine-readable while making long Native or Scanpy runs observable. Pass
-`--quiet` to suppress progress messages. Library callers can supply a
+The subcommand CLI prints a final summary. Library callers can supply a
 `progress_callback` to `find_markers()`, `find_markers_scanpy()`, or `run()`;
 the callback receives the completed count, total count, and cluster label.
 
 Native command-line analysis can process independent target clusters
-concurrently with `--workers`. The default is one worker, which preserves the
+concurrently with `workers` in the configuration. The default is one worker, which preserves the
 lowest peak-memory behavior. Multiple workers preserve cluster ordering and
 marker results, but each active worker needs its own temporary gene-chunk
 arrays, so increase the value only when additional memory is available. Scanpy
 already performs its ranking in one engine call and therefore requires one
 worker.
 
-Before committing to an analysis, use `--inspect-json` to scan an input and
+Before committing to an analysis, use `marker-gene-finder inspect INPUT --output REPORT` to scan an input and
 write a machine-readable preflight report without calculating markers. The
 report includes the application version, expression source, cell, gene, and
 cluster counts, storage type, estimated dense expression size, configured
@@ -101,13 +106,13 @@ statistics. H5AD inspection opens the file in backed mode; CSV inspection reads 
 Inspection reports normalize the configured memory limit to a regular JSON
 number, including when library callers provide a NumPy numeric scalar.
 
-Use `--plan-json` to turn the same preflight data into a versioned execution
+Use `marker-gene-finder plan INPUT --output REPORT` to turn the same preflight data into a versioned execution
 plan without calculating markers. Plans keep `requested_engine`,
 `recommended_engine`, and `resolved_engine` separate, record resolved Native
 chunk and worker settings, and report conflicts through `can_execute` and
 `warnings`. Explicit engine choices are never silently replaced.
 
-The opt-in `--engine auto` mode follows the preflight resource recommendation
+The opt-in `"engine": "auto"` configuration mode follows the preflight resource recommendation
 for each input: CSV uses Native, sparse H5AD uses Scanpy, and dense H5AD uses
 Native unless its estimated dense representation exceeds the configured
 safety limit. The default remains `native`, and automatic selection is
@@ -124,16 +129,16 @@ The native engine remains the default. Scanpy works directly with AnnData and re
 
 Select one or more **Clusters to analyze** in the web interface to limit the
 reported groups. Each selected cluster is still compared with every other cell.
-On the CLI, repeat `--target-cluster`, for example
-`--target-cluster 0 --target-cluster 2`. Omitting it analyzes every cluster.
-Set **Minimum cells per target cluster** or use `--min-cluster-size` to avoid
+In the CLI configuration, set `"target_clusters": ["0", "2"]`, for example.
+Omitting it analyzes every cluster.
+Set **Minimum cells per target cluster** or use `min_cluster_size` in the configuration to avoid
 testing undersized groups. Small clusters remain part of the one-versus-rest
 reference population; they are only excluded as analysis targets. The default
 of `1` preserves the previous behavior.
 
 Exact genes and gene-name prefixes can be excluded before testing. In the web
 interface, enter comma-separated values under **Exclude genes** or **Exclude
-gene prefixes**. On the CLI, repeat `--exclude-gene` or `--exclude-prefix`.
+gene prefixes**. In the CLI configuration, set the `excluded_genes` or `excluded_prefixes` arrays.
 No exclusions are applied by default; organism-specific naming conventions
 remain under the user's control.
 
@@ -182,7 +187,7 @@ Results are ranked after applying the selected thresholds. Choose log2 fold
 change (the default), target-cluster mean expression, target-cluster expressing
 cell count, outside-cluster expressing-cell count, mean-expression difference,
 expression-fraction difference, or adjusted p-value in the web interface or
-with `--rank-by`. Ranking by
+with `rank_by` in the configuration. Ranking by
 `cells_expressing_in` prioritizes markers supported by the largest absolute
 number of target cells. Ranking by `cells_expressing_out` prioritizes genes
 detected in the fewest reference-population cells. The existing fold-change
@@ -198,28 +203,28 @@ of `1.0` preserves the previous behavior.
 Use the minimum target-cluster expressing-cell count to require evidence from
 a specific number of cells in addition to the fractional expression threshold.
 Set **Minimum target-cluster cells expressing gene** in the web interface or
-use `--min-cells-expressing` on the CLI. Its default of `0` preserves the
+use `min_cells_expressing` in the CLI configuration. Its default of `0` preserves the
 previous behavior.
 Use the minimum target-cluster mean-expression threshold to remove genes whose
 average expression inside the target cluster is too low on the input matrix's
 existing scale. Set **Minimum target-cluster mean expression** in the web
-interface or use `--min-cluster-mean` on the CLI. Its default of `0.0`
+interface or use `min_cluster_mean` in the CLI configuration. Its default of `0.0`
 preserves the previous behavior.
 Use the optional maximum outside-cluster mean-expression threshold to exclude
 genes with excessive average expression in the reference population. Enable
 **Limit outside-cluster mean expression** in the web interface or pass
-`--max-other-mean` on the CLI. The value uses the input matrix's existing
+`max_other_mean` in the CLI configuration. The value uses the input matrix's existing
 scale, and omitting it preserves the previous behavior.
 Use the optional maximum outside-cluster expressing-cell count to cap the
 absolute number of reference cells in which a marker is detected. Enable
 **Limit outside-cluster cells expressing gene** in the web interface or pass
-`--max-cells-expressing-out` on the CLI. Omitting it preserves the previous
+`max_cells_expressing_out` in the CLI configuration. Omitting it preserves the previous
 behavior.
 Use the minimum mean-expression difference to require a marker's target-cluster
 mean to exceed its reference mean by a chosen absolute amount on the input
 matrix's existing scale. The `mean_difference` output column records this
 target-minus-reference value. Set **Minimum mean-expression difference** in the
-web interface or use `--min-mean-difference` on the CLI. Its default of `0.0`
+web interface or use `min_mean_difference` in the CLI configuration. Its default of `0.0`
 preserves the previous behavior.
 
 The default maximum adjusted p-value is `1.0`, which preserves all otherwise eligible markers. Set a lower value, such as `0.05`, to retain only markers that pass the selected false-discovery-rate threshold.
@@ -374,22 +379,25 @@ Analysis profiles and bundle settings now use a named envelope:
 Imports still accept the flat schema-1 document and migrate it in memory.
 Unsupported future schemas and malformed schema-2 envelopes are rejected.
 
-## Legacy v1 command-line reference
+## Command-line workflows
 
-The examples below document the transitional flat parser invoked with
-`python src/marker_finder.py`. Prefer the v2 commands above for new workflows.
+All workflows use the installed subcommand CLI. Analysis settings belong in
+`analysis-config.json`; see the [migration guide](docs/migration.md) for the
+complete legacy-to-public mapping.
 
 Inspect a dataset without creating marker results:
 
 ```bash
-python src/marker_finder.py \
-  --input expression.h5ad \
-  --cluster-column leiden \
-  --inspect-json inspection.json
+cat > analysis-config.json <<'JSON'
+{
+  "cluster_column": "leiden"
+}
+JSON
+marker-gene-finder inspect expression.h5ad --output inspection.json --config analysis-config.json
 ```
 
-The inspection respects `--layer`, `--use-raw`, and
-`--max-dense-memory-mb`. The report records `storage`,
+The inspection respects the `layer`, `use_raw`, and
+`max_dense_memory_mb` configuration fields. The report records `storage`,
 `native_within_limit`, `recommended_engine`, and `recommendation_reasons` so
 automation can select an engine before analysis. It cannot be combined with an
 analysis output, batch input, or runtime diagnostics.
@@ -397,27 +405,30 @@ analysis output, batch input, or runtime diagnostics.
 Create a reviewable execution plan without running marker analysis:
 
 ```bash
-python src/marker_finder.py \
-  --input expression.h5ad \
-  --engine auto \
-  --cluster-column leiden \
-  --plan-json analysis-plan.json
+cat > analysis-config.json <<'JSON'
+{
+  "cluster_column": "leiden",
+  "engine": "auto"
+}
+JSON
+marker-gene-finder plan expression.h5ad --output analysis-plan.json --config analysis-config.json
 ```
 
-After reviewing the plan, run with `--engine auto` to use its resource-based
+After reviewing the plan, set `engine` to `"auto"` in the configuration to use its resource-based
 engine resolution. Runtime diagnostics record both the requested and resolved
 engine. For batch input, auto resolution is performed independently per file.
 
-Use `--input-dir` and `--output-dir` to apply one configuration to every CSV
+Use the `batch` input and output directory arguments to apply one configuration to every CSV
 or H5AD file directly inside a directory:
 
 ```bash
-python src/marker_finder.py \
-  --input-dir batch_inputs \
-  --output-dir batch_outputs \
-  --cluster-column cluster \
-  --min-log2fc 1.0 \
-  --max-p-adj 0.05
+cat > analysis-config.json <<'JSON'
+{
+  "min_log2fc": 1.0,
+  "max_p_adj": 0.05
+}
+JSON
+marker-gene-finder batch batch_inputs batch_outputs --config analysis-config.json
 ```
 
 Each input receives its own `<input-name>.markers.csv` output. The output
@@ -430,21 +441,21 @@ uses the same analysis options as single-file mode.
 
 Successful batch records also include cells, genes, clusters, marker rows, and
 load, analysis, output, and total durations. The manifest records the overall
-batch duration. For a single input, pass `--diagnostics-json diagnostics.json`
+batch duration. For a single input, pass `--metadata diagnostics.json`
 to write the same runtime and dataset metadata to a standalone JSON file:
 
 ```bash
-python src/marker_finder.py \
-  --input expression.h5ad \
-  --output markers.csv \
-  --engine native \
-  --cluster-column leiden \
-  --gene-chunk-size 500 \
-  --workers 2 \
-  --diagnostics-json diagnostics.json
+cat > analysis-config.json <<'JSON'
+{
+  "cluster_column": "leiden",
+  "gene_chunk_size": 500,
+  "workers": 2
+}
+JSON
+marker-gene-finder analyze expression.h5ad markers.csv --metadata diagnostics.json --config analysis-config.json
 ```
 
-For automation that should emit only its final summary, add `--quiet`.
+The subcommand CLI emits a final summary without per-cluster progress messages.
 
 Durations use a monotonic high-resolution clock and are intended for runtime
 comparison and troubleshooting, not as stable performance assertions. Native
@@ -461,11 +472,12 @@ causes that input to run again.
 Benchmark a complete single-input analysis without retaining marker output:
 
 ```bash
-python src/marker_finder.py \
-  --input expression.h5ad \
-  --engine auto \
-  --benchmark-repeats 3 \
-  --benchmark-json benchmark.json
+cat > analysis-config.json <<'JSON'
+{
+  "engine": "auto"
+}
+JSON
+marker-gene-finder benchmark expression.h5ad --output benchmark.json --repeats 3 --config analysis-config.json
 ```
 
 The versioned benchmark report records the platform, Python and application
@@ -479,10 +491,7 @@ Compare a candidate benchmark with a baseline and fail when its median runtime
 regresses by more than an allowed percentage:
 
 ```bash
-python src/marker_finder.py \
-  --compare-benchmarks baseline.json candidate.json \
-  --max-regression-percent 10 \
-  --comparison-json comparison.json
+marker-gene-finder compare-benchmarks baseline.json candidate.json --output comparison.json --max-regression-percent 10.0
 ```
 
 The comparison records the median ratio and percentage change. It also warns
@@ -495,9 +504,7 @@ marker output. Verify that a completed batch still matches those recorded
 artifacts without rerunning the analysis:
 
 ```bash
-python src/marker_finder.py \
-  --verify-batch-manifest batch_outputs/batch_manifest.json \
-  --verification-json batch-verification.json
+marker-gene-finder verify batch_outputs/batch_manifest.json --output batch-verification.json
 ```
 
 Verification reports missing or modified inputs and outputs and exits nonzero
@@ -508,24 +515,14 @@ Select a batch subset with repeatable filename globs. Include patterns are
 combined with OR logic, then matching exclude patterns are removed:
 
 ```bash
-python src/marker_finder.py \
-  --input-dir batch_inputs \
-  --output-dir batch_outputs \
-  --include-pattern 'sample-*.csv' \
-  --include-pattern '*.h5ad' \
-  --exclude-pattern '*-draft.csv'
+marker-gene-finder batch batch_inputs batch_outputs --include-pattern 'sample-*.csv' --include-pattern '*.h5ad' --exclude-pattern '*-draft.csv'
 ```
 
 Preview the exact selected files and whether resume mode would run or skip each
 one without executing marker analysis or changing the batch manifest:
 
 ```bash
-python src/marker_finder.py \
-  --input-dir batch_inputs \
-  --output-dir batch_outputs \
-  --include-pattern 'sample-*.csv' \
-  --resume \
-  --batch-plan-json batch-plan.json
+marker-gene-finder batch-plan batch_inputs batch_outputs --output batch-plan.json --resume --include-pattern 'sample-*.csv'
 ```
 
 The versioned plan records input fingerprints, the settings fingerprint, run or
@@ -684,29 +681,25 @@ matrix.
 ## Run
 
 ```bash
-python src/marker_finder.py \
-  --input data/example_expression.csv \
-  --output outputs/top_markers.csv \
-  --cluster-column cluster \
-  --top-n 2 \
-  --min-cluster-size 10 \
-  --min-cells-expressing 3 \
-  --min-cluster-mean 1.0 \
-  --min-mean-difference 0.5 \
-  --max-other-mean 0.5 \
-  --max-cells-expressing-out 5 \
-  --min-pct 0.5 \
-  --max-pct-out 0.25 \
-  --rank-by pct_difference \
-  --min-log2fc 0.0 \
-  --max-p-adj 0.05
+cat > analysis-config.json <<'JSON'
+{
+  "top_n": 2
+}
+JSON
+marker-gene-finder analyze data/example_expression.csv outputs/top_markers.csv --config analysis-config.json
 ```
 
 For H5AD input, select the `AnnData.obs` column containing
 cluster labels:
 
 ```bash
-python src/marker_finder.py --input path/to/expression.h5ad --output outputs/top_markers.csv --cluster-column leiden --engine scanpy
+cat > analysis-config.json <<'JSON'
+{
+  "cluster_column": "leiden",
+  "engine": "scanpy"
+}
+JSON
+marker-gene-finder analyze path/to/expression.h5ad outputs/top_markers.csv --config analysis-config.json
 ```
 The example should identify:
 
@@ -718,14 +711,21 @@ The example should identify:
 ## H5AD expression layers
 
 Both Native and Scanpy use `AnnData.X` by default. To analyze a named
-matrix in `AnnData.layers`, pass `--layer`:
+matrix in `AnnData.layers`, set `layer` in the configuration:
 
 ```bash
-python src/marker_finder.py --input expression.h5ad --output outputs/markers.csv --cluster-column leiden --engine scanpy --layer lognormalized
+cat > analysis-config.json <<'JSON'
+{
+  "cluster_column": "leiden",
+  "engine": "scanpy",
+  "layer": "lognormalized"
+}
+JSON
+marker-gene-finder analyze expression.h5ad outputs/markers.csv --config analysis-config.json
 ```
 
 Replace `lognormalized` with a layer name present in your file.
-The same option works with `--engine native`. CSV input does not support
+The same option works with `"engine": "native"`. CSV input does not support
 layer selection, and missing layer names produce an error.
 
 In Streamlit, use the **Expression matrix** dropdown after uploading an
@@ -741,15 +741,22 @@ names alone do not establish how the data were processed.
 Both engines support expression stored in `AnnData.raw`:
 
 ```bash
-python src/marker_finder.py --input expression.h5ad --output outputs/raw_markers.csv --cluster-column leiden --engine scanpy --use-raw
+cat > analysis-config.json <<'JSON'
+{
+  "cluster_column": "leiden",
+  "engine": "scanpy",
+  "use_raw": true
+}
+JSON
+marker-gene-finder analyze expression.h5ad outputs/raw_markers.csv --config analysis-config.json
 ```
 
-The same option works with `--engine native`. Raw selection uses
+The same option works with `"engine": "native"`. Raw selection uses
 `AnnData.raw.X` and its own gene names, which may differ from X.
 Cell identifiers and cluster labels use the current observations.
 The input file is not modified.
 
-`--use-raw` and `--layer` are mutually exclusive. Raw selection
+`use_raw` and `layer` are mutually exclusive. Raw selection
 requires H5AD input and reports an error if raw expression is missing.
 Omitting both options continues to use `AnnData.X`.
 
@@ -765,8 +772,13 @@ For Scanpy, use appropriately normalized, log-transformed expression.
 ## Test
 
 ```bash
-pytest -q
+MGF_DISABLE_LEGACY=1 python -m pytest -q --ignore=tests/compatibility
+python -m pytest -q tests/compatibility
 ```
+
+The primary suite blocks legacy imports. CI also builds and installs the wheel
+on each supported Python version and tests it outside the checkout with legacy
+modules blocked, including Streamlit and the executable migration examples.
 
 ## Version 2.6 engine workflows
 

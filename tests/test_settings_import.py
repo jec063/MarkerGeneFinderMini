@@ -6,7 +6,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 
-from src.settings_import import (
+from marker_gene_finder.settings import (
     MAX_SETTINGS_BYTES,
     load_analysis_settings,
     load_analysis_profile_upload,

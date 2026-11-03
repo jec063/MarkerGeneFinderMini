@@ -4,12 +4,7 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 
-from src.marker_finder import (
-    RESULT_COLUMNS,
-    build_parser,
-    find_markers_scanpy,
-    run,
-)
+from marker_gene_finder.analysis import RESULT_COLUMNS, find_markers_scanpy, run
 
 def test_find_markers_scanpy_ranks_expected_genes() -> None:
     adata = ad.AnnData(
@@ -63,20 +58,6 @@ def test_find_markers_scanpy_ranks_expected_genes() -> None:
     assert markers["reference_size"].tolist() == [4, 4]
     assert progress_events == [(1, 2, "A"), (2, 2, "B")]
 
-def test_parser_accepts_scanpy_engine() -> None:
-    args = build_parser().parse_args(
-        [
-            "--input",
-            "expression.h5ad",
-            "--output",
-            "markers.csv",
-            "--engine",
-            "scanpy",
-        ]
-    )
-
-    assert args.engine == "scanpy"
-
 
 def test_scanpy_run_rejects_parallel_native_workers(tmp_path: Path) -> None:
     input_path = tmp_path / "expression.h5ad"
@@ -122,78 +103,6 @@ def test_scanpy_max_pct_out_filters_broadly_expressed_genes() -> None:
     )
 
     assert markers["gene"].tolist() == ["specific"]
-
-
-def test_parser_accepts_max_pct_out() -> None:
-    args = build_parser().parse_args(
-        [
-            "--input", "expression.csv",
-            "--output", "markers.csv",
-            "--max-pct-out", "0.25",
-        ]
-    )
-
-    assert args.max_pct_out == pytest.approx(0.25)
-
-
-def test_parser_accepts_rank_by() -> None:
-    args = build_parser().parse_args(
-        [
-            "--input", "expression.csv",
-            "--output", "markers.csv",
-            "--rank-by", "pct_difference",
-        ]
-    )
-
-    assert args.rank_by == "pct_difference"
-
-
-def test_parser_accepts_mean_difference_ranking() -> None:
-    args = build_parser().parse_args(
-        [
-            "--input", "expression.csv",
-            "--output", "markers.csv",
-            "--rank-by", "mean_difference",
-        ]
-    )
-
-    assert args.rank_by == "mean_difference"
-
-
-def test_parser_accepts_cluster_mean_ranking() -> None:
-    args = build_parser().parse_args(
-        [
-            "--input", "expression.csv",
-            "--output", "markers.csv",
-            "--rank-by", "cluster_mean",
-        ]
-    )
-
-    assert args.rank_by == "cluster_mean"
-
-
-def test_parser_accepts_expressing_cell_count_ranking() -> None:
-    args = build_parser().parse_args(
-        [
-            "--input", "input.h5ad",
-            "--output", "markers.csv",
-            "--rank-by", "cells_expressing_in",
-        ]
-    )
-
-    assert args.rank_by == "cells_expressing_in"
-
-
-def test_parser_accepts_reference_expressing_cell_count_ranking() -> None:
-    args = build_parser().parse_args(
-        [
-            "--input", "input.h5ad",
-            "--output", "markers.csv",
-            "--rank-by", "cells_expressing_out",
-        ]
-    )
-
-    assert args.rank_by == "cells_expressing_out"
 
 
 def test_scanpy_min_cluster_size_skips_small_targets() -> None:

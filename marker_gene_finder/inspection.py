@@ -234,6 +234,7 @@ def build_analysis_plan(
     }
 
 __all__ = [
+    "CSV_INSPECTION_CHUNK_ROWS",
     "PLAN_SCHEMA_VERSION",
     "build_analysis_plan",
     "estimate_dense_expression_bytes",
