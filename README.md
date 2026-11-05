@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **2.9.0**. The version is shown in the web
+Current application version: **3.0.0rc1**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -10,37 +10,29 @@ analysis-settings exports and reproducibility bundles.
 
 The program compares gene expression inside each cluster with all other cells and ranks genes using log2 fold change.
 
-## v2.9 migration readiness
+## v3 release candidate
 
-The [migration guide](docs/migration.md) maps every supported legacy command
-and import to its replacement. The [v3 public contract](docs/public-api-v3.md)
-freezes supported entry points, configuration, result, and engine contracts.
-Executable examples live in [examples/migration.py](examples/migration.py).
-Legacy interfaces remain available in v2.9; their removal belongs to v3.
+This is **v3.0.0rc1**, a prerelease for validating the v3 transition before a
+stable release. Use `marker-gene-finder` or `python -m marker_gene_finder` and the
+public `marker_gene_finder` Python API. Deprecated `src.*` imports, the `_core`
+compatibility facade, and the historical flat CLI have been removed from the
+source tree and distributions.
 
-## v2.8 execution core
+The [migration guide](docs/migration.md) maps every former public import and
+flat option to its supported replacement. The [v3 public contract](docs/public-api-v3.md)
+retains the API, configuration defaults, result columns, and engine contracts
+frozen in v2.9. Statistical defaults and saved-artifact schemas are unchanged.
 
-Input loading, statistics, inspection, analysis, batch execution, and benchmarking
-now have focused implementations. Existing public imports, the flat CLI, and
-deprecated `src.*` shims remain available throughout v2. Statistical defaults and
-saved-artifact schemas are unchanged.
+The [release-candidate validation guide](docs/release-candidate.md) describes
+scientific regression, installation, artifact compatibility, and example-workflow
+checks required before stable v3. The prior stable release remains
+[MarkerGeneFinderMini v2.9.0](https://github.com/jec063/MarkerGeneFinderMini/releases/tag/v2.9.0).
 
-CSV results, JSON exports, configuration files, and ZIP bundles are written to
-unique sibling files and published by atomic replacement. An exception or
-interruption before replacement leaves the prior destination intact (or absent
-for a new file). A hard process kill may leave a hidden temporary file. This is
-per-file protection on filesystems supporting atomic replacement, not a
-transaction across an entire batch or a power-loss durability guarantee.
-Plugins receive a staging output path; their returned marker table is validated
-before the public API publishes it.
-
-Native and Scanpy use the same progress callback contract: one event per
-completed cluster, in selection order, on the calling thread. The existing
-`callback(completed, total, cluster)` signature is preserved, including Native
-worker runs; callback exceptions propagate to the caller.
-
-The [v2.8 validation record](benchmarks/README.md) documents independent Native
-and Scanpy regression fixtures, numerical tolerances, and runtime/memory checks.
+CSV, JSON, configuration, ZIP, and batch outputs use atomic per-file replacement.
+This protects destinations from partial writes but is not a batch transaction
+or a power-loss guarantee. Native and Scanpy progress callbacks preserve cluster
+order and caller-thread execution. The [v2.8 validation record](benchmarks/README.md)
+retains the independent engine fixtures and numerical tolerances.
 
 ## Input
 
@@ -252,19 +244,17 @@ marker-gene-finder --version
 Install the optional Streamlit interface with `python -m pip install '.[web]'`
 or the test dependencies with `python -m pip install '.[test]'`.
 
-## Version 2 API and CLI
+## Public API and CLI
 
-Version 2 provides a stable `marker_gene_finder` Python package, a validated
+The application provides a stable `marker_gene_finder` Python package, a validated
 `AnalysisConfig`, a typed `MarkerResult`, documented public exceptions, and an
 explicit subcommand CLI. The established analysis engines remain available
 behind this interface, so the release changes orchestration without changing
 the marker calculations.
 
 Version 2.1 moves the analysis, inspection, batch, and benchmark services into
-the `marker_gene_finder` package. The historical `src.marker_finder` module is
-now a compatibility entry point, so existing imports and its flat CLI continue
-to work during the v2 migration window without remaining a dependency of the
-public package.
+the `marker_gene_finder` package. The historical `src.marker_finder` module was retained during v2 and is now
+removed; use the public replacements in the migration guide.
 
 Version 2.2 moves profiles, presets, expression summaries, settings import,
 and report bundles into the public package. New exports use analysis-settings
@@ -275,8 +265,7 @@ import. The Streamlit application now imports only public
 Version 2.3 adds a formal `AnalysisEngine` protocol, normalized `EngineOutput`,
 and a validated `EngineRegistry`. The public API dispatches Native, Scanpy, and
 automatic file analysis through this interface, and callers can inject a
-registry for controlled integrations and tests. Legacy `src.*` imports now
-emit deprecation notices and are scheduled for removal in version 3.0.
+registry for controlled integrations and tests. Legacy `src.*` imports were deprecated in v2 and have been removed in v3.
 
 Version 2.3.1 completes the custom-engine contract: portable configurations
 may name registered third-party engines, unknown engines remain configuration
@@ -344,7 +333,7 @@ than silently ignored. A minimal configuration is:
 }
 ```
 
-The v2 commands are `analyze`, `inspect`, `plan`, `batch`, `batch-plan`,
+The supported commands are `analyze`, `inspect`, `plan`, `batch`, `batch-plan`,
 `verify`, `benchmark`, and `compare-benchmarks`. For example:
 
 ```bash
@@ -361,9 +350,8 @@ The installed command now requires a subcommand and moves analysis settings
 into a reusable JSON configuration. For example, replace
 `marker-gene-finder --input expression.csv --output markers.csv --top-n 10`
 with the `analyze` command above and set `top_n` to `10` in the configuration.
-The original flat parser remains temporarily available through
-`python src/marker_finder.py` for migration, but new automation should use the
-v2 subcommands and public package.
+The original flat parser and `python src/marker_finder.py` are removed in v3.
+Use the supported subcommands and public package.
 
 Analysis profiles and bundle settings now use a named envelope:
 
@@ -772,13 +760,13 @@ For Scanpy, use appropriately normalized, log-transformed expression.
 ## Test
 
 ```bash
-MGF_DISABLE_LEGACY=1 python -m pytest -q --ignore=tests/compatibility
-python -m pytest -q tests/compatibility
+python -m pytest -q
 ```
 
-The primary suite blocks legacy imports. CI also builds and installs the wheel
-on each supported Python version and tests it outside the checkout with legacy
-modules blocked, including Streamlit and the executable migration examples.
+The suite checks the actual source tree with legacy modules physically absent.
+CI also checks wheel and source archives, installs the wheel on each supported
+Python version, and tests it outside the checkout, including Streamlit and the
+executable migration examples.
 
 ## Version 2.6 engine workflows
 

@@ -1,4 +1,4 @@
-"""Stable v2 Python API built on the proven v1 analysis engines."""
+"""Stable v3 Python API built on the proven v1 analysis engines."""
 
 from __future__ import annotations
 

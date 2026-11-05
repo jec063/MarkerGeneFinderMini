@@ -14,6 +14,7 @@ dependencies = [
     "numpy>=1.24,<3.0",
     "scipy>=1.10,<2.0",
     "pandas>=2.0,<3.0",
+    "packaging>=23",
 ]
 
 [project.optional-dependencies]
@@ -27,4 +28,4 @@ marker-gene-finder = "marker_gene_finder.cli:main"
 version = {attr = "marker_gene_finder.version.APP_VERSION"}
 
 [tool.setuptools.packages.find]
-include = ["marker_gene_finder", "marker_gene_finder.*", "src", "src.*"]
+include = ["marker_gene_finder", "marker_gene_finder.*"]

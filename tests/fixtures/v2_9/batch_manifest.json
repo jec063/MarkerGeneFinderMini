@@ -1,0 +1,49 @@
+{
+  "schema_version": 2,
+  "app_version": "2.9.0",
+  "settings_fingerprint": "2da227f2f7fc80d9be0200ef6e6292e15f4e1e9f2f322f2f5c81d95c4f741c58",
+  "include_patterns": [],
+  "exclude_patterns": [],
+  "inputs": 1,
+  "completed": 1,
+  "skipped": 0,
+  "failed": 0,
+  "pending": 0,
+  "duration_seconds": 0.0296049589999825,
+  "runs": [
+    {
+      "input": "inputs/sample.csv",
+      "output": "outputs/sample.csv.markers.csv",
+      "input_fingerprint": {
+        "size": 541,
+        "mtime_ns": 1793848383097033398,
+        "sha256": "072cae36441c4c5db1720a120a9ed748c70f4857ad35ac5c014fdff7f3304f7c"
+      },
+      "settings_fingerprint": "2da227f2f7fc80d9be0200ef6e6292e15f4e1e9f2f322f2f5c81d95c4f741c58",
+      "status": "complete",
+      "marker_rows": 8,
+      "error": null,
+      "diagnostics": {
+        "app_version": "2.9.0",
+        "engine": "native",
+        "requested_engine": "native",
+        "resolved_engine": "native",
+        "input_format": "csv",
+        "input": "inputs/sample.csv",
+        "output": "outputs/sample.csv.markers.csv",
+        "cells": 12,
+        "genes": 8,
+        "clusters": 4,
+        "marker_rows": 8,
+        "gene_chunk_size": 1000,
+        "workers": 1,
+        "load_seconds": 0.004326017000039428,
+        "analysis_seconds": 0.023500511999998253,
+        "output_seconds": 0.0012853719999839086,
+        "total_seconds": 0.029183216999967954
+      },
+      "output_sha256": "d9b454652e32f9791b8547dcf80ca64e7b89d1de9440cf3da2875343b7de9ed5",
+      "duration_seconds": 0.02933937799997466
+    }
+  ]
+}

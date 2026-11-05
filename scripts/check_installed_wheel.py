@@ -3,22 +3,12 @@
 This script and its inputs must first be copied outside the source checkout.
 """
 import argparse
-import importlib.abc
+import importlib.util
 from importlib import metadata
-import os
 from pathlib import Path
 import runpy
 import subprocess
 import sys
-
-
-class NoLegacyImports(importlib.abc.MetaPathFinder):
-    def find_spec(self, fullname, path=None, target=None):
-        if fullname == "src" or fullname.startswith("src.") or fullname in {
-            "marker_gene_finder._core", "marker_gene_finder._legacy_cli",
-        }:
-            raise ImportError(f"Installed-wheel check forbids legacy import: {fullname}")
-        return None
 
 
 def main():
@@ -27,7 +17,6 @@ def main():
     args = parser.parse_args()
     checkout = args.checkout.resolve()
     assert not Path.cwd().resolve().is_relative_to(checkout)
-    sys.meta_path.insert(0, NoLegacyImports())
     import marker_gene_finder
     package = Path(marker_gene_finder.__file__).resolve()
     assert not package.is_relative_to(checkout), package
@@ -42,16 +31,21 @@ def main():
     assert not app.exception and not app.error
     assert not app.session_state["marker_results"].empty
     assert not any(name == "src" or name.startswith("src.") for name in sys.modules)
-    # Apply the same guard to fresh Python processes, including the console script.
-    (root / "sitecustomize.py").write_text(
-        "import sys\nfrom check_installed_wheel import NoLegacyImports\n"
-        "sys.meta_path.insert(0, NoLegacyImports())\n"
-    )
-    environment = dict(os.environ)
-    environment["PYTHONPATH"] = str(root) + os.pathsep + environment.get("PYTHONPATH", "")
+    for module in ("src", "marker_gene_finder._core", "marker_gene_finder._legacy_cli"):
+        assert importlib.util.find_spec(module) is None, module
+    files = metadata.files("marker-gene-finder-mini")
+    assert files is not None
+    for path in files:
+        assert path.parts[0] != "src", path
+        assert str(path) not in {"marker_gene_finder/_core.py", "marker_gene_finder/_legacy_cli.py"}, path
     for command in ([sys.executable, "-m", "marker_gene_finder", "--version"],
                     ["marker-gene-finder", "list-engines"]):
-        subprocess.run(command, check=True, env=environment)
+        subprocess.run(command, check=True)
+    rejected = subprocess.run(
+        ["marker-gene-finder", "--input", "missing.csv", "--output", "unwanted.csv"],
+        capture_output=True, text=True,
+    )
+    assert rejected.returncode == 2 and not Path("unwanted.csv").exists()
     print(f"Installed wheel, migration examples, and Streamlit passed: {package}")
 
 

@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "app_version": "2.9.0",
+  "python_version": "3.12.14",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "input": "inputs/sample.csv",
+  "repeats": 1,
+  "min_seconds": 0.018931733000044915,
+  "median_seconds": 0.018931733000044915,
+  "max_seconds": 0.018931733000044915,
+  "runs": [
+    {
+      "repeat": 1,
+      "app_version": "2.9.0",
+      "engine": "native",
+      "requested_engine": "native",
+      "resolved_engine": "native",
+      "input_format": "csv",
+      "input": "inputs/sample.csv",
+      "output": "/tmp/tmpc6896zq_/run-1.csv",
+      "cells": 12,
+      "genes": 8,
+      "clusters": 4,
+      "marker_rows": 8,
+      "gene_chunk_size": 1000,
+      "workers": 1,
+      "load_seconds": 0.0010221420000107173,
+      "analysis_seconds": 0.017133656999988034,
+      "output_seconds": 0.0007064670000431761,
+      "total_seconds": 0.018931733000044915
+    }
+  ]
+}

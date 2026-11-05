@@ -1,4 +1,4 @@
-"""Version 2 command-line interface with explicit subcommands."""
+"""Supported command-line interface with explicit subcommands."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ def _add_batch_arguments(parser: argparse.ArgumentParser) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Create the stable v2 subcommand parser."""
+    """Create the supported subcommand parser."""
     parser = argparse.ArgumentParser(
         prog="marker-gene-finder",
         description="Find marker genes with a typed, reproducible configuration.",
@@ -215,7 +215,7 @@ def execute(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Run the v2 CLI and present expected failures without a traceback."""
+    """Run the public CLI and present expected failures without a traceback."""
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
