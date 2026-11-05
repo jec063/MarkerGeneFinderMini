@@ -1,6 +1,7 @@
 """Tests for saved analysis profiles."""
 
 import json
+import pytest
 
 from marker_gene_finder.profiles import (
     PROFILE_DEFAULTS,
@@ -57,3 +58,11 @@ def test_newer_version_detection() -> None:
     assert is_newer_app_version("99.0.0") is True
     assert is_newer_app_version(APP_VERSION) is False
     assert is_newer_app_version("not-a-version") is False
+
+
+@pytest.mark.parametrize("imported,newer", [
+    ("2.9.0", False), ("3.0.0b1", False), ("3.0.0rc1", False),
+    ("3.0.0rc2", True), ("3.0.0", True), (None, False),
+])
+def test_profile_versions_order_release_candidates(imported, newer):
+    assert is_newer_app_version(imported) is newer

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from packaging.version import InvalidVersion, Version
 from collections.abc import Mapping
 
 from .filter_presets import FILTER_DEFAULTS
@@ -81,15 +82,13 @@ def compare_profile_state(
 
 
 def is_newer_app_version(imported: str | None) -> bool:
-    """Return whether an imported semantic version is newer than this app."""
+    """Return whether an imported PEP 440 version is newer than this app."""
     if not imported:
         return False
     try:
-        imported_parts = tuple(int(part) for part in imported.split("."))
-        current_parts = tuple(int(part) for part in APP_VERSION.split("."))
-    except ValueError:
+        return Version(imported) > Version(APP_VERSION)
+    except InvalidVersion:
         return False
-    return imported_parts > current_parts
 
 
 def _split_values(value: str) -> list[str]:

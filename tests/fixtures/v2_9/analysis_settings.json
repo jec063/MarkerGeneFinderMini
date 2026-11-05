@@ -1,0 +1,8 @@
+{
+  "schema_name": "marker-gene-finder-analysis-settings",
+  "schema_version": 2,
+  "app_version": "2.9.0",
+  "settings": {
+    "top_n": 2
+  }
+}

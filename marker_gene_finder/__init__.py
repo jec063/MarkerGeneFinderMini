@@ -1,4 +1,4 @@
-"""Stable public API for Marker Gene Finder v2."""
+"""Stable public API for Marker Gene Finder v3."""
 
 from .api import analyze, analyze_file
 from .config import AnalysisConfig, CONFIG_SCHEMA_VERSION

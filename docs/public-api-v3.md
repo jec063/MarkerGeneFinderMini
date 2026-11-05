@@ -1,7 +1,8 @@
-# Planned v3 public contract — frozen in v2.9
+# v3 public contract — frozen in v2.9
 
-This is the supported contract to retain when v3 removes `src.*`, `_core`'s
-legacy facade, and the flat CLI. v2.9 retains these compatibility interfaces.
+This is the supported contract after removing `src.*`, `_core`'s legacy
+facade, and the flat CLI. These compatibility interfaces remain available only
+in the v2 release line.
 No new statistical methods or default changes are part of this transition.
 
 The reviewed [machine-readable snapshot](public-api-v3.json) freezes root

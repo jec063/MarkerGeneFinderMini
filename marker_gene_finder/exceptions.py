@@ -1,4 +1,4 @@
-"""Documented exceptions raised by the public v2 API."""
+"""Documented exceptions raised by the public API."""
 
 
 class MarkerFinderError(Exception):

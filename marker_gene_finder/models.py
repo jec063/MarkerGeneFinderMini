@@ -1,4 +1,4 @@
-"""Typed result containers for the public v2 API."""
+"""Typed result containers for the public API."""
 
 from __future__ import annotations
 

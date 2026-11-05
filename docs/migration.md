@@ -1,8 +1,9 @@
 # Migrating to the supported API and CLI
 
-v2.9 keeps legacy interfaces available while preparing their removal in v3.
+v3 removes the legacy interfaces deprecated throughout v2. Use the supported
+replacements below. v2.9 remains the last stable release with the old shims.
 Change imports and commands now; statistical defaults do not change. The
-[planned v3 contract](public-api-v3.md) defines the supported surface.
+[v3 contract](public-api-v3.md) defines the supported surface.
 
 ## Python imports
 
@@ -34,8 +35,8 @@ readers, and bundle/summary helpers from their replacement module.
 
 Underscore-prefixed helpers and incidental imported dependencies are internal,
 not supported public imports. Patch or inject the documented engine interface
-in integrations; legacy `_core` patch forwarding is transitional compatibility.
-`src` itself is an empty package, and `src._compat` is internal warning machinery.
+in integrations; legacy `_core` patch forwarding has been removed. The empty `src` package and
+its internal `src._compat` warning machinery have also been removed.
 
 Existing DataFrame-returning calls can change only their import:
 
@@ -66,7 +67,7 @@ Install with `python -m pip install '.[web,test]'`. Use either
 `marker-gene-finder` or `python -m marker_gene_finder`. Both invoke the same
 subcommand parser. Replace `python src/marker_finder.py`,
 `python -m src.marker_finder`, and the historical flat installed command.
-Calling `python -m marker_gene_finder._core` is also transitional, not a v3 API.
+`python -m marker_gene_finder._core` has also been removed.
 
 | Legacy mode | Replacement |
 | --- | --- |
@@ -122,19 +123,18 @@ CSV/API equivalence, H5AD X/layers/raw in both engines, a reference plugin,
 configuration round trips, profiles, bundles, all CLI workflows, batch resume,
 verification, and benchmark comparison. Tests execute this same file.
 
-Run the primary suite with legacy imports blocked:
+Run the suite against the actual v3 source tree:
 
 ```sh
-MGF_DISABLE_LEGACY=1 python -m pytest -q --ignore=tests/compatibility
-python -m pytest -q tests/compatibility
+python -m pytest -q
 ```
 
 CI builds and installs wheels on Python 3.10, 3.11, and 3.12, then copies the
 example, Streamlit app, and wheel-check script outside the repository. It checks
-the imported package path, blocks legacy imports, executes the example and app,
-and smoke-tests the installed command. This v2.9 preparation does not replace
-the v3 release-candidate gate: repeat the examples, scientific regressions,
-installation matrix, and artifact migration checks after the actual removals.
+the imported package path and absence of the removed modules, executes the
+example and app, and smoke-tests the installed command. The release candidate
+runs these checks after the actual removals; stable promotion requires review
+of the [release-candidate validation record](release-candidate.md).
 
 ## Complete flat-option mapping
 

@@ -1,0 +1,25 @@
+{
+  "schema_name": "marker-gene-finder-analysis-settings",
+  "schema_version": 2,
+  "app_version": "2.9.0",
+  "settings": {
+    "top_n": 2,
+    "filter_preset": "Permissive",
+    "rank_by": "log2FC",
+    "min_cluster_size": 1,
+    "min_pct": 0.0,
+    "min_cells_expressing": 0,
+    "min_cluster_mean": 0.0,
+    "min_mean_difference": 0.0,
+    "max_other_mean": null,
+    "max_cells_expressing_out": null,
+    "max_pct_out": 1.0,
+    "min_pct_difference": 0.0,
+    "min_log2fc": 0.0,
+    "max_p_adj": 1.0,
+    "pseudocount": 0.1,
+    "excluded_genes": [],
+    "excluded_prefixes": []
+  },
+  "profile_name": "v2.9 fixture"
+}
