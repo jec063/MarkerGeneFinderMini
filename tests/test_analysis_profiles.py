@@ -64,5 +64,6 @@ def test_newer_version_detection() -> None:
     ("2.9.0", False), ("3.0.0b1", False), ("3.0.0rc1", False),
     ("3.0.0rc2", True), ("3.0.0", True), (None, False),
 ])
-def test_profile_versions_order_release_candidates(imported, newer):
+def test_profile_versions_order_release_candidates(imported, newer, monkeypatch):
+    monkeypatch.setattr("marker_gene_finder.profiles.APP_VERSION", "3.0.0rc1")
     assert is_newer_app_version(imported) is newer

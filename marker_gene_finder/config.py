@@ -36,6 +36,18 @@ def validate_engine_name(value: object) -> str:
     return value
 
 
+def _require_finite_number(name: str, value: object) -> None:
+    """Reject malformed portable numbers before comparisons or computation."""
+    valid = isinstance(value, (int, float)) and not isinstance(value, bool)
+    if valid:
+        try:
+            valid = math.isfinite(value)
+        except OverflowError:
+            valid = False
+    if not valid:
+        raise ConfigurationError(f"{name} must be a finite number.")
+
+
 @dataclass(frozen=True, slots=True)
 class AnalysisConfig:
     """Portable configuration shared by the v2 API and CLI."""
@@ -74,44 +86,39 @@ class AnalysisConfig:
         if self.layer is not None and not isinstance(self.layer, str):
             raise ConfigurationError("layer must be a string or null.")
         validate_engine_name(self.engine)
-        if self.rank_by not in RANK_BY_CHOICES:
+        if not isinstance(self.rank_by, str) or self.rank_by not in RANK_BY_CHOICES:
             raise ConfigurationError(f"Unsupported rank_by value: {self.rank_by}.")
+        if not isinstance(self.use_raw, bool):
+            raise ConfigurationError("use_raw must be boolean.")
         for name in ("top_n", "min_cluster_size", "gene_chunk_size", "workers"):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value < 1:
                 raise ConfigurationError(f"{name} must be a positive integer.")
-        if self.min_cells_expressing < 0:
-            raise ConfigurationError("min_cells_expressing cannot be negative.")
-        if (
-            self.max_cells_expressing_out is not None
-            and self.max_cells_expressing_out < 0
-        ):
-            raise ConfigurationError("max_cells_expressing_out cannot be negative.")
+        for name in ("min_cells_expressing", "max_cells_expressing_out"):
+            value = getattr(self, name)
+            if name == "max_cells_expressing_out" and value is None:
+                continue
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise ConfigurationError(f"{name} must be a non-negative integer.")
         for name in ("min_pct", "min_pct_difference", "max_p_adj", "max_pct_out"):
             value = getattr(self, name)
-            if not math.isfinite(value) or not 0 <= value <= 1:
+            _require_finite_number(name, value)
+            if not 0 <= value <= 1:
                 raise ConfigurationError(f"{name} must be between 0 and 1.")
         for name in (
             "pseudocount", "min_log2fc", "min_cluster_mean",
             "min_mean_difference",
         ):
             value = getattr(self, name)
-            if not math.isfinite(value):
-                raise ConfigurationError(f"{name} must be finite.")
+            _require_finite_number(name, value)
         if self.pseudocount <= 0:
             raise ConfigurationError("pseudocount must be positive.")
-        if self.max_other_mean is not None and not math.isfinite(self.max_other_mean):
-            raise ConfigurationError("max_other_mean must be finite when provided.")
-        if (
-            self.max_dense_memory_mb is not None
-            and (
-                not math.isfinite(self.max_dense_memory_mb)
-                or self.max_dense_memory_mb <= 0
-            )
-        ):
-            raise ConfigurationError(
-                "max_dense_memory_mb must be positive or null."
-            )
+        if self.max_other_mean is not None:
+            _require_finite_number("max_other_mean", self.max_other_mean)
+        if self.max_dense_memory_mb is not None:
+            _require_finite_number("max_dense_memory_mb", self.max_dense_memory_mb)
+            if self.max_dense_memory_mb <= 0:
+                raise ConfigurationError("max_dense_memory_mb must be positive or null.")
         if self.use_raw and self.layer is not None:
             raise ConfigurationError("use_raw and layer are mutually exclusive.")
         for name in ("target_clusters", "excluded_genes", "excluded_prefixes"):
@@ -147,8 +154,10 @@ class AnalysisConfig:
         """Load a v2 configuration document and reject unknown fields."""
         if not isinstance(document, dict):
             raise SchemaError("Analysis configuration must be a JSON object.")
+        if not all(isinstance(key, str) for key in document):
+            raise SchemaError("Analysis configuration field names must be strings.")
         schema = document.get("schema_version", CONFIG_SCHEMA_VERSION)
-        if schema != CONFIG_SCHEMA_VERSION:
+        if isinstance(schema, bool) or not isinstance(schema, int) or schema != CONFIG_SCHEMA_VERSION:
             raise SchemaError(
                 f"Unsupported analysis configuration schema version: {schema}."
             )
@@ -179,6 +188,6 @@ class AnalysisConfig:
         """Load and validate a configuration JSON file."""
         try:
             document = json.loads(Path(path).read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError) as error:
             raise SchemaError(f"Cannot load analysis configuration: {error}") from error
         return cls.from_dict(document)
