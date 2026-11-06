@@ -131,9 +131,22 @@ def _inspection_options(config: AnalysisConfig) -> dict[str, Any]:
     }
 
 
+def _validate_report_output(output: Path, sources) -> None:
+    """Protect files consumed by report commands, including symlink aliases."""
+    destination = output.resolve()
+    for source in sources:
+        if source is not None and destination == Path(source).resolve():
+            raise ValueError(f"Report output must be distinct from source file: {source}.")
+
+
 def execute(args: argparse.Namespace) -> int:
     """Execute one parsed v2 command and return its process status."""
     command = args.command
+    if command != "analyze" and getattr(args, "output", None) is not None:
+        _validate_report_output(args.output, [
+            getattr(args, field, None)
+            for field in ("input", "config", "manifest", "baseline", "candidate")
+        ])
     registry = load_engine_plugins() if getattr(args, "load_engine_plugins", False) else None
     if command == "analyze":
         options = {"registry": registry} if registry is not None else {}
@@ -189,6 +202,10 @@ def execute(args: argparse.Namespace) -> int:
         }
         if command == "batch-plan":
             document = build_batch_plan(args.input_dir, args.output_dir, **options)
+            _validate_report_output(args.output, [
+                args.output_dir / "batch_manifest.json",
+                *(row[key] for row in document["entries"] for key in ("input", "output")),
+            ])
             _write_json(args.output, document)
             return 0 if all(row["can_execute"] for row in document["entries"]) else 1
         records = run_batch(

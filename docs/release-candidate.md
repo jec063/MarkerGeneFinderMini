@@ -1,4 +1,4 @@
-# v3.0.0rc1 validation
+# v3.0.0rc2 validation
 
 This is a prerelease, not stable v3. The breaking change is removal of `src.*`,
 the `_core` compatibility facade, and the flat CLI implementation. Supported
@@ -7,6 +7,12 @@ defaults, result columns, engine capabilities, and data schemas are retained.
 
 Profile version comparisons now understand PEP 440 release candidates, so a
 profile from rc2 or stable 3.0.0 is correctly recognized as newer than rc1.
+
+RC2 adds field-specific errors for malformed configuration types and invalid UTF-8.
+Numeric strings, booleans used as numbers, fractional counts, and non-boolean
+`use_raw` values are rejected. Valid configurations and scientific defaults are
+unchanged. CLI report destinations cannot replace their source files, including
+symlink aliases; batch plans also protect selected marker outputs and manifests.
 
 ## Required checks
 
@@ -34,7 +40,7 @@ profile from rc2 or stable 3.0.0 is correctly recognized as newer than rc1.
 
 ## Promotion to stable
 
-Keep v2.9.0 as the latest stable release while rc1 is exercised. Review this
+Keep v2.9.0 as the latest stable release while rc2 is exercised. Review this
 checklist, CI results, and any RC feedback before releasing stable 3.0.0. Changes
 after rc1 require the affected checks to be rerun. No new statistical methods,
 distributed execution, or platform expansion are included in this transition.
