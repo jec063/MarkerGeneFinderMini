@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **3.0.0rc2**. The version is shown in the web
+Current application version: **3.0.0**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -10,15 +10,14 @@ analysis-settings exports and reproducibility bundles.
 
 The program compares gene expression inside each cluster with all other cells and ranks genes using log2 fold change.
 
-## v3 release candidate
+## v3 stable release
 
-This is **v3.0.0rc2**, a prerelease for validating the v3 transition before a
-stable release. Use `marker-gene-finder` or `python -m marker_gene_finder` and the
+This is **v3.0.0**, the stable release of the supported API and subcommand CLI. Use `marker-gene-finder` or `python -m marker_gene_finder` and the
 public `marker_gene_finder` Python API. Deprecated `src.*` imports, the `_core`
 compatibility facade, and the historical flat CLI have been removed from the
 source tree and distributions.
 
-RC2 improves malformed-configuration errors and prevents CLI reports from
+v3 improves malformed-configuration errors and prevents CLI reports from
 overwriting their source files, configurations, or batch recovery files.
 
 The [migration guide](docs/migration.md) maps every former public import and
@@ -26,9 +25,10 @@ flat option to its supported replacement. The [v3 public contract](docs/public-a
 retains the API, configuration defaults, result columns, and engine contracts
 frozen in v2.9. Statistical defaults and saved-artifact schemas are unchanged.
 
-The [release-candidate validation guide](docs/release-candidate.md) describes
-scientific regression, installation, artifact compatibility, and example-workflow
-checks required before stable v3. The prior stable release remains
+The [promotion validation record](docs/validation/v3/STATUS.md) records scientific
+regression, real biological data, installation, compatibility, and performance
+checks. The [release validation guide](docs/release-candidate.md) lists the required
+checks. The last v2 release is
 [MarkerGeneFinderMini v2.9.0](https://github.com/jec063/MarkerGeneFinderMini/releases/tag/v2.9.0).
 
 CSV, JSON, configuration, ZIP, and batch outputs use atomic per-file replacement.
