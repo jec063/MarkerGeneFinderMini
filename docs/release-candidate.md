@@ -1,6 +1,6 @@
-# v3.0.0rc2 validation
+# v3 release validation
 
-This is a prerelease, not stable v3. The breaking change is removal of `src.*`,
+v3.0.0 promotes the validated RC2 implementation. The breaking change is removal of `src.*`,
 the `_core` compatibility facade, and the flat CLI implementation. Supported
 commands and Python services follow the contract frozen in v2.9. Statistical
 defaults, result columns, engine capabilities, and data schemas are retained.
@@ -38,9 +38,11 @@ symlink aliases; batch plans also protect selected marker outputs and manifests.
 6. Run the test/build/installed-wheel matrix on Python 3.10, 3.11, and 3.12 before
    publishing the prerelease. Repeat it on the merged release commit.
 
-## Promotion to stable
+## Stable promotion
 
-Keep v2.9.0 as the latest stable release while rc2 is exercised. Review this
-checklist, CI results, and any RC feedback before releasing stable 3.0.0. Changes
-after rc1 require the affected checks to be rerun. No new statistical methods,
-distributed execution, or platform expansion are included in this transition.
+RC2 completed the [promotion validation](validation/v3/STATUS.md), including
+real PBMC data and investigation of noisy performance measurements. Original
+and follow-up samples are retained alongside the report. No scientific code or
+defaults changed during promotion. Build the actual versioned v3.0.0 artifacts,
+run all source and installed-wheel checks, and require passing PR and merged-main
+CI before publishing stable v3.0.0 as the latest release.

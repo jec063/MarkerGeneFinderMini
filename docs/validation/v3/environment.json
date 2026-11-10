@@ -1,0 +1,16 @@
+{
+  "python": "3.12.14",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "dependencies": {
+    "numpy": "2.5.4",
+    "pandas": "2.3.3",
+    "scipy": "1.18.1",
+    "scanpy": "1.12.5",
+    "anndata": "0.12.19",
+    "streamlit": "1.66.1"
+  },
+  "artifact_sha256": {
+    "marker_gene_finder_mini-3.0.0rc2-py3-none-any.whl": "9de58c9d4e82016cfe09546c69f8a58f6aff0b94e37bdb934173cd2cd394563c",
+    "marker_gene_finder_mini-3.0.0rc2.tar.gz": "b149feb44d51f09e4055ecae2f8b688c439aa60d3e8bfe77d434d7023628195c"
+  }
+}
