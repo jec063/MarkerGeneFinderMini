@@ -1,0 +1,65 @@
+{
+  "app_version": "2.9.0",
+  "dataset": "Scanpy pbmc68k_reduced, 10x Genomics PBMC 68k",
+  "source": "https://www.10xgenomics.com/datasets/fresh-68-k-pbm-cs-donor-a-1-standard-1-1-0",
+  "sha256": "863e19914ab2d4ba97edc9623ac3a343c0461f1e40b121bfb5fa92638b22e9bd",
+  "cells": 700,
+  "genes": 765,
+  "groups": {
+    "Dendritic": 240,
+    "CD14+ Monocyte": 129,
+    "CD19+ B": 95,
+    "CD4+/CD25 T Reg": 68,
+    "CD8+ Cytotoxic T": 54,
+    "CD8+/CD45RA+ Naive Cytotoxic": 43,
+    "CD56+ NK": 31,
+    "CD4+/CD45RO+ Memory": 19,
+    "CD34+": 13,
+    "CD4+/CD45RA+/CD25- Naive T": 8
+  },
+  "expression": "Existing non-negative raw matrix, cast to float64; no new normalization; scaled X not used",
+  "comparisons": [
+    {
+      "engine": "native",
+      "source": "X",
+      "rows": 50
+    },
+    {
+      "engine": "native",
+      "source": "layer",
+      "rows": 50
+    },
+    {
+      "engine": "native",
+      "source": "raw",
+      "rows": 50
+    },
+    {
+      "engine": "native",
+      "source": "csv",
+      "rows": 50
+    },
+    {
+      "engine": "scanpy",
+      "source": "X",
+      "rows": 50
+    },
+    {
+      "engine": "scanpy",
+      "source": "layer",
+      "rows": 50
+    },
+    {
+      "engine": "scanpy",
+      "source": "raw",
+      "rows": 50
+    }
+  ],
+  "passed": true,
+  "scientific_content_sha256": "38d5b7c9d4e6375b1607ccceb8b58fe7a2029edb9efe7c82c522c013acad5d61",
+  "scientific_content_encoding": "Dense raw expression, C-order little-endian float64 bytes, followed by compact UTF-8 JSON [obs_names, raw.var_names, bulk_labels as strings].",
+  "reviewed_container_sha256": [
+    "863e19914ab2d4ba97edc9623ac3a343c0461f1e40b121bfb5fa92638b22e9bd",
+    "e71d41e737c941559b7c57c9243bdb3d2c889c2adfdf00e3422ac6b46783676f"
+  ]
+}
