@@ -46,3 +46,20 @@ and follow-up samples are retained alongside the report. No scientific code or
 defaults changed during promotion. Build the actual versioned v3.0.0 artifacts,
 run all source and installed-wheel checks, and require passing PR and merged-main
 CI before publishing stable v3.0.0 as the latest release.
+
+## Maintenance release checks
+
+The standard suite includes `tests/test_biological_regression.py`. It validates
+Scanpy's checksum-pinned bundled PBMC measurements against independent Native and
+Scanpy v2.9.0 references; see `tests/fixtures/pbmc68k/README.md`. No dataset download
+is needed in CI.
+
+After building into a clean directory, run `python scripts/release_checksums.py dist`
+and `(cd dist && sha256sum --check SHA256SUMS)`. Attach the verified wheel, source
+archive, and SHA256SUMS to the release. CI performs the same archive and checksum
+checks on every supported Python version.
+
+For the public Streamlit deployment, allow for inactivity sleep and cold starts.
+Wake the app when prompted. The application controls live in the `/~/+/` iframe;
+checking only the outer page does not establish application readiness. Verify the
+version, example analysis, repository CSV upload, and CSV/ZIP download integrity.
