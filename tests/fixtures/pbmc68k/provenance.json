@@ -55,5 +55,11 @@
       "rows": 50
     }
   ],
-  "passed": true
+  "passed": true,
+  "scientific_content_sha256": "38d5b7c9d4e6375b1607ccceb8b58fe7a2029edb9efe7c82c522c013acad5d61",
+  "scientific_content_encoding": "Dense raw expression, C-order little-endian float64 bytes, followed by compact UTF-8 JSON [obs_names, raw.var_names, bulk_labels as strings].",
+  "reviewed_container_sha256": [
+    "863e19914ab2d4ba97edc9623ac3a343c0461f1e40b121bfb5fa92638b22e9bd",
+    "e71d41e737c941559b7c57c9243bdb3d2c889c2adfdf00e3422ac6b46783676f"
+  ]
 }

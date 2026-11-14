@@ -20,12 +20,19 @@ FIXTURES = Path(__file__).parent / 'fixtures/pbmc68k'
 @pytest.fixture(scope='module')
 def biological_inputs(tmp_path_factory):
     root = tmp_path_factory.mktemp('pbmc')
-    source = Path(sc.__file__).parent / 'datasets/10x_pbmc68k_reduced.h5ad'
     provenance = json.loads((FIXTURES / 'provenance.json').read_text())
-    assert hashlib.sha256(source.read_bytes()).hexdigest() == provenance['sha256'], (
-        'Scanpy PBMC fixture changed; review provenance and scientific references.'
-    )
     original = sc.datasets.pbmc68k_reduced()
+    # HDF5 encoding differs between supported Scanpy releases. Pin the actual
+    # ordered expression values and labels consumed by analysis instead.
+    digest = hashlib.sha256()
+    digest.update(original.raw.X.toarray().astype('<f8').tobytes(order='C'))
+    digest.update(json.dumps([
+        original.obs_names.tolist(), original.raw.var_names.tolist(),
+        original.obs.bulk_labels.astype(str).tolist(),
+    ], ensure_ascii=False, separators=(',', ':')).encode('utf-8'))
+    assert digest.hexdigest() == provenance['scientific_content_sha256'], (
+        'PBMC scientific content changed; review provenance and references.'
+    )
     data = ad.AnnData(original.raw.X.astype('float64'),
                       obs=original.obs[['bulk_labels']].copy(), var=original.raw.var.copy())
     assert data.shape == (700, 765)
