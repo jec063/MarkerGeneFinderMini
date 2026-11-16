@@ -119,3 +119,30 @@ def test_settings_import_controls_are_available() -> None:
     assert any(
         item.label == "Reset profile to defaults" for item in app.button
     )
+
+
+def test_h5ad_negative_source_warning_is_specific_to_selected_matrix(tmp_path, monkeypatch):
+    """Warn before analysis without claiming that nonnegative raw is normalized."""
+    import io
+    import anndata as ad
+    import numpy as np
+    import pandas as pd
+    import streamlit as st
+
+    data = ad.AnnData(np.array([[-1., 1.], [1., -1.]]),
+                      obs=pd.DataFrame({'cluster': ['A', 'B']}, index=['a','b']))
+    data.raw = ad.AnnData(np.array([[1., 0.], [0., 1.]]), obs=data.obs.copy())
+    path = tmp_path / 'source.h5ad'
+    data.write_h5ad(path)
+    uploaded = io.BytesIO(path.read_bytes())
+    uploaded.name = path.name
+    monkeypatch.setattr(st, 'file_uploader', lambda label, **kwargs:
+                        uploaded if label == 'Upload an expression CSV or H5AD file' else None)
+    app = AppTest.from_file(APP_PATH).run()
+    assert not app.exception
+    assert any('contains negative values' in item.value for item in app.warning)
+    assert 'marker_results' not in app.session_state
+    source = next(item for item in app.selectbox if item.label == 'Expression matrix')
+    source.set_value(('raw', None)).run()
+    assert not app.exception
+    assert not any('contains negative values' in item.value for item in app.warning)

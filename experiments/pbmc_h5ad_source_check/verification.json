@@ -1,0 +1,42 @@
+{
+  "url": "https://raw.githubusercontent.com/chanzuckerberg/cellxgene/main/example-dataset/pbmc3k.h5ad",
+  "sha256": "0db367b991dd95809732b218539ede489bea99113807f62ebd7ccc970025fe38",
+  "shape_X": [
+    2638,
+    1838
+  ],
+  "shape_raw": [
+    2638,
+    13714
+  ],
+  "layers": [],
+  "counts": {
+    "CD4 T cells": 1144,
+    "CD14+ Monocytes": 480,
+    "B cells": 342,
+    "CD8 T cells": 316,
+    "NK cells": 154,
+    "FCGR3A+ Monocytes": 150,
+    "Dendritic cells": 37,
+    "Megakaryocytes": 15
+  },
+  "X_min": -2.8491053581237793,
+  "raw_min": 0.0,
+  "X_max": 10.0,
+  "raw_max": 6.040254592895508,
+  "preprocessing_metadata": "No uns[log1p]; state unspecified by metadata; numerical ranges alone do not prove normalization.",
+  "genes_verified": [
+    "FAM177B",
+    "RP11-16E12.2",
+    "PKHD1L1",
+    "HRK",
+    "RP11-297B17.3"
+  ],
+  "plot_summary_rows_verified": 40,
+  "scanpy_version": "1.12.5",
+  "anndata_version": "0.12.19",
+  "direct_statistics_match": true,
+  "filtered_rank_match": true,
+  "cli_match": true,
+  "source_settings_match": true
+}

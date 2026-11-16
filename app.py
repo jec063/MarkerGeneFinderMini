@@ -133,6 +133,27 @@ def h5ad_expression_sources(
             adata.file.close()
 
 
+@st.cache_data(show_spinner=False)
+def h5ad_source_has_negative_values(
+    file_contents: bytes, file_name: str, source: tuple[str, str | None],
+) -> bool:
+    """Inspect the selected matrix in bounded row blocks without inferring scale."""
+    with TemporaryDirectory() as directory:
+        path = Path(directory) / Path(file_name).name
+        path.write_bytes(file_contents)
+        data = ad.read_h5ad(path, backed="r")
+        try:
+            matrix = (data.raw.X if source[0] == "raw" else
+                      data.layers[source[1]] if source[0] == "layer" else data.X)
+            for start in range(0, matrix.shape[0], 256):
+                block = matrix[start:start + 256]
+                if block.min() < 0:
+                    return True
+            return False
+        finally:
+            data.file.close()
+
+
 def clear_marker_results() -> None:
     """Clear results when the input or analysis settings change."""
     st.session_state.pop("marker_results", None)
@@ -389,6 +410,22 @@ with st.sidebar:
             selected_source[1] if selected_source[0] == "layer" else None
         )
         use_raw = selected_source[0] == "raw"
+        try:
+            has_negative_values = h5ad_source_has_negative_values(
+                file_contents, file_name, selected_source,
+            )
+        except (KeyError, OSError, ValueError) as error:
+            st.error(f"Could not inspect the selected H5AD matrix: {error}")
+            st.stop()
+        if has_negative_values:
+            st.warning(
+                "The selected expression matrix contains negative values and is "
+                "unsuitable for this app's marker analysis. Negative values can "
+                "occur after scaling or centering. Choose a suitable nonnegative "
+                "matrix; for Scanpy, use normalized, log-transformed expression. "
+                "Check the file's preprocessing documentation: raw is a storage "
+                "location, not a guarantee of preprocessing."
+            )
     else:
         analysis_engine = "native"
         selected_layer = None
