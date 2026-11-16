@@ -420,7 +420,9 @@ with st.sidebar:
         if has_negative_values:
             st.warning(
                 "The selected expression matrix contains negative values and is "
-                "unsuitable for this app's marker analysis. Negative values can "
+                "unsuitable for this app's marker analysis. Its marker filters "
+                "and expression summaries assume nonnegative expression, with "
+                "values > 0 counted as expressing. Negative values can "
                 "occur after scaling or centering. Choose a suitable nonnegative "
                 "matrix; for Scanpy, use normalized, log-transformed expression. "
                 "Check the file's preprocessing documentation: raw is a storage "

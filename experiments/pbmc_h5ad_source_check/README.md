@@ -80,8 +80,9 @@ Used local Chromium against the actual Streamlit app, not mocked uploads.
 ## One verified fix
 
 Added an upfront warning beside the expression selector whenever the selected
-matrix contains negative values. It states that this selection is unsuitable for
-this app's marker analysis, that scaling/centering can produce negatives, and
+matrix contains negative values. It explains that the marker filters and
+expression summaries assume nonnegative expression and count values >0 as
+expressing, that scaling/centering can produce negatives, and
 that a suitable matrix and preprocessing documentation are needed. It explicitly
 avoids treating raw as a guarantee of preprocessing. It does not assert that all
 negative matrices were scaled or all nonnegative matrices are normalized.

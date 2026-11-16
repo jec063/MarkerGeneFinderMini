@@ -141,6 +141,7 @@ def test_h5ad_negative_source_warning_is_specific_to_selected_matrix(tmp_path, m
     app = AppTest.from_file(APP_PATH).run()
     assert not app.exception
     assert any('contains negative values' in item.value for item in app.warning)
+    assert any('assume nonnegative expression' in item.value for item in app.warning)
     assert 'marker_results' not in app.session_state
     source = next(item for item in app.selectbox if item.label == 'Expression matrix')
     source.set_value(('raw', None)).run()
