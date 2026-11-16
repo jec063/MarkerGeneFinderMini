@@ -2,7 +2,7 @@
 
 A small Python project for identifying candidate marker genes from clustered gene-expression data. This is the first working component of the broader CellCoPilot project.
 
-Current application version: **3.0.1**. The version is shown in the web
+Current application version: **3.0.2**. The version is shown in the web
 interface, available from the CLI with `--version`, and recorded in new
 analysis-settings exports and reproducibility bundles.
 
@@ -11,6 +11,12 @@ analysis-settings exports and reproducibility bundles.
 The program compares gene expression inside each cluster with all other cells and ranks genes using log2 fold change.
 
 ## v3 stable release
+
+v3.0.2 warns before analysis when the selected H5AD expression matrix contains
+negative values. Scaling or centering can produce negatives; `.raw` is a
+selectable storage location whose contents depend on the input file. See the
+[PBMC source-selection QA report](experiments/pbmc_h5ad_source_check/README.md).
+Statistical defaults and source selections are unchanged.
 
 v3.0.1 adds repeatable PBMC biological regression checks to CI, updates the
 Python setup action, and generates verified SHA-256 checksums for release archives.
