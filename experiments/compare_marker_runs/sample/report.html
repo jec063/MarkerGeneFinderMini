@@ -303,7 +303,29 @@
       <td>0.1</td>
     </tr>
   </tbody>
-</table><p>Comparable input/source/engine/dependency provenance: True. Confirmed sole analysis setting change is min_pct: True.</p><h2>Marker changes</h2><table border="1" class="dataframe">
+</table><p>Comparable input/source/engine/dependency provenance: True. Confirmed sole analysis setting change is min_pct: True.</p><h2>Analysis context</h2><p>comparable</p><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+    </tr>
+  </thead>
+  <tbody>
+  </tbody>
+</table><h2>Explainable shortlist changes</h2><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>added</th>
+      <th>removed</th>
+      <th>reranked</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0</td>
+      <td>7</td>
+      <td>12</td>
+    </tr>
+  </tbody>
+</table><h2>Marker changes</h2><table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
       <th>added</th>
@@ -334,6 +356,8 @@
       <th>min_pct_B</th>
       <th>log2FC_A</th>
       <th>log2FC_B</th>
+      <th>explainable</th>
+      <th>rank_from_exported_prefix_B</th>
       <th>evidence</th>
       <th>explanation</th>
     </tr>
@@ -351,6 +375,8 @@
       <td>0.1</td>
       <td>5.88413</td>
       <td>None</td>
+      <td>True</td>
+      <td>None</td>
       <td>threshold crossing supported by same-input/source/engine/config provenance</td>
       <td>Exported pct_in=0.0847953 passes A min_pct=0.05, fails B min_pct=0.1.</td>
     </tr>
@@ -365,6 +391,8 @@
       <td>0.05</td>
       <td>0.1</td>
       <td>6.53702</td>
+      <td>None</td>
+      <td>True</td>
       <td>None</td>
       <td>threshold crossing supported by same-input/source/engine/config provenance</td>
       <td>Exported pct_in=0.0614035 passes A min_pct=0.05, fails B min_pct=0.1.</td>
@@ -381,6 +409,8 @@
       <td>0.1</td>
       <td>7.06723</td>
       <td>None</td>
+      <td>True</td>
+      <td>None</td>
       <td>threshold crossing supported by same-input/source/engine/config provenance</td>
       <td>Exported pct_in=0.0555556 passes A min_pct=0.05, fails B min_pct=0.1.</td>
     </tr>
@@ -395,6 +425,8 @@
       <td>0.05</td>
       <td>0.1</td>
       <td>5.62506</td>
+      <td>None</td>
+      <td>True</td>
       <td>None</td>
       <td>threshold crossing supported by same-input/source/engine/config provenance</td>
       <td>Exported pct_in=0.0614035 passes A min_pct=0.05, fails B min_pct=0.1.</td>
@@ -411,6 +443,8 @@
       <td>0.1</td>
       <td>5.70555</td>
       <td>None</td>
+      <td>True</td>
+      <td>None</td>
       <td>threshold crossing supported by same-input/source/engine/config provenance</td>
       <td>Exported pct_in=0.0789474 passes A min_pct=0.05, fails B min_pct=0.1.</td>
     </tr>
@@ -426,6 +460,8 @@
       <td>0.1</td>
       <td>6.59455</td>
       <td>None</td>
+      <td>True</td>
+      <td>None</td>
       <td>threshold crossing supported by same-input/source/engine/config provenance</td>
       <td>Exported pct_in=0.0935673 passes A min_pct=0.05, fails B min_pct=0.1.</td>
     </tr>
@@ -440,6 +476,8 @@
       <td>0.05</td>
       <td>0.1</td>
       <td>6.12081</td>
+      <td>None</td>
+      <td>True</td>
       <td>None</td>
       <td>threshold crossing supported by same-input/source/engine/config provenance</td>
       <td>Exported pct_in=0.0847953 passes A min_pct=0.05, fails B min_pct=0.1.</td>
@@ -459,6 +497,8 @@
       <th>min_pct_B</th>
       <th>log2FC_A</th>
       <th>log2FC_B</th>
+      <th>explainable</th>
+      <th>rank_from_exported_prefix_B</th>
       <th>evidence</th>
       <th>explanation</th>
     </tr>
@@ -476,6 +516,8 @@
       <td>0.1</td>
       <td>None</td>
       <td>5.09433</td>
+      <td>False</td>
+      <td>None</td>
       <td>unresolved</td>
       <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
     </tr>
@@ -491,6 +533,8 @@
       <td>0.1</td>
       <td>None</td>
       <td>4.93703</td>
+      <td>False</td>
+      <td>None</td>
       <td>unresolved</td>
       <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
     </tr>
@@ -506,6 +550,8 @@
       <td>0.1</td>
       <td>None</td>
       <td>5.39071</td>
+      <td>False</td>
+      <td>None</td>
       <td>unresolved</td>
       <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
     </tr>
@@ -521,6 +567,8 @@
       <td>0.1</td>
       <td>None</td>
       <td>5.38938</td>
+      <td>False</td>
+      <td>None</td>
       <td>unresolved</td>
       <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
     </tr>
@@ -536,6 +584,8 @@
       <td>0.1</td>
       <td>None</td>
       <td>5.31856</td>
+      <td>False</td>
+      <td>None</td>
       <td>unresolved</td>
       <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
     </tr>
@@ -551,6 +601,8 @@
       <td>0.1</td>
       <td>None</td>
       <td>5.11045</td>
+      <td>False</td>
+      <td>None</td>
       <td>unresolved</td>
       <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
     </tr>
@@ -566,6 +618,8 @@
       <td>0.1</td>
       <td>None</td>
       <td>4.96373</td>
+      <td>False</td>
+      <td>None</td>
       <td>unresolved</td>
       <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
     </tr>
@@ -584,6 +638,8 @@
       <th>min_pct_B</th>
       <th>log2FC_A</th>
       <th>log2FC_B</th>
+      <th>explainable</th>
+      <th>rank_from_exported_prefix_B</th>
       <th>evidence</th>
       <th>explanation</th>
     </tr>
@@ -601,8 +657,10 @@
       <td>0.1</td>
       <td>6.64532</td>
       <td>6.64532</td>
-      <td>direct export observation</td>
-      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+      <td>True</td>
+      <td>4</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 4.</td>
     </tr>
     <tr>
       <td>B cells</td>
@@ -616,8 +674,10 @@
       <td>0.1</td>
       <td>5.47402</td>
       <td>5.47402</td>
-      <td>direct export observation</td>
-      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+      <td>True</td>
+      <td>11</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 11.</td>
     </tr>
     <tr>
       <td>B cells</td>
@@ -631,8 +691,10 @@
       <td>0.1</td>
       <td>6.07078</td>
       <td>6.07078</td>
-      <td>direct export observation</td>
-      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+      <td>True</td>
+      <td>6</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 6.</td>
     </tr>
     <tr>
       <td>B cells</td>
@@ -646,8 +708,10 @@
       <td>0.1</td>
       <td>5.53236</td>
       <td>5.53236</td>
-      <td>direct export observation</td>
-      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+      <td>True</td>
+      <td>9</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 9.</td>
     </tr>
     <tr>
       <td>B cells</td>
@@ -661,8 +725,10 @@
       <td>0.1</td>
       <td>6.04375</td>
       <td>6.04375</td>
-      <td>direct export observation</td>
-      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+      <td>True</td>
+      <td>7</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 7.</td>
     </tr>
     <tr>
       <td>B cells</td>
@@ -676,8 +742,10 @@
       <td>0.1</td>
       <td>5.85166</td>
       <td>5.85166</td>
-      <td>direct export observation</td>
-      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+      <td>True</td>
+      <td>8</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 8.</td>
     </tr>
     <tr>
       <td>B cells</td>
@@ -691,8 +759,10 @@
       <td>0.1</td>
       <td>5.4298</td>
       <td>5.4298</td>
-      <td>direct export observation</td>
-      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+      <td>True</td>
+      <td>13</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 13.</td>
     </tr>
     <tr>
       <td>B cells</td>
@@ -706,8 +776,10 @@
       <td>0.1</td>
       <td>6.72277</td>
       <td>6.72277</td>
-      <td>direct export observation</td>
-      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+      <td>True</td>
+      <td>3</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 3.</td>
     </tr>
     <tr>
       <td>B cells</td>
@@ -721,8 +793,10 @@
       <td>0.1</td>
       <td>5.47825</td>
       <td>5.47825</td>
-      <td>direct export observation</td>
-      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+      <td>True</td>
+      <td>10</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 10.</td>
     </tr>
     <tr>
       <td>B cells</td>
@@ -736,8 +810,10 @@
       <td>0.1</td>
       <td>6.15654</td>
       <td>6.15654</td>
-      <td>direct export observation</td>
-      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+      <td>True</td>
+      <td>5</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 5.</td>
     </tr>
     <tr>
       <td>B cells</td>
@@ -751,8 +827,10 @@
       <td>0.1</td>
       <td>5.46807</td>
       <td>5.46807</td>
-      <td>direct export observation</td>
-      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+      <td>True</td>
+      <td>12</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 12.</td>
     </tr>
     <tr>
       <td>B cells</td>
@@ -766,8 +844,10 @@
       <td>0.1</td>
       <td>6.94705</td>
       <td>6.94705</td>
-      <td>direct export observation</td>
-      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+      <td>True</td>
+      <td>2</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 2.</td>
     </tr>
   </tbody>
 </table><h3>Unchanged</h3><table border="1" class="dataframe">
@@ -784,6 +864,8 @@
       <th>min_pct_B</th>
       <th>log2FC_A</th>
       <th>log2FC_B</th>
+      <th>explainable</th>
+      <th>rank_from_exported_prefix_B</th>
       <th>evidence</th>
       <th>explanation</th>
     </tr>
@@ -801,6 +883,8 @@
       <td>0.1</td>
       <td>7.39219</td>
       <td>7.39219</td>
+      <td>False</td>
+      <td>1</td>
       <td>direct export observation</td>
       <td>No membership/rank change.</td>
     </tr>

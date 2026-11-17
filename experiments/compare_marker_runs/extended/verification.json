@@ -1,0 +1,66 @@
+{
+  "comparisons": [
+    {
+      "comparison": "original_min_pct",
+      "changes": {
+        "added": 7,
+        "removed": 7,
+        "reranked": 12,
+        "unchanged": 1
+      },
+      "explainable": {
+        "added": 0,
+        "removed": 7,
+        "reranked": 12
+      },
+      "changed_total": 26,
+      "explainable_total": 19
+    },
+    {
+      "comparison": "top_n",
+      "changes": {
+        "added": 0,
+        "removed": 10,
+        "reranked": 0,
+        "unchanged": 10
+      },
+      "explainable": {
+        "added": 0,
+        "removed": 10,
+        "reranked": 0
+      },
+      "changed_total": 10,
+      "explainable_total": 10,
+      "evidence_types": {
+        "top_n truncation established from exported prefix": 10
+      },
+      "direct_scanpy_match": true
+    },
+    {
+      "comparison": "combined",
+      "changes": {
+        "added": 0,
+        "removed": 10,
+        "reranked": 9,
+        "unchanged": 1
+      },
+      "explainable": {
+        "added": 0,
+        "removed": 10,
+        "reranked": 9
+      },
+      "changed_total": 19,
+      "explainable_total": 19,
+      "evidence_types": {
+        "threshold crossing supported by same-input/source/engine/config provenance": 7,
+        "rank shift established from exported prefix": 9,
+        "top_n truncation established from exported prefix": 3
+      },
+      "direct_scanpy_match": true
+    }
+  ],
+  "context_mismatch_suppresses_all_causes": true,
+  "source_engine_version_mismatch_checks": true,
+  "zip_directory_parity": true,
+  "dataset_sha256": "0db367b991dd95809732b218539ede489bea99113807f62ebd7ccc970025fe38"
+}
