@@ -187,3 +187,42 @@ A second extended run reproduced every file (including bundle ZIPs) byte for byt
 The documented two-ZIP command produced an identical machine-readable diff to the
 sample. A future upload UI should stay experimental and add bounded archive
 validation before accepting arbitrary public bundles.
+
+## Read-only experimental Streamlit page (undeployed)
+
+Launch this separate entrypoint from repository root:
+
+```sh
+PYTHONPATH=. MPLCONFIGDIR=/tmp/mgf-mpl .venv/bin/python -m streamlit run \
+  experiments/compare_marker_runs/streamlit_app.py --server.port 8507
+```
+
+Open http://localhost:8507. Upload existing ZIP bundles as **Earlier run** and
+**Later run**, then choose a shared exported cluster. `extended/A.zip` plus
+`extended/top_n/B.zip` or `extended/combined/B.zip` are ready to try. To create a ZIP
+for the original filter example, archive the four files in `sample/B` at the ZIP
+root; no new format is required. The page shows settings first, then shortlisted
+marker changes and evidence, and downloads the exact existing all-cluster JSON diff.
+It never uploads expression data, executes marker analysis or changes an export.
+
+Input bundles must contain the current marker CSV and version-2 settings plus a
+separate/embedded replay config. Missing provenance is allowed with an explicit
+warning and no causal explanations. Invalid numeric tables/metadata or incomplete
+bundles receive feedback. Matching input hashes are recorded identity evidence;
+original datasets are not available to independently verify them. Upload changes
+clear cached comparisons and visible results. See [verification notes](PAGE_VERIFICATION.md).
+
+Reproduce browser and page checks with the local server running (Python Playwright
+and `/usr/bin/chromium` are needed for the browser command):
+
+```sh
+python experiments/compare_marker_runs/browser_page.py \
+  --url http://127.0.0.1:8507 --output /tmp/compare-page-verification
+MPLCONFIGDIR=/tmp/mgf-mpl .venv/bin/python -m pytest \
+  experiments/compare_marker_runs/test_compare.py \
+  experiments/compare_marker_runs/test_page.py -q
+```
+
+The browser check uses only committed exports, including synthetic invalid,
+no-shared-cluster and missing-identity variants. Screenshots/downloads go to /tmp,
+not Git. The stable app and CLI are unchanged; no deployment or PR is created.
