@@ -4,9 +4,11 @@ A read-only page for two existing MarkerGeneFinderMini export bundles. It shows
 changed settings and recorded matrix/engine context, then additions, removals and
 rank changes **within exported shortlists**. It runs separately from the stable
 app; the stable app, CLI, API, export formats and analysis defaults are unchanged.
-The page makes no annotation verdicts. Separate Community Cloud deployment is
-prepared but blocked on account sign-in; no hosted demo URL is verified. See
-[deployment settings and clean-install instructions](DEPLOYMENT.md).
+The page makes no annotation verdicts.
+
+**Hosted demo:** [Compare exported marker runs](https://cellcopilot-compare-runs.streamlit.app/).
+Sample loading, uploads and downloads were verified against the committed exports.
+See [deployment settings, hosted verification and clean-install instructions](DEPLOYMENT.md).
 
 ## Try it without downloading expression data
 
