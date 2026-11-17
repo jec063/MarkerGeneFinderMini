@@ -1,5 +1,10 @@
 # Separate experimental comparison demo
 
+**Working demo:** https://cellcopilot-compare-runs.streamlit.app/
+
+Public sample and upload workflows verified on November 17, 2026. This is a
+separate experimental app; the existing marker-analysis app is unchanged.
+
 ## Local launch and clean installation
 
 From a checkout, create a fresh Python 3.12 environment (3.10–3.12 are tested):
@@ -26,8 +31,7 @@ the comparison page. Do not repoint the existing marker-analysis app at this fil
 
 ## Streamlit Community Cloud configuration
 
-Create a **new app** from https://share.streamlit.io/ with these settings after
-merging the PR:
+Deployment target settings (use these for recreating the separate app):
 
 | Field | Value |
 | --- | --- |
@@ -35,23 +39,16 @@ merging the PR:
 | Branch | `main` |
 | Main file path | `experiments/compare_marker_runs/streamlit_app.py` |
 | Python version | `3.12` |
-| App URL slug | Request `cellcopilot-compare-runs`, or another available separate slug |
+| App URL | https://cellcopilot-compare-runs.streamlit.app/ |
 | Dependencies | Root `requirements.txt` |
 | Secrets | None required by this demo |
 
-**Deployment status:** prepared, not published. In the Codex workspace,
-Community Cloud opens at **Continue to sign-in**. No authenticated Chrome profile
-or Streamlit deployment credential is configured. GitHub repository access does
-not provide a Community Cloud login. The exact remaining action is for an account
-with deployment access to sign in, create the new app using the settings above,
-and choose an available URL slug. No working demo URL has been verified; the
-requested slug is not a claim that the URL exists. Keep the existing
-`cellcopilot-marker-finder.streamlit.app` app's settings unchanged.
-
-Once deployed, record the actual working URL here and in the experiment README,
-then repeat the checks below against that URL. Hosted sample loading, upload,
-cluster selection and download checks remain unverified until account access is
-available. The local server is not a public deployment.
+**Deployment status:** published and publicly verified. The earlier account-access
+blocker was resolved by the owner deploying the app. Public verification requires
+no Community Cloud account. Private management settings and the server's exact Git
+revision are not exposed by this check; results are compared against repository
+reference `504cb5174cf496d4536e9233998c2152d6fb9b28` and its committed Muraro bundles.
+Keep the existing `cellcopilot-marker-finder.streamlit.app` app's settings unchanged.
 
 ## Browser acceptance check
 
@@ -59,12 +56,14 @@ With Python Playwright and `/usr/bin/chromium` available:
 
 ```sh
 python experiments/compare_marker_runs/browser_demo.py \
-  --url http://127.0.0.1:8510 --output /tmp/comparison-demo-browser
+  --url https://cellcopilot-compare-runs.streamlit.app/ --output /tmp/comparison-demo-browser
 python experiments/compare_marker_runs/browser_page.py \
-  --url http://127.0.0.1:8510 --output /tmp/comparison-upload-browser
+  --url https://cellcopilot-compare-runs.streamlit.app/ --output /tmp/comparison-upload-browser
 ```
 
-Substitute the hosted HTTPS URL after deployment. The first check loads the sample,
+For local checks, substitute `http://127.0.0.1:8510`. The iframe-aware runners locate
+the rendered application inside Community Cloud and wait for expected result state
+instead of relying on local response times. The first check loads the sample,
 selects beta and duct, verifies settings/overview/counts, compares JSON downloads
 with the same uploaded Muraro bundles, switches input modes, rejects an invalid
 replacement without showing stale sample results, and restores the sample. The
@@ -91,5 +90,39 @@ identity, identical runs, incomplete bundles and stale-result clearing.
 
 Compact results: [demo-verification.json](demo-verification.json). The sample
 JSON downloads match the export-only comparator exactly. Sample files, statistical
-logic and export formats are unchanged. Hosted verification is still blocked as
-described above; no working hosted URL or researcher time saving is claimed.
+logic and export formats are unchanged. This original local record predates public
+deployment; the current hosted evidence is recorded below. Researcher time savings
+remain unmeasured.
+
+## Hosted verification
+
+The normal public URL opened the standalone comparison page. Selecting **Try sample
+comparison** showed min_pct **0.10 → 0.25**, the same named `log1p_cp10k` layer and
+Scanpy, and beta as the most changed cluster: **28 exported entries** (9 added,
+9 removed, 10 reranked), versus duct 25 and alpha 23.
+
+- Beta **ZNF385D**: earlier rank 2, detection **0.1964286 = 19.64%**, below the new
+  **25%** threshold. Removal is from the exported shortlist, not absence of expression.
+- **GLP1R**: later rank 12; earlier rank **Unavailable** because the earlier export
+  contains no row. Its earlier rank or filter outcome cannot be inferred from these
+  exports. No full-analysis rank is inserted into the page.
+
+Selected beta and duct in the sample, then uploaded the two committed Muraro ZIPs
+through **Upload my bundles** and selected beta. Replaced an upload with invalid
+bytes, confirmed error feedback and
+removal of stale results/download controls, and returned to a fresh sample. Both
+complete hosted runs passed; all **eight Muraro JSON downloads** matched the same
+committed comparison exactly. Original PBMC checks also passed for min_pct-only,
+top-N-only, combined settings, identical runs, mismatched contexts, incomplete
+bundles, missing identity and no shared clusters.
+
+[Fix PR #78](https://github.com/jec063/MarkerGeneFinderMini/pull/78) explicitly resets
+the selector for new comparisons after an intermittent recovery retained the old
+cluster. It also makes the browser checks handle Cloud's iframe and await settled
+results. The hosted checks were repeated after the fix merged. Comparison logic,
+statistics and exported evidence did not change.
+
+Compact evidence: [hosted-verification.json](hosted-verification.json), including the
+repository reference, canonical diff hash and CI links. Downloaded diffs and browser
+screenshots remain outside Git. This is an agent-operated functional check, not a
+researcher usability study; claims about researcher time savings remain pending.

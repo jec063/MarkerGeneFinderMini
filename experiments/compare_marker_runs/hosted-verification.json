@@ -1,0 +1,50 @@
+{
+  "verified_on": "2026-11-17",
+  "url": "https://cellcopilot-compare-runs.streamlit.app/",
+  "repository_reference": "504cb5174cf496d4536e9233998c2152d6fb9b28",
+  "browser": "Headless Chromium / Playwright",
+  "normal_public_url_and_sample_action_verified": true,
+  "min_pct": [
+    0.1,
+    0.25
+  ],
+  "shared_cluster_changed_entries": {
+    "beta": 28,
+    "duct": 25,
+    "alpha": 23
+  },
+  "ZNF385D": {
+    "cluster": "beta",
+    "change": "removed from exported shortlist",
+    "earlier_rank": 2,
+    "earlier_detection": 0.1964285714285714,
+    "later_min_pct": 0.25,
+    "threshold_explanation_supported": true
+  },
+  "GLP1R": {
+    "cluster": "beta",
+    "earlier_rank": null,
+    "later_rank": 12,
+    "earlier_export_has_row": false,
+    "cause_available_from_exports": false
+  },
+  "muraro_browser_runs": 2,
+  "muraro_downloads_per_run": 4,
+  "all_muraro_downloads_equal_committed_comparison": true,
+  "canonical_comparison_sha256": "dd7d52190573b084c7f01c1cf203a65f0346ab676c413aeb48d1eb77fa98a185",
+  "sample_upload_switch_clears_visible_results": true,
+  "invalid_input_feedback_and_download_removal": true,
+  "sample_recovery_resets_cluster_to_alpha": true,
+  "pbmc_cases_with_exact_json_parity": [
+    "original",
+    "top_n",
+    "combined",
+    "identical",
+    "context_mismatch"
+  ],
+  "no_shared_clusters_and_missing_identity_feedback": true,
+  "fix_pr": "https://github.com/jec063/MarkerGeneFinderMini/pull/78",
+  "fix_ci": "https://github.com/jec063/MarkerGeneFinderMini/actions/runs/44164847603",
+  "postmerge_ci": "https://github.com/jec063/MarkerGeneFinderMini/actions/runs/44165369196",
+  "researcher_time_savings": "Not measured; pending human review."
+}

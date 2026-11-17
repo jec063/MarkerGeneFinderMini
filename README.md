@@ -8,7 +8,7 @@ analysis-settings exports and reproducibility bundles.
 
 **Live app:** [Launch the CellCoPilot Marker Gene Finder](https://cellcopilot-marker-finder.streamlit.app/)
 
-**Experimental comparison demo:** [Sample comparison, local launch and separate deployment setup](experiments/compare_marker_runs/DEPLOYMENT.md). Hosted publication is pending Streamlit account access.
+**Experimental comparison demo:** [Compare exported marker runs](https://cellcopilot-compare-runs.streamlit.app/) using the Muraro sample or two uploaded bundles. [Launch and verification instructions](experiments/compare_marker_runs/DEPLOYMENT.md).
 
 The program compares gene expression inside each cluster with all other cells and ranks genes using log2 fold change.
 
