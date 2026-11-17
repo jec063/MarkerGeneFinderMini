@@ -1,0 +1,808 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Compare marker runs</title><style>body{font:15px system-ui;margin:30px}table{border-collapse:collapse;font-size:12px}td,th{padding:7px;border:1px solid #ccc;max-width:360px;overflow-wrap:anywhere}pre{white-space:pre-wrap}h2{margin-top:30px}</style></head><body><h1>CellCoPilot · Compare marker runs</h1><p>Existing exports only; no analysis is rerun to create this comparison. Missing rows are not zero expression.</p><h2>Run A</h2><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>matrix</th>
+      <th>engine</th>
+      <th>engine_version</th>
+      <th>input_sha256</th>
+      <th>marker_csv_sha256</th>
+      <th>target_clusters</th>
+      <th>min_pct</th>
+      <th>top_n</th>
+      <th>rank_by</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>AnnData.raw.X</td>
+      <td>scanpy</td>
+      <td>1.12.5</td>
+      <td>0db367b991dd95809732b218539ede489bea99113807f62ebd7ccc970025fe38</td>
+      <td>625dfa85ef93a982420e786a03d94ec89d61a7e7344842042adee394988f2031</td>
+      <td>[B cells]</td>
+      <td>0.05</td>
+      <td>20</td>
+      <td>log2FC</td>
+    </tr>
+  </tbody>
+</table><details><summary>Complete exported configuration/settings/provenance</summary><pre>{
+  &quot;config&quot;: {
+    &quot;cluster_column&quot;: &quot;louvain&quot;,
+    &quot;cell_column&quot;: &quot;cell&quot;,
+    &quot;engine&quot;: &quot;scanpy&quot;,
+    &quot;top_n&quot;: 20,
+    &quot;pseudocount&quot;: 0.1,
+    &quot;min_pct&quot;: 0.05,
+    &quot;min_pct_difference&quot;: 0.0,
+    &quot;min_log2fc&quot;: 0.0,
+    &quot;max_p_adj&quot;: 1.0,
+    &quot;max_pct_out&quot;: 1.0,
+    &quot;rank_by&quot;: &quot;log2FC&quot;,
+    &quot;min_cluster_size&quot;: 1,
+    &quot;min_cells_expressing&quot;: 0,
+    &quot;min_cluster_mean&quot;: 0.0,
+    &quot;min_mean_difference&quot;: 0.0,
+    &quot;max_other_mean&quot;: null,
+    &quot;max_cells_expressing_out&quot;: null,
+    &quot;layer&quot;: null,
+    &quot;use_raw&quot;: true,
+    &quot;target_clusters&quot;: [
+      &quot;B cells&quot;
+    ],
+    &quot;excluded_genes&quot;: [],
+    &quot;excluded_prefixes&quot;: [],
+    &quot;max_dense_memory_mb&quot;: 2048.0,
+    &quot;gene_chunk_size&quot;: 1000,
+    &quot;workers&quot;: 1,
+    &quot;schema_name&quot;: &quot;marker-gene-finder.analysis-config&quot;,
+    &quot;schema_version&quot;: 2
+  },
+  &quot;provenance&quot;: {
+    &quot;schema_name&quot;: &quot;marker-gene-finder.provenance&quot;,
+    &quot;schema_version&quot;: 1,
+    &quot;app_version&quot;: &quot;3.0.2&quot;,
+    &quot;requested_engine&quot;: &quot;scanpy&quot;,
+    &quot;resolved_engine&quot;: &quot;scanpy&quot;,
+    &quot;engine_version&quot;: &quot;1.12.5&quot;,
+    &quot;effective_config&quot;: {
+      &quot;cluster_column&quot;: &quot;louvain&quot;,
+      &quot;cell_column&quot;: null,
+      &quot;engine&quot;: &quot;scanpy&quot;,
+      &quot;top_n&quot;: 20,
+      &quot;pseudocount&quot;: null,
+      &quot;min_pct&quot;: 0.05,
+      &quot;min_pct_difference&quot;: 0.0,
+      &quot;min_log2fc&quot;: 0.0,
+      &quot;max_p_adj&quot;: 1.0,
+      &quot;max_pct_out&quot;: 1.0,
+      &quot;rank_by&quot;: &quot;log2FC&quot;,
+      &quot;min_cluster_size&quot;: 1,
+      &quot;min_cells_expressing&quot;: 0,
+      &quot;min_cluster_mean&quot;: 0.0,
+      &quot;min_mean_difference&quot;: 0.0,
+      &quot;max_other_mean&quot;: null,
+      &quot;max_cells_expressing_out&quot;: null,
+      &quot;layer&quot;: null,
+      &quot;use_raw&quot;: true,
+      &quot;target_clusters&quot;: [
+        &quot;B cells&quot;
+      ],
+      &quot;excluded_genes&quot;: [],
+      &quot;excluded_prefixes&quot;: [],
+      &quot;max_dense_memory_mb&quot;: null,
+      &quot;gene_chunk_size&quot;: null,
+      &quot;workers&quot;: 1,
+      &quot;schema_name&quot;: &quot;marker-gene-finder.analysis-config&quot;,
+      &quot;schema_version&quot;: 2
+    },
+    &quot;expression_source&quot;: &quot;AnnData.raw.X&quot;,
+    &quot;layer&quot;: null,
+    &quot;dependency_versions&quot;: {
+      &quot;python&quot;: &quot;3.12.14&quot;,
+      &quot;numpy&quot;: &quot;2.5.4&quot;,
+      &quot;pandas&quot;: &quot;2.3.3&quot;,
+      &quot;scipy&quot;: &quot;1.18.1&quot;,
+      &quot;anndata&quot;: &quot;0.12.19&quot;,
+      &quot;scanpy&quot;: &quot;1.12.5&quot;
+    },
+    &quot;input_sha256&quot;: &quot;0db367b991dd95809732b218539ede489bea99113807f62ebd7ccc970025fe38&quot;
+  },
+  &quot;settings&quot;: {
+    &quot;schema_name&quot;: &quot;marker-gene-finder-analysis-settings&quot;,
+    &quot;schema_version&quot;: 2,
+    &quot;app_version&quot;: &quot;3.0.2&quot;,
+    &quot;settings&quot;: {
+      &quot;cluster_column&quot;: &quot;louvain&quot;,
+      &quot;cell_column&quot;: null,
+      &quot;engine&quot;: &quot;scanpy&quot;,
+      &quot;top_n&quot;: 20,
+      &quot;pseudocount&quot;: null,
+      &quot;min_pct&quot;: 0.05,
+      &quot;min_pct_difference&quot;: 0.0,
+      &quot;min_log2fc&quot;: 0.0,
+      &quot;max_p_adj&quot;: 1.0,
+      &quot;max_pct_out&quot;: 1.0,
+      &quot;rank_by&quot;: &quot;log2FC&quot;,
+      &quot;min_cluster_size&quot;: 1,
+      &quot;min_cells_expressing&quot;: 0,
+      &quot;min_cluster_mean&quot;: 0.0,
+      &quot;min_mean_difference&quot;: 0.0,
+      &quot;max_other_mean&quot;: null,
+      &quot;max_cells_expressing_out&quot;: null,
+      &quot;layer&quot;: null,
+      &quot;use_raw&quot;: true,
+      &quot;target_clusters&quot;: [
+        &quot;B cells&quot;
+      ],
+      &quot;excluded_genes&quot;: [],
+      &quot;excluded_prefixes&quot;: [],
+      &quot;max_dense_memory_mb&quot;: null,
+      &quot;gene_chunk_size&quot;: null,
+      &quot;workers&quot;: 1,
+      &quot;expression_source&quot;: &quot;AnnData.raw.X&quot;
+    }
+  },
+  &quot;marker_sha256&quot;: &quot;625dfa85ef93a982420e786a03d94ec89d61a7e7344842042adee394988f2031&quot;
+}</pre></details><h2>Run B</h2><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>matrix</th>
+      <th>engine</th>
+      <th>engine_version</th>
+      <th>input_sha256</th>
+      <th>marker_csv_sha256</th>
+      <th>target_clusters</th>
+      <th>min_pct</th>
+      <th>top_n</th>
+      <th>rank_by</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>AnnData.raw.X</td>
+      <td>scanpy</td>
+      <td>1.12.5</td>
+      <td>0db367b991dd95809732b218539ede489bea99113807f62ebd7ccc970025fe38</td>
+      <td>f7ed5fa311fd580f25cf8771246f8693feed7bdafaff83daf213551ad1d44860</td>
+      <td>[B cells]</td>
+      <td>0.1</td>
+      <td>20</td>
+      <td>log2FC</td>
+    </tr>
+  </tbody>
+</table><details><summary>Complete exported configuration/settings/provenance</summary><pre>{
+  &quot;config&quot;: {
+    &quot;cluster_column&quot;: &quot;louvain&quot;,
+    &quot;cell_column&quot;: &quot;cell&quot;,
+    &quot;engine&quot;: &quot;scanpy&quot;,
+    &quot;top_n&quot;: 20,
+    &quot;pseudocount&quot;: 0.1,
+    &quot;min_pct&quot;: 0.1,
+    &quot;min_pct_difference&quot;: 0.0,
+    &quot;min_log2fc&quot;: 0.0,
+    &quot;max_p_adj&quot;: 1.0,
+    &quot;max_pct_out&quot;: 1.0,
+    &quot;rank_by&quot;: &quot;log2FC&quot;,
+    &quot;min_cluster_size&quot;: 1,
+    &quot;min_cells_expressing&quot;: 0,
+    &quot;min_cluster_mean&quot;: 0.0,
+    &quot;min_mean_difference&quot;: 0.0,
+    &quot;max_other_mean&quot;: null,
+    &quot;max_cells_expressing_out&quot;: null,
+    &quot;layer&quot;: null,
+    &quot;use_raw&quot;: true,
+    &quot;target_clusters&quot;: [
+      &quot;B cells&quot;
+    ],
+    &quot;excluded_genes&quot;: [],
+    &quot;excluded_prefixes&quot;: [],
+    &quot;max_dense_memory_mb&quot;: 2048.0,
+    &quot;gene_chunk_size&quot;: 1000,
+    &quot;workers&quot;: 1,
+    &quot;schema_name&quot;: &quot;marker-gene-finder.analysis-config&quot;,
+    &quot;schema_version&quot;: 2
+  },
+  &quot;provenance&quot;: {
+    &quot;schema_name&quot;: &quot;marker-gene-finder.provenance&quot;,
+    &quot;schema_version&quot;: 1,
+    &quot;app_version&quot;: &quot;3.0.2&quot;,
+    &quot;requested_engine&quot;: &quot;scanpy&quot;,
+    &quot;resolved_engine&quot;: &quot;scanpy&quot;,
+    &quot;engine_version&quot;: &quot;1.12.5&quot;,
+    &quot;effective_config&quot;: {
+      &quot;cluster_column&quot;: &quot;louvain&quot;,
+      &quot;cell_column&quot;: null,
+      &quot;engine&quot;: &quot;scanpy&quot;,
+      &quot;top_n&quot;: 20,
+      &quot;pseudocount&quot;: null,
+      &quot;min_pct&quot;: 0.1,
+      &quot;min_pct_difference&quot;: 0.0,
+      &quot;min_log2fc&quot;: 0.0,
+      &quot;max_p_adj&quot;: 1.0,
+      &quot;max_pct_out&quot;: 1.0,
+      &quot;rank_by&quot;: &quot;log2FC&quot;,
+      &quot;min_cluster_size&quot;: 1,
+      &quot;min_cells_expressing&quot;: 0,
+      &quot;min_cluster_mean&quot;: 0.0,
+      &quot;min_mean_difference&quot;: 0.0,
+      &quot;max_other_mean&quot;: null,
+      &quot;max_cells_expressing_out&quot;: null,
+      &quot;layer&quot;: null,
+      &quot;use_raw&quot;: true,
+      &quot;target_clusters&quot;: [
+        &quot;B cells&quot;
+      ],
+      &quot;excluded_genes&quot;: [],
+      &quot;excluded_prefixes&quot;: [],
+      &quot;max_dense_memory_mb&quot;: null,
+      &quot;gene_chunk_size&quot;: null,
+      &quot;workers&quot;: 1,
+      &quot;schema_name&quot;: &quot;marker-gene-finder.analysis-config&quot;,
+      &quot;schema_version&quot;: 2
+    },
+    &quot;expression_source&quot;: &quot;AnnData.raw.X&quot;,
+    &quot;layer&quot;: null,
+    &quot;dependency_versions&quot;: {
+      &quot;python&quot;: &quot;3.12.14&quot;,
+      &quot;numpy&quot;: &quot;2.5.4&quot;,
+      &quot;pandas&quot;: &quot;2.3.3&quot;,
+      &quot;scipy&quot;: &quot;1.18.1&quot;,
+      &quot;anndata&quot;: &quot;0.12.19&quot;,
+      &quot;scanpy&quot;: &quot;1.12.5&quot;
+    },
+    &quot;input_sha256&quot;: &quot;0db367b991dd95809732b218539ede489bea99113807f62ebd7ccc970025fe38&quot;
+  },
+  &quot;settings&quot;: {
+    &quot;schema_name&quot;: &quot;marker-gene-finder-analysis-settings&quot;,
+    &quot;schema_version&quot;: 2,
+    &quot;app_version&quot;: &quot;3.0.2&quot;,
+    &quot;settings&quot;: {
+      &quot;cluster_column&quot;: &quot;louvain&quot;,
+      &quot;cell_column&quot;: null,
+      &quot;engine&quot;: &quot;scanpy&quot;,
+      &quot;top_n&quot;: 20,
+      &quot;pseudocount&quot;: null,
+      &quot;min_pct&quot;: 0.1,
+      &quot;min_pct_difference&quot;: 0.0,
+      &quot;min_log2fc&quot;: 0.0,
+      &quot;max_p_adj&quot;: 1.0,
+      &quot;max_pct_out&quot;: 1.0,
+      &quot;rank_by&quot;: &quot;log2FC&quot;,
+      &quot;min_cluster_size&quot;: 1,
+      &quot;min_cells_expressing&quot;: 0,
+      &quot;min_cluster_mean&quot;: 0.0,
+      &quot;min_mean_difference&quot;: 0.0,
+      &quot;max_other_mean&quot;: null,
+      &quot;max_cells_expressing_out&quot;: null,
+      &quot;layer&quot;: null,
+      &quot;use_raw&quot;: true,
+      &quot;target_clusters&quot;: [
+        &quot;B cells&quot;
+      ],
+      &quot;excluded_genes&quot;: [],
+      &quot;excluded_prefixes&quot;: [],
+      &quot;max_dense_memory_mb&quot;: null,
+      &quot;gene_chunk_size&quot;: null,
+      &quot;workers&quot;: 1,
+      &quot;expression_source&quot;: &quot;AnnData.raw.X&quot;
+    }
+  },
+  &quot;marker_sha256&quot;: &quot;f7ed5fa311fd580f25cf8771246f8693feed7bdafaff83daf213551ad1d44860&quot;
+}</pre></details><h2>Settings changed</h2><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>setting</th>
+      <th>A</th>
+      <th>B</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>min_pct</td>
+      <td>0.05</td>
+      <td>0.1</td>
+    </tr>
+  </tbody>
+</table><p>Comparable input/source/engine/dependency provenance: True. Confirmed sole analysis setting change is min_pct: True.</p><h2>Marker changes</h2><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>added</th>
+      <th>removed</th>
+      <th>reranked</th>
+      <th>unchanged</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>7</td>
+      <td>7</td>
+      <td>12</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table><h3>Removed</h3><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>cluster</th>
+      <th>gene</th>
+      <th>change</th>
+      <th>rank_A</th>
+      <th>rank_B</th>
+      <th>pct_in_A</th>
+      <th>pct_in_B</th>
+      <th>min_pct_A</th>
+      <th>min_pct_B</th>
+      <th>log2FC_A</th>
+      <th>log2FC_B</th>
+      <th>evidence</th>
+      <th>explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>B cells</td>
+      <td>BACE2</td>
+      <td>removed</td>
+      <td>12</td>
+      <td>None</td>
+      <td>0.0847953</td>
+      <td>None</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>5.88413</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.0847953 passes A min_pct=0.05, fails B min_pct=0.1.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>KCNG1</td>
+      <td>removed</td>
+      <td>7</td>
+      <td>None</td>
+      <td>0.0614035</td>
+      <td>None</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>6.53702</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.0614035 passes A min_pct=0.05, fails B min_pct=0.1.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>MACROD2</td>
+      <td>removed</td>
+      <td>2</td>
+      <td>None</td>
+      <td>0.0555556</td>
+      <td>None</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>7.06723</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.0555556 passes A min_pct=0.05, fails B min_pct=0.1.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>PAWR</td>
+      <td>removed</td>
+      <td>15</td>
+      <td>None</td>
+      <td>0.0614035</td>
+      <td>None</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>5.62506</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.0614035 passes A min_pct=0.05, fails B min_pct=0.1.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>RP11-428G5.5</td>
+      <td>removed</td>
+      <td>14</td>
+      <td>None</td>
+      <td>0.0789474</td>
+      <td>None</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>5.70555</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.0789474 passes A min_pct=0.05, fails B min_pct=0.1.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>RP5-887A10.1</td>
+      <td>removed</td>
+      <td>6</td>
+      <td>None</td>
+      <td>0.0935673</td>
+      <td>None</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>6.59455</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.0935673 passes A min_pct=0.05, fails B min_pct=0.1.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>TNFRSF13C</td>
+      <td>removed</td>
+      <td>9</td>
+      <td>None</td>
+      <td>0.0847953</td>
+      <td>None</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>6.12081</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.0847953 passes A min_pct=0.05, fails B min_pct=0.1.</td>
+    </tr>
+  </tbody>
+</table><h3>Added</h3><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>cluster</th>
+      <th>gene</th>
+      <th>change</th>
+      <th>rank_A</th>
+      <th>rank_B</th>
+      <th>pct_in_A</th>
+      <th>pct_in_B</th>
+      <th>min_pct_A</th>
+      <th>min_pct_B</th>
+      <th>log2FC_A</th>
+      <th>log2FC_B</th>
+      <th>evidence</th>
+      <th>explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>B cells</td>
+      <td>CD19</td>
+      <td>added</td>
+      <td>None</td>
+      <td>18</td>
+      <td>None</td>
+      <td>0.216374</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>None</td>
+      <td>5.09433</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>HLA-DOB</td>
+      <td>added</td>
+      <td>None</td>
+      <td>20</td>
+      <td>None</td>
+      <td>0.289474</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>None</td>
+      <td>4.93703</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>LCN8</td>
+      <td>added</td>
+      <td>None</td>
+      <td>14</td>
+      <td>None</td>
+      <td>0.102339</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>None</td>
+      <td>5.39071</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>PKIG</td>
+      <td>added</td>
+      <td>None</td>
+      <td>15</td>
+      <td>None</td>
+      <td>0.277778</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>None</td>
+      <td>5.38938</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>PNOC</td>
+      <td>added</td>
+      <td>None</td>
+      <td>16</td>
+      <td>None</td>
+      <td>0.230994</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>None</td>
+      <td>5.31856</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>RP11-693J15.5</td>
+      <td>added</td>
+      <td>None</td>
+      <td>17</td>
+      <td>None</td>
+      <td>0.114035</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>None</td>
+      <td>5.11045</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>SPIB</td>
+      <td>added</td>
+      <td>None</td>
+      <td>19</td>
+      <td>None</td>
+      <td>0.248538</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>None</td>
+      <td>4.96373</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+  </tbody>
+</table><h3>Reranked</h3><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>cluster</th>
+      <th>gene</th>
+      <th>change</th>
+      <th>rank_A</th>
+      <th>rank_B</th>
+      <th>pct_in_A</th>
+      <th>pct_in_B</th>
+      <th>min_pct_A</th>
+      <th>min_pct_B</th>
+      <th>log2FC_A</th>
+      <th>log2FC_B</th>
+      <th>evidence</th>
+      <th>explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>B cells</td>
+      <td>CD79A</td>
+      <td>reranked</td>
+      <td>5</td>
+      <td>4</td>
+      <td>0.935673</td>
+      <td>0.935673</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>6.64532</td>
+      <td>6.64532</td>
+      <td>direct export observation</td>
+      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>FAM129C</td>
+      <td>reranked</td>
+      <td>18</td>
+      <td>11</td>
+      <td>0.122807</td>
+      <td>0.122807</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>5.47402</td>
+      <td>5.47402</td>
+      <td>direct export observation</td>
+      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>FCER2</td>
+      <td>reranked</td>
+      <td>10</td>
+      <td>6</td>
+      <td>0.385965</td>
+      <td>0.385965</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>6.07078</td>
+      <td>6.07078</td>
+      <td>direct export observation</td>
+      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>FCRL2</td>
+      <td>reranked</td>
+      <td>16</td>
+      <td>9</td>
+      <td>0.108187</td>
+      <td>0.108187</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>5.53236</td>
+      <td>5.53236</td>
+      <td>direct export observation</td>
+      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>FCRLA</td>
+      <td>reranked</td>
+      <td>11</td>
+      <td>7</td>
+      <td>0.298246</td>
+      <td>0.298246</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>6.04375</td>
+      <td>6.04375</td>
+      <td>direct export observation</td>
+      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>IGLL5</td>
+      <td>reranked</td>
+      <td>13</td>
+      <td>8</td>
+      <td>0.236842</td>
+      <td>0.236842</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>5.85166</td>
+      <td>5.85166</td>
+      <td>direct export observation</td>
+      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>KIAA0125</td>
+      <td>reranked</td>
+      <td>20</td>
+      <td>13</td>
+      <td>0.222222</td>
+      <td>0.222222</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>5.4298</td>
+      <td>5.4298</td>
+      <td>direct export observation</td>
+      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>LINC00926</td>
+      <td>reranked</td>
+      <td>4</td>
+      <td>3</td>
+      <td>0.564327</td>
+      <td>0.564327</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>6.72277</td>
+      <td>6.72277</td>
+      <td>direct export observation</td>
+      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>MS4A1</td>
+      <td>reranked</td>
+      <td>17</td>
+      <td>10</td>
+      <td>0.859649</td>
+      <td>0.859649</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>5.47825</td>
+      <td>5.47825</td>
+      <td>direct export observation</td>
+      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>TCL1A</td>
+      <td>reranked</td>
+      <td>8</td>
+      <td>5</td>
+      <td>0.622807</td>
+      <td>0.622807</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>6.15654</td>
+      <td>6.15654</td>
+      <td>direct export observation</td>
+      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>TSPAN13</td>
+      <td>reranked</td>
+      <td>19</td>
+      <td>12</td>
+      <td>0.309942</td>
+      <td>0.309942</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>5.46807</td>
+      <td>5.46807</td>
+      <td>direct export observation</td>
+      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+    </tr>
+    <tr>
+      <td>B cells</td>
+      <td>VPREB3</td>
+      <td>reranked</td>
+      <td>3</td>
+      <td>2</td>
+      <td>0.491228</td>
+      <td>0.491228</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>6.94705</td>
+      <td>6.94705</td>
+      <td>direct export observation</td>
+      <td>Shared marker moved in the exported ranked list. Its exported statistics are unchanged; filtering can shift positions. Full pre-filter ordering is not exported.</td>
+    </tr>
+  </tbody>
+</table><h3>Unchanged</h3><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>cluster</th>
+      <th>gene</th>
+      <th>change</th>
+      <th>rank_A</th>
+      <th>rank_B</th>
+      <th>pct_in_A</th>
+      <th>pct_in_B</th>
+      <th>min_pct_A</th>
+      <th>min_pct_B</th>
+      <th>log2FC_A</th>
+      <th>log2FC_B</th>
+      <th>evidence</th>
+      <th>explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>B cells</td>
+      <td>AC079767.4</td>
+      <td>unchanged</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0.125731</td>
+      <td>0.125731</td>
+      <td>0.05</td>
+      <td>0.1</td>
+      <td>7.39219</td>
+      <td>7.39219</td>
+      <td>direct export observation</td>
+      <td>No membership/rank change.</td>
+    </tr>
+  </tbody>
+</table><p>min_pct and pct_in are fractions, not percentages. Log2FC is Scanpy’s approximate fold change. Means/detection use the selected matrix’s existing scale; raw is a storage location, not a preprocessing guarantee. A top_n CSV does not include failed genes or complete prior ranks.</p></body></html>
