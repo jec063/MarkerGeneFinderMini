@@ -8,6 +8,8 @@ analysis-settings exports and reproducibility bundles.
 
 **Live app:** [Launch the CellCoPilot Marker Gene Finder](https://cellcopilot-marker-finder.streamlit.app/)
 
+[Portfolio case study: validating H5AD expression sources](docs/portfolio-case-study.md)
+
 The program compares gene expression inside each cluster with all other cells and ranks genes using log2 fold change.
 
 ## v3 stable release
