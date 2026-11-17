@@ -10,6 +10,7 @@ ROOT=Path(__file__).resolve().parent
 
 def test_original_threshold_and_identical():
     result=compare(ROOT/'sample/A',ROOT/'sample/B')
+    assert compare(ROOT/'extended/A.zip',ROOT/'sample/B.zip')==result
     assert result['counts']==dict(added=7,removed=7,reranked=12,unchanged=1)
     assert result['explainable_changes']==dict(added=0,removed=7,reranked=12)
     unchanged=compare(ROOT/'sample/A',ROOT/'sample/A')

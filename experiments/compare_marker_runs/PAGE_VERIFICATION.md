@@ -40,7 +40,10 @@ the cluster selector does not alter the all-cluster download.
 
 `test_compare.py` and `test_page.py` verify upload/standalone parity, source and
 context suppression, bounded flat-archive validation, source-specific evidence
-labels, identical/no-shared cases, and stale state clearing. All 13 experiment tests passed; the existing repository suite passed 345 tests. The original export-only generation/Scanpy evidence remains the
+labels, identical/no-shared cases, and stale state clearing. At the original page checkpoint, all 13 experiment tests passed locally; the
+Muraro overview subsequently added a fourteenth. The existing repository suite
+passed 345 tests. The review-readiness change explicitly runs all 14 experiment
+tests in CI; the prior default pytest invocation collected only the stable suite. The original export-only generation/Scanpy evidence remains the
 basis for explanations; no statistical algorithm or expression values changed.
 
 The upload adapter allows <=20 MiB compressed bytes, <=50 MiB declared expanded

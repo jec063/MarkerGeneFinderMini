@@ -27,6 +27,7 @@ def main():
         directory=out/name;directory.mkdir(exist_ok=True)
         result=analyze_file(args.input,directory/'marker_gene_results.csv',replace(config,min_pct=threshold),hash_input_file=True)
         bundle=result.to_bundle()
+        (out/(name+'.zip')).write_bytes(bundle)
         with zipfile.ZipFile(__import__('io').BytesIO(bundle)) as archive:
             for member in ['analysis_settings.json','analysis_config.json','provenance.json']:
                 (directory/member).write_bytes(archive.read(member))

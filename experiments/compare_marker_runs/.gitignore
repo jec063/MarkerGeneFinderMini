@@ -1,0 +1,10 @@
+# Regenerated presentation outputs; inputs and compact checks remain tracked.
+**/report.html
+**/identical.html
+**/comparison.json
+/sample/A.zip
+/pancreas/results/earlier/
+/pancreas/results/later/
+/pancreas/results/cluster_summary.csv
+# Public expression datasets belong outside Git.
+*.h5ad

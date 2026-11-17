@@ -1,12 +1,89 @@
-# CellCoPilot prototype: compare existing marker exports
+# Compare marker exports: standalone Streamlit experiment
 
-One static, export-only comparison experiment. Stable app, CLI, API, defaults and
-export formats are unchanged. No source expression is needed to compare exports;
-`generate.py` uses PBMC only to create the sample and independently check it.
+A read-only page for two existing MarkerGeneFinderMini export bundles. It shows
+changed settings and recorded matrix/engine context, then additions, removals and
+rank changes **within exported shortlists**. It runs separately from the stable
+app; the stable app, CLI, API, export formats and analysis defaults are unchanged.
+The page is undeployed and makes no annotation verdicts.
 
-## Run
+## Try it without downloading expression data
 
 From repository root, using the existing requirements/virtual environment:
+
+```sh
+PYTHONPATH=. MPLCONFIGDIR=/tmp/mgf-mpl .venv/bin/python -m streamlit run \
+  experiments/compare_marker_runs/streamlit_app.py --server.port 8507
+```
+
+Open http://localhost:8507 and upload an Earlier run and a Later run:
+
+| Example | Earlier run | Later run | Expected change |
+| --- | --- | --- | --- |
+| PBMC3k: detection threshold | [extended/A.zip](extended/A.zip) | [sample/B.zip](sample/B.zip) | min_pct .05 → .10; 7 added, 7 removed, 12 reranked |
+| PBMC3k: top N | [extended/A.zip](extended/A.zip) | [extended/top_n/B.zip](extended/top_n/B.zip) | top20 → top10; 10 removed |
+| PBMC3k: both settings | [extended/A.zip](extended/A.zip) | [extended/combined/B.zip](extended/combined/B.zip) | 10 removed, 9 reranked |
+| Muraro pancreas | [pancreas/results/earlier.zip](pancreas/results/earlier.zip) | [pancreas/results/later.zip](pancreas/results/later.zip) | min_pct .10 → .25; choose alpha, beta or duct |
+| Identical runs | Any bundle above | The same bundle | No shortlist changes |
+
+In Muraro, beta changes most: **28 entries** (9 added, 9 removed, 10 reranked),
+versus duct 25 and alpha 23. Beta **ZNF385D** has detection 19.64%, so it fails the
+new 25% threshold. **WSCD2** moves from rank 3 to 2 with unchanged statistics.
+**GLP1R** appears at rank 12, but its earlier rank is unavailable in the exports;
+the page leaves its cause unknown. Independent full results place it at earlier
+rank 22; that information is deliberately not supplied to the page.
+
+The overview distinguishes membership changes (added + removed) from all changed
+entries (also reranked); neither measures biological change. The JSON download
+contains all clusters; the selector only filters the view.
+
+## Review map and retained artifacts
+
+1. `compare.py`: existing export-only comparison and conservative explanation rules.
+2. `upload.py`: bounded ZIP validation and adapter; `streamlit_app.py`: separate UI.
+3. `test_compare.py`, `test_page.py`: 14 expression-data-free experiment tests.
+4. [PBMC page verification](PAGE_VERIFICATION.md) and [Muraro QA](pancreas/QA.md):
+   browser observations, independent checks, limitations and reproduction commands.
+
+| Retained files | Reason |
+| --- | --- |
+| ZIPs linked above | Immediately uploadable examples; the Muraro ZIPs are the canonical complete exports |
+| `sample/A`, `sample/B`, `extended/*/B` | Small readable PBMC CSV/settings/config/provenance fixtures used by tests, browser variants and side-by-side checks |
+| `sample/verification.json`, `extended/verification.json` | Full direct-Scanpy checks, counts and hidden-rank validation for PBMC |
+| `pancreas/results/independent_verification.json` | Muraro source hash, counts, preprocessing, direct-Scanpy checks and independent earlier ranks |
+| `page-browser-verification.json`, `pancreas/browser_after.json` | One aggregate browser record per dataset; downloaded JSONs matched standalone comparisons |
+
+Generated HTML reports and full comparison JSONs repeat evidence derivable from
+the retained exports, so they are no longer tracked. Extracted Muraro exports
+repeat the ZIP contents; unzip a bundle to inspect CSV/settings side by side.
+Duplicate PBMC browser and pre-fix Muraro records were removed; the QA note retains
+the pre-fix observations. ZIP copies of PBMC fixtures are intentionally retained
+for immediate uploads and ZIP/directory parity checks. Regenerated outputs are
+ignored locally; downloaded/derived H5AD files must stay outside Git.
+
+## Generate reports from retained exports (no dataset required)
+
+```sh
+.venv/bin/python experiments/compare_marker_runs/compare.py \
+  experiments/compare_marker_runs/extended/A.zip \
+  experiments/compare_marker_runs/sample/B.zip /tmp/compare-pbmc
+.venv/bin/python experiments/compare_marker_runs/compare.py \
+  experiments/compare_marker_runs/pancreas/results/earlier.zip \
+  experiments/compare_marker_runs/pancreas/results/later.zip /tmp/compare-muraro
+```
+
+Each command writes `report.html` and `comparison.json`. Substitute the top-N or
+combined later bundle for those reports. Use the same bundle twice for the
+no-change report. For the synthetic context-mismatch report, use `sample/A` and
+`extended/context_mismatch/B`; its changed input hash must suppress all causes.
+This is a metadata-safety check, not a biological run.
+
+## Regenerate analyses and independent checks
+
+The public PBMC file is the [source-selection QA dataset](../pbmc_h5ad_source_check/README.md),
+SHA-256 `0db367b991dd95809732b218539ede489bea99113807f62ebd7ccc970025fe38`.
+Both runs select `.raw`, Scanpy, B cells versus rest (342 versus 2,296 cells),
+top20 and log2FC ranking. Only min_pct changes .05 → .10; no preprocessing is
+performed. `.raw` is a storage location, not a scale guarantee.
 
 ```sh
 mkdir -p /workspace/compare-marker-input
@@ -14,224 +91,51 @@ curl -fL https://raw.githubusercontent.com/chanzuckerberg/cellxgene/main/example
   -o /workspace/compare-marker-input/pbmc3k.h5ad
 OPENBLAS_NUM_THREADS=1 MPLCONFIGDIR=/tmp/mgf-mpl PYTHONPATH=. \
   .venv/bin/python experiments/compare_marker_runs/generate.py \
-  /workspace/compare-marker-input/pbmc3k.h5ad
-```
-
-The public dataset is the same [PBMC source-selection QA file](../pbmc_h5ad_source_check/README.md),
-SHA-256 `0db367b991dd95809732b218539ede489bea99113807f62ebd7ccc970025fe38`.
-The generator fails on different bytes. Keep the H5AD outside Git. The recorded
-run used Scanpy 1.12.5; both exports record the full scientific dependency versions.
-
-The generator runs the public `analyze_file` API twice with input hashing enabled,
-then extracts files from the existing `MarkerResult.to_bundle()` format. Both use
-`.raw`, Scanpy, `louvain`, B cells versus rest (342 versus 2,296 cells), top_n=20,
-rank_by=log2FC and otherwise default settings. **Only min_pct changes: 0.05 to
-0.10** (5% to 10% target-cluster detection). No normalization is performed here.
-The matrix is the file's selected raw.X; raw is storage, not a scale guarantee.
-
-Compare any two current-format bundle ZIPs or extracted bundle directories:
-
-```sh
-.venv/bin/python experiments/compare_marker_runs/compare.py \
-  experiments/compare_marker_runs/sample/A \
-  experiments/compare_marker_runs/sample/B /tmp/marker-comparison
-```
-
-Open `/tmp/marker-comparison/report.html`, or the committed
-[sample report](sample/report.html). The [no-change sample](sample/identical.html)
-compares A with itself. Complete settings/provenance are expandable. The report
-joins on (cluster, gene), distinguishes absent rows from zero detection, and lists
-added/removed/reranked/shared markers with statistics and the relevant threshold.
-`sample/A` and `sample/B` contain unmodified current-format marker CSV, settings,
-config and provenance files; no new export schema is introduced. SHA-256s of the
-input and marker CSVs establish which files are being compared.
-
-## What this example established
-
-| Change | Count |
-| --- | ---: |
-| Added in B | 7 |
-| Removed from A | 7 |
-| Shared, reranked | 12 |
-| Shared, same rank | 1 |
-
-All seven removed genes have exported A detection between 0.05 and 0.10. For
-example MACROD2 (rank 2, pct_in=0.055556) and BACE2 (rank 12, pct_in=0.084795)
-pass A's threshold and fail B's. Provenance confirms the same input, matrix,
-engine version and dependencies, with min_pct the sole requested/effective
-setting change. This supports a threshold-crossing explanation for these removals.
-MS4A1 moves from rank 17 to 10 with unchanged statistics; CD79A moves from 5 to 4.
-The report distinguishes these list-position changes from statistical changes.
-
-Added markers have no A row. The report explicitly leaves their prior rank/filter
-outcome unresolved, rather than pretending absence means a failed filter. A
-separate full direct-Scanpy check found all seven passed A's filter but ranked
-below its exported top 20 (recorded in sample/verification.json). That information
-is intentionally NOT fed into the export-only report. Similarly, if a gene lacks
-exported detection or comparable input/source/engine provenance, no causal removal
-explanation is asserted. Settings outside the supported monotone top_n/min_pct cases are reported as
-differences without assigning a cause.
-
-## Verification and comparison with side-by-side files
-
-The generator independently calls direct Scanpy rank_genes_groups with explicit
-raw selection, Wilcoxon, tie correction and BH adjustment. It matches permissive
-filters and ordering against both exported top-20 tables, checking detection,
-adjusted p-values and fold changes. It verifies every positive threshold crossing,
-all added markers' full A ranks, identical-export no-change, and refusal to infer
-a cause with missing provenance or missing detection statistics. Assertions fail
-on disagreement. Compact results and verification records are committed.
-
-Opening the two CSVs and settings JSON files side by side exposes the same
-information but requires manually finding the changed setting, joining genes,
-tracking shifted ranks and comparing detection with thresholds. This sample report
-puts all seven supported crossings, 12 rank movements and seven evidence gaps in
-one view, with source/configuration checks alongside them. It made those checks
-explicit and auditable; no reviewer time savings or user preference was measured.
-It cannot recover truncated rows, infer preprocessing, or adjudicate biology.
-
-## Extended checks: top N and multiple settings
-
-The original single-filter comparison remains a regression check. New runs keep
-B cells, raw, Scanpy, input hash and all other settings fixed:
-
-| Comparison (A → B) | Added | Removed | Reranked | Explainable changed entries |
-| --- | ---: | ---: | ---: | ---: |
-| Original: min_pct .05 → .10, top20 fixed | 7 | 7 | 12 | 19/26 |
-| Top N only: top20 → top10, min_pct .05 fixed | 0 | 10 | 0 | 10/10 |
-| Combined: top20/.05 → top10/.10 | 0 | 10 | 9 | 19/19 |
-
-Counts include rank changes, not just membership. Membership-only explanations
-are 7/14, 10/10, and 10/10 respectively. The combined case attributes seven removals
-to a failing detection threshold and three to truncation after filtering. For
-example, MS4A1 passes the new .10 threshold but its post-filter rank is 10; FAM129C
-passes too but moves to 11, so top10 truncates it. The nine shared rank movements
-are established by counting surviving earlier entries in the exported A prefix.
-
-This inference requires matching context, min_pct staying fixed or increasing,
-only top_n/min_pct changing, requested/effective settings agreeing, contiguous
-export ranks, matching expected B prefix, and unchanged shared statistics.
-The code does not fill in unseen rows. In the original comparison, seven additions
-still lack A evidence; their previous ranks remain unknown to the report.
-
-The synthetic `extended/context_mismatch/` example keeps the CSVs but changes
-B's declared input hash. It is explicitly a metadata-safety test, not a biological
-run. The HTML exposes the mismatch and assigns **zero causal explanations**, even
-though the values look like familiar threshold crossings. Additional automated
-checks cover matrix, engine, engine-version and grouping mismatches, missing
-metadata, and missing detection statistics. Differences in context are observations,
-not grounds for attributing a gene's change to a threshold.
-
-Generate all examples after the original sample:
-
-```sh
+  /workspace/compare-marker-input/pbmc3k.h5ad --output /tmp/compare-sample
 OPENBLAS_NUM_THREADS=1 MPLCONFIGDIR=/tmp/mgf-mpl PYTHONPATH=. \
   .venv/bin/python experiments/compare_marker_runs/extend.py \
-  /workspace/compare-marker-input/pbmc3k.h5ad
-.venv/bin/python -m pytest experiments/compare_marker_runs/test_compare.py -q
+  /workspace/compare-marker-input/pbmc3k.h5ad --sample /tmp/compare-sample \
+  --output /tmp/compare-extended
 ```
 
-**One command to try with two existing bundle ZIPs:**
+These commands regenerate the extracted exports, ZIPs, reports and verification
+records, including the original identical-run check. Scientific dependency
+versions are recorded in each export. The [Muraro QA](pancreas/QA.md) gives its
+versioned dataset URL, checksum, explicit named-layer preparation and exact
+`pancreas/run.py` command to regenerate all Muraro outputs. Both generators verify
+shortlists and explanations independently against full direct Scanpy results.
+
+## Tests and browser reproduction
 
 ```sh
-.venv/bin/python experiments/compare_marker_runs/compare.py \
-  experiments/compare_marker_runs/extended/A.zip \
-  experiments/compare_marker_runs/extended/combined/B.zip /tmp/marker-comparison
+MPLCONFIGDIR=/tmp/mgf-mpl .venv/bin/python -m pytest -v \
+  experiments/compare_marker_runs/test_compare.py \
+  experiments/compare_marker_runs/test_page.py
 ```
 
-Substitute your own bundle paths. It writes `/tmp/marker-comparison/report.html`
-and `/tmp/marker-comparison/comparison.json`; no dataset is opened or analysis run.
-See [top-N report](extended/top_n/report.html),
-[combined report](extended/combined/report.html), and
-[context mismatch report](extended/context_mismatch/report.html).
-Machine-readable summaries/checks: `extended/verification.json`.
+The original passing run [44063938885](https://github.com/jec063/MarkerGeneFinderMini/actions/runs/44063938885)
+ran only 345 stable tests: `pytest.ini` defaults to `tests/`. The existing Actions
+workflow now explicitly invokes these two experiment files with verbose output
+on Python 3.10, 3.11 and 3.12, separately from the stable suite and wheel checks.
+It needs neither expression downloads nor browser installation.
 
-**Recommendation: the evidence supports a small, read-only experimental Streamlit
-integration for two uploaded bundles**, limited to inspecting settings/context and
-showing supported explanations or explicit unknowns. Stable app/CLI code remains
-untouched here. It makes ranking shifts, cutoff failures and context mismatch
-checks auditable on this example; it does not establish user time savings or
-broad scientific validity. Avoid changing analysis defaults or claiming arbitrary
-causal explanations across changed datasets/settings.
-
-The report does not mostly return unknown in these three examples. The remaining
-gap is specific: a top-N export omits prior rows. The smallest useful future export
-addition would be a per-gene filter outcome and post-filter/pre-top-N rank for
-candidate genes outside the shortlist (plus the measured statistic for a claimed
-failed threshold). This would resolve additions such as PNOC's missing A rank;
-it would not justify comparing different biological contexts. No export change
-is made in this experiment.
-
-To regenerate outside the committed sample, add `--output /tmp/compare-marker-rerun`
-to generate.py. To inspect reports in browsers that block file URLs, serve the
-output with `python -m http.server 8767 --bind 127.0.0.1 --directory /tmp/marker-comparison`.
-
-
-Recorded checks: all generator assertions passed; both static reports rendered in
-Chromium with seven threshold explanations and seven explicit evidence gaps;
-an independent rerun reproduced every sample export, report and verification file
-byte for byte. No user study or timing benchmark was performed.
-
-For an independent extended rerun, use `extend.py --output /tmp/compare-extended-rerun`.
-All generated extended exports/reports can be compared byte for byte with the
-committed examples. The standalone comparison command was also exercised on ZIPs
-and checked for parity with extracted-directory inputs.
-
-Extended verification completed: five export-only regressions passed via
-`python -m pytest experiments/compare_marker_runs/test_compare.py -q`; the existing
-repository suite passed 345 tests. Original generator checks were rerun, including
-identical exports, missing provenance/statistics and full direct Scanpy validation.
-The extended generator checked direct full results for both new shortlists and
-all inferred post-filter ranks. All three new HTML reports rendered in Chromium.
-A second extended run reproduced every file (including bundle ZIPs) byte for byte.
-The documented two-ZIP command produced an identical machine-readable diff to the
-sample. A future upload UI should stay experimental and add bounded archive
-validation before accepting arbitrary public bundles.
-
-## Read-only experimental Streamlit page (undeployed)
-
-Launch this separate entrypoint from repository root:
-
-```sh
-PYTHONPATH=. MPLCONFIGDIR=/tmp/mgf-mpl .venv/bin/python -m streamlit run \
-  experiments/compare_marker_runs/streamlit_app.py --server.port 8507
-```
-
-Open http://localhost:8507. Upload existing ZIP bundles as **Earlier run** and
-**Later run**, then choose a shared exported cluster. `extended/A.zip` plus
-`extended/top_n/B.zip` or `extended/combined/B.zip` are ready to try. To create a ZIP
-for the original filter example, archive the four files in `sample/B` at the ZIP
-root; no new format is required. The page shows settings first, then shortlisted
-marker changes and evidence, and downloads the exact existing all-cluster JSON diff.
-It never uploads expression data, executes marker analysis or changes an export.
-
-Input bundles must contain the current marker CSV and version-2 settings plus a
-separate/embedded replay config. Missing provenance is allowed with an explicit
-warning and no causal explanations. Invalid numeric tables/metadata or incomplete
-bundles receive feedback. Matching input hashes are recorded identity evidence;
-original datasets are not available to independently verify them. Upload changes
-clear cached comparisons and visible results. See [verification notes](PAGE_VERIFICATION.md).
-
-Reproduce browser and page checks with the local server running (Python Playwright
-and `/usr/bin/chromium` are needed for the browser command):
+For real Chromium upload checks, run the local server above, then use a Python
+with Playwright and `/usr/bin/chromium` installed:
 
 ```sh
 python experiments/compare_marker_runs/browser_page.py \
   --url http://127.0.0.1:8507 --output /tmp/compare-page-verification
-MPLCONFIGDIR=/tmp/mgf-mpl .venv/bin/python -m pytest \
-  experiments/compare_marker_runs/test_compare.py \
-  experiments/compare_marker_runs/test_page.py -q
+python experiments/compare_marker_runs/pancreas/browser.py \
+  --url http://127.0.0.1:8507 --expect-overview --output /tmp/compare-pancreas-browser
 ```
 
-The browser check uses only committed exports, including synthetic invalid,
-no-shared-cluster and missing-identity variants. Screenshots/downloads go to /tmp,
-not Git. The stable app and CLI are unchanged; no deployment or PR is created.
+The page rejects invalid/incomplete bundles, clears stale results after upload
+changes and handles identical/no-shared-cluster cases. It shows context differences
+and leaves causes unavailable when metadata is missing or incompatible. Matching
+recorded input hashes are not an independent rehash of the original dataset.
 
-## Second-dataset workflow check
-
-The [Muraro pancreas QA note](pancreas/QA.md) records three annotated clusters,
-min_pct 0.10 → 0.25, direct Scanpy validation, side-by-side export checks and
-actual browser results. It motivated a shared-cluster change overview and a
-visible named-layer field. Example bundles: `pancreas/results/earlier.zip` and
-`pancreas/results/later.zip`. This is a local workflow check, not a deployment or
-human productivity study.
+The examples made settings, threshold crossings, rank shifts and evidence gaps
+easier to verify than manually joining CSV rows. They do not measure human time
+savings, annotation accuracy or broad scientific validity. Top-N exports cannot
+recover unseen prior rows. A future export extension could provide per-gene filter
+outcomes and pre-top-N ranks, but this experiment changes no export schema.

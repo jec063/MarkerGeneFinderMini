@@ -33,6 +33,12 @@ jobs:
       - name: Run tests on the v3 source tree
         run: python -m pytest -q -x
 
+      - name: Run export comparison experiment tests
+        run: >-
+          python -m pytest -v -x
+          experiments/compare_marker_runs/test_compare.py
+          experiments/compare_marker_runs/test_page.py
+
       - name: Build distribution
         run: |
           python -m pip install build
