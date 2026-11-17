@@ -1,0 +1,50 @@
+{
+  "schema_name": "marker-gene-finder.provenance",
+  "schema_version": 1,
+  "app_version": "3.0.2",
+  "requested_engine": "scanpy",
+  "resolved_engine": "scanpy",
+  "engine_version": "1.12.5",
+  "effective_config": {
+    "cluster_column": "louvain",
+    "cell_column": null,
+    "engine": "scanpy",
+    "top_n": 20,
+    "pseudocount": null,
+    "min_pct": 0.05,
+    "min_pct_difference": 0.0,
+    "min_log2fc": 0.0,
+    "max_p_adj": 1.0,
+    "max_pct_out": 1.0,
+    "rank_by": "log2FC",
+    "min_cluster_size": 1,
+    "min_cells_expressing": 0,
+    "min_cluster_mean": 0.0,
+    "min_mean_difference": 0.0,
+    "max_other_mean": null,
+    "max_cells_expressing_out": null,
+    "layer": null,
+    "use_raw": true,
+    "target_clusters": [
+      "B cells"
+    ],
+    "excluded_genes": [],
+    "excluded_prefixes": [],
+    "max_dense_memory_mb": null,
+    "gene_chunk_size": null,
+    "workers": 1,
+    "schema_name": "marker-gene-finder.analysis-config",
+    "schema_version": 2
+  },
+  "expression_source": "AnnData.raw.X",
+  "layer": null,
+  "dependency_versions": {
+    "python": "3.12.14",
+    "numpy": "2.5.4",
+    "pandas": "2.3.3",
+    "scipy": "1.18.1",
+    "anndata": "0.12.19",
+    "scanpy": "1.12.5"
+  },
+  "input_sha256": "0db367b991dd95809732b218539ede489bea99113807f62ebd7ccc970025fe38"
+}

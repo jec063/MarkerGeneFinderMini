@@ -1,0 +1,64 @@
+{
+  "counts": {
+    "added": 7,
+    "removed": 7,
+    "reranked": 12,
+    "unchanged": 1
+  },
+  "threshold_crossings_verified": 7,
+  "identical_export_counts": {
+    "added": 0,
+    "removed": 0,
+    "reranked": 0,
+    "unchanged": 20
+  },
+  "missing_provenance_abstention_passed": true,
+  "missing_statistics_abstention_passed": true,
+  "direct_scanpy_matches": true,
+  "added_genes_independent_check": [
+    {
+      "gene": "CD19",
+      "verified_full_rank_A": 26,
+      "report_claim": "A rank unavailable in exports; no causal inference",
+      "independent_validation": "passed A filter but outside exported top20"
+    },
+    {
+      "gene": "HLA-DOB",
+      "verified_full_rank_A": 30,
+      "report_claim": "A rank unavailable in exports; no causal inference",
+      "independent_validation": "passed A filter but outside exported top20"
+    },
+    {
+      "gene": "LCN8",
+      "verified_full_rank_A": 21,
+      "report_claim": "A rank unavailable in exports; no causal inference",
+      "independent_validation": "passed A filter but outside exported top20"
+    },
+    {
+      "gene": "PKIG",
+      "verified_full_rank_A": 22,
+      "report_claim": "A rank unavailable in exports; no causal inference",
+      "independent_validation": "passed A filter but outside exported top20"
+    },
+    {
+      "gene": "PNOC",
+      "verified_full_rank_A": 23,
+      "report_claim": "A rank unavailable in exports; no causal inference",
+      "independent_validation": "passed A filter but outside exported top20"
+    },
+    {
+      "gene": "RP11-693J15.5",
+      "verified_full_rank_A": 25,
+      "report_claim": "A rank unavailable in exports; no causal inference",
+      "independent_validation": "passed A filter but outside exported top20"
+    },
+    {
+      "gene": "SPIB",
+      "verified_full_rank_A": 29,
+      "report_claim": "A rank unavailable in exports; no causal inference",
+      "independent_validation": "passed A filter but outside exported top20"
+    }
+  ],
+  "input_sha256": "0db367b991dd95809732b218539ede489bea99113807f62ebd7ccc970025fe38",
+  "scanpy_version": "1.12.5"
+}

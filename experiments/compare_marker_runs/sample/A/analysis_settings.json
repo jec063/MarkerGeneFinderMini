@@ -1,0 +1,35 @@
+{
+  "schema_name": "marker-gene-finder-analysis-settings",
+  "schema_version": 2,
+  "app_version": "3.0.2",
+  "settings": {
+    "cluster_column": "louvain",
+    "cell_column": null,
+    "engine": "scanpy",
+    "top_n": 20,
+    "pseudocount": null,
+    "min_pct": 0.05,
+    "min_pct_difference": 0.0,
+    "min_log2fc": 0.0,
+    "max_p_adj": 1.0,
+    "max_pct_out": 1.0,
+    "rank_by": "log2FC",
+    "min_cluster_size": 1,
+    "min_cells_expressing": 0,
+    "min_cluster_mean": 0.0,
+    "min_mean_difference": 0.0,
+    "max_other_mean": null,
+    "max_cells_expressing_out": null,
+    "layer": null,
+    "use_raw": true,
+    "target_clusters": [
+      "B cells"
+    ],
+    "excluded_genes": [],
+    "excluded_prefixes": [],
+    "max_dense_memory_mb": null,
+    "gene_chunk_size": null,
+    "workers": 1,
+    "expression_source": "AnnData.raw.X"
+  }
+}

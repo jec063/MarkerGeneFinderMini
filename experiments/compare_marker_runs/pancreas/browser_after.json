@@ -1,0 +1,42 @@
+{
+  "changed_setting": {
+    "min_pct": [
+      0.1,
+      0.25
+    ]
+  },
+  "overview_present": true,
+  "clusters": [
+    {
+      "cluster": "alpha",
+      "counts": {
+        "added": 4,
+        "removed": 4,
+        "reranked": 15,
+        "unchanged": 1
+      },
+      "matches_standalone": true
+    },
+    {
+      "cluster": "beta",
+      "counts": {
+        "added": 9,
+        "removed": 9,
+        "reranked": 10,
+        "unchanged": 1
+      },
+      "matches_standalone": true
+    },
+    {
+      "cluster": "duct",
+      "counts": {
+        "added": 5,
+        "removed": 5,
+        "reranked": 15,
+        "unchanged": 0
+      },
+      "matches_standalone": true
+    }
+  ],
+  "same_full_json_download_for_each_selected_cluster": true
+}
