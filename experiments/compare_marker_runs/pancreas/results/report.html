@@ -1,0 +1,1771 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Compare marker runs</title><style>body{font:15px system-ui;margin:30px}table{border-collapse:collapse;font-size:12px}td,th{padding:7px;border:1px solid #ccc;max-width:360px;overflow-wrap:anywhere}pre{white-space:pre-wrap}h2{margin-top:30px}</style></head><body><h1>CellCoPilot · Compare marker runs</h1><p>Existing exports only; no analysis is rerun to create this comparison. Missing rows are not zero expression.</p><h2>Run A</h2><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>matrix</th>
+      <th>engine</th>
+      <th>engine_version</th>
+      <th>input_sha256</th>
+      <th>marker_csv_sha256</th>
+      <th>target_clusters</th>
+      <th>min_pct</th>
+      <th>top_n</th>
+      <th>rank_by</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>AnnData.layers</td>
+      <td>scanpy</td>
+      <td>1.12.5</td>
+      <td>2623fb6b5651e784d4d311a33e6fceb4558d397807b5d7b57a9b69604d8968ab</td>
+      <td>6f3f46c12f988119ee03821654d10fef6d12a921b0c754fa51262542026193f8</td>
+      <td>[alpha, beta, duct]</td>
+      <td>0.1</td>
+      <td>20</td>
+      <td>log2FC</td>
+    </tr>
+  </tbody>
+</table><details><summary>Complete exported configuration/settings/provenance</summary><pre>{
+  &quot;config&quot;: {
+    &quot;cluster_column&quot;: &quot;cellular_classification&quot;,
+    &quot;cell_column&quot;: &quot;cell&quot;,
+    &quot;engine&quot;: &quot;scanpy&quot;,
+    &quot;top_n&quot;: 20,
+    &quot;pseudocount&quot;: 0.1,
+    &quot;min_pct&quot;: 0.1,
+    &quot;min_pct_difference&quot;: 0.0,
+    &quot;min_log2fc&quot;: 0.0,
+    &quot;max_p_adj&quot;: 1.0,
+    &quot;max_pct_out&quot;: 1.0,
+    &quot;rank_by&quot;: &quot;log2FC&quot;,
+    &quot;min_cluster_size&quot;: 1,
+    &quot;min_cells_expressing&quot;: 0,
+    &quot;min_cluster_mean&quot;: 0.0,
+    &quot;min_mean_difference&quot;: 0.0,
+    &quot;max_other_mean&quot;: null,
+    &quot;max_cells_expressing_out&quot;: null,
+    &quot;layer&quot;: &quot;log1p_cp10k&quot;,
+    &quot;use_raw&quot;: false,
+    &quot;target_clusters&quot;: [
+      &quot;alpha&quot;,
+      &quot;beta&quot;,
+      &quot;duct&quot;
+    ],
+    &quot;excluded_genes&quot;: [],
+    &quot;excluded_prefixes&quot;: [],
+    &quot;max_dense_memory_mb&quot;: 2048.0,
+    &quot;gene_chunk_size&quot;: 1000,
+    &quot;workers&quot;: 1,
+    &quot;schema_name&quot;: &quot;marker-gene-finder.analysis-config&quot;,
+    &quot;schema_version&quot;: 2
+  },
+  &quot;provenance&quot;: {
+    &quot;schema_name&quot;: &quot;marker-gene-finder.provenance&quot;,
+    &quot;schema_version&quot;: 1,
+    &quot;app_version&quot;: &quot;3.0.2&quot;,
+    &quot;requested_engine&quot;: &quot;scanpy&quot;,
+    &quot;resolved_engine&quot;: &quot;scanpy&quot;,
+    &quot;engine_version&quot;: &quot;1.12.5&quot;,
+    &quot;effective_config&quot;: {
+      &quot;cluster_column&quot;: &quot;cellular_classification&quot;,
+      &quot;cell_column&quot;: null,
+      &quot;engine&quot;: &quot;scanpy&quot;,
+      &quot;top_n&quot;: 20,
+      &quot;pseudocount&quot;: null,
+      &quot;min_pct&quot;: 0.1,
+      &quot;min_pct_difference&quot;: 0.0,
+      &quot;min_log2fc&quot;: 0.0,
+      &quot;max_p_adj&quot;: 1.0,
+      &quot;max_pct_out&quot;: 1.0,
+      &quot;rank_by&quot;: &quot;log2FC&quot;,
+      &quot;min_cluster_size&quot;: 1,
+      &quot;min_cells_expressing&quot;: 0,
+      &quot;min_cluster_mean&quot;: 0.0,
+      &quot;min_mean_difference&quot;: 0.0,
+      &quot;max_other_mean&quot;: null,
+      &quot;max_cells_expressing_out&quot;: null,
+      &quot;layer&quot;: &quot;log1p_cp10k&quot;,
+      &quot;use_raw&quot;: false,
+      &quot;target_clusters&quot;: [
+        &quot;alpha&quot;,
+        &quot;beta&quot;,
+        &quot;duct&quot;
+      ],
+      &quot;excluded_genes&quot;: [],
+      &quot;excluded_prefixes&quot;: [],
+      &quot;max_dense_memory_mb&quot;: null,
+      &quot;gene_chunk_size&quot;: null,
+      &quot;workers&quot;: 1,
+      &quot;schema_name&quot;: &quot;marker-gene-finder.analysis-config&quot;,
+      &quot;schema_version&quot;: 2
+    },
+    &quot;expression_source&quot;: &quot;AnnData.layers&quot;,
+    &quot;layer&quot;: &quot;log1p_cp10k&quot;,
+    &quot;dependency_versions&quot;: {
+      &quot;python&quot;: &quot;3.12.14&quot;,
+      &quot;numpy&quot;: &quot;2.5.4&quot;,
+      &quot;pandas&quot;: &quot;2.3.3&quot;,
+      &quot;scipy&quot;: &quot;1.18.1&quot;,
+      &quot;anndata&quot;: &quot;0.12.19&quot;,
+      &quot;scanpy&quot;: &quot;1.12.5&quot;
+    },
+    &quot;input_sha256&quot;: &quot;2623fb6b5651e784d4d311a33e6fceb4558d397807b5d7b57a9b69604d8968ab&quot;
+  },
+  &quot;settings&quot;: {
+    &quot;schema_name&quot;: &quot;marker-gene-finder-analysis-settings&quot;,
+    &quot;schema_version&quot;: 2,
+    &quot;app_version&quot;: &quot;3.0.2&quot;,
+    &quot;settings&quot;: {
+      &quot;cluster_column&quot;: &quot;cellular_classification&quot;,
+      &quot;cell_column&quot;: null,
+      &quot;engine&quot;: &quot;scanpy&quot;,
+      &quot;top_n&quot;: 20,
+      &quot;pseudocount&quot;: null,
+      &quot;min_pct&quot;: 0.1,
+      &quot;min_pct_difference&quot;: 0.0,
+      &quot;min_log2fc&quot;: 0.0,
+      &quot;max_p_adj&quot;: 1.0,
+      &quot;max_pct_out&quot;: 1.0,
+      &quot;rank_by&quot;: &quot;log2FC&quot;,
+      &quot;min_cluster_size&quot;: 1,
+      &quot;min_cells_expressing&quot;: 0,
+      &quot;min_cluster_mean&quot;: 0.0,
+      &quot;min_mean_difference&quot;: 0.0,
+      &quot;max_other_mean&quot;: null,
+      &quot;max_cells_expressing_out&quot;: null,
+      &quot;layer&quot;: &quot;log1p_cp10k&quot;,
+      &quot;use_raw&quot;: false,
+      &quot;target_clusters&quot;: [
+        &quot;alpha&quot;,
+        &quot;beta&quot;,
+        &quot;duct&quot;
+      ],
+      &quot;excluded_genes&quot;: [],
+      &quot;excluded_prefixes&quot;: [],
+      &quot;max_dense_memory_mb&quot;: null,
+      &quot;gene_chunk_size&quot;: null,
+      &quot;workers&quot;: 1,
+      &quot;expression_source&quot;: &quot;AnnData.layers&quot;
+    }
+  },
+  &quot;marker_sha256&quot;: &quot;6f3f46c12f988119ee03821654d10fef6d12a921b0c754fa51262542026193f8&quot;
+}</pre></details><h2>Run B</h2><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>matrix</th>
+      <th>engine</th>
+      <th>engine_version</th>
+      <th>input_sha256</th>
+      <th>marker_csv_sha256</th>
+      <th>target_clusters</th>
+      <th>min_pct</th>
+      <th>top_n</th>
+      <th>rank_by</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>AnnData.layers</td>
+      <td>scanpy</td>
+      <td>1.12.5</td>
+      <td>2623fb6b5651e784d4d311a33e6fceb4558d397807b5d7b57a9b69604d8968ab</td>
+      <td>c8c885f1862b6402fef20a4d2a6e7f98374e9e3746fd980c8e237abf34afec79</td>
+      <td>[alpha, beta, duct]</td>
+      <td>0.25</td>
+      <td>20</td>
+      <td>log2FC</td>
+    </tr>
+  </tbody>
+</table><details><summary>Complete exported configuration/settings/provenance</summary><pre>{
+  &quot;config&quot;: {
+    &quot;cluster_column&quot;: &quot;cellular_classification&quot;,
+    &quot;cell_column&quot;: &quot;cell&quot;,
+    &quot;engine&quot;: &quot;scanpy&quot;,
+    &quot;top_n&quot;: 20,
+    &quot;pseudocount&quot;: 0.1,
+    &quot;min_pct&quot;: 0.25,
+    &quot;min_pct_difference&quot;: 0.0,
+    &quot;min_log2fc&quot;: 0.0,
+    &quot;max_p_adj&quot;: 1.0,
+    &quot;max_pct_out&quot;: 1.0,
+    &quot;rank_by&quot;: &quot;log2FC&quot;,
+    &quot;min_cluster_size&quot;: 1,
+    &quot;min_cells_expressing&quot;: 0,
+    &quot;min_cluster_mean&quot;: 0.0,
+    &quot;min_mean_difference&quot;: 0.0,
+    &quot;max_other_mean&quot;: null,
+    &quot;max_cells_expressing_out&quot;: null,
+    &quot;layer&quot;: &quot;log1p_cp10k&quot;,
+    &quot;use_raw&quot;: false,
+    &quot;target_clusters&quot;: [
+      &quot;alpha&quot;,
+      &quot;beta&quot;,
+      &quot;duct&quot;
+    ],
+    &quot;excluded_genes&quot;: [],
+    &quot;excluded_prefixes&quot;: [],
+    &quot;max_dense_memory_mb&quot;: 2048.0,
+    &quot;gene_chunk_size&quot;: 1000,
+    &quot;workers&quot;: 1,
+    &quot;schema_name&quot;: &quot;marker-gene-finder.analysis-config&quot;,
+    &quot;schema_version&quot;: 2
+  },
+  &quot;provenance&quot;: {
+    &quot;schema_name&quot;: &quot;marker-gene-finder.provenance&quot;,
+    &quot;schema_version&quot;: 1,
+    &quot;app_version&quot;: &quot;3.0.2&quot;,
+    &quot;requested_engine&quot;: &quot;scanpy&quot;,
+    &quot;resolved_engine&quot;: &quot;scanpy&quot;,
+    &quot;engine_version&quot;: &quot;1.12.5&quot;,
+    &quot;effective_config&quot;: {
+      &quot;cluster_column&quot;: &quot;cellular_classification&quot;,
+      &quot;cell_column&quot;: null,
+      &quot;engine&quot;: &quot;scanpy&quot;,
+      &quot;top_n&quot;: 20,
+      &quot;pseudocount&quot;: null,
+      &quot;min_pct&quot;: 0.25,
+      &quot;min_pct_difference&quot;: 0.0,
+      &quot;min_log2fc&quot;: 0.0,
+      &quot;max_p_adj&quot;: 1.0,
+      &quot;max_pct_out&quot;: 1.0,
+      &quot;rank_by&quot;: &quot;log2FC&quot;,
+      &quot;min_cluster_size&quot;: 1,
+      &quot;min_cells_expressing&quot;: 0,
+      &quot;min_cluster_mean&quot;: 0.0,
+      &quot;min_mean_difference&quot;: 0.0,
+      &quot;max_other_mean&quot;: null,
+      &quot;max_cells_expressing_out&quot;: null,
+      &quot;layer&quot;: &quot;log1p_cp10k&quot;,
+      &quot;use_raw&quot;: false,
+      &quot;target_clusters&quot;: [
+        &quot;alpha&quot;,
+        &quot;beta&quot;,
+        &quot;duct&quot;
+      ],
+      &quot;excluded_genes&quot;: [],
+      &quot;excluded_prefixes&quot;: [],
+      &quot;max_dense_memory_mb&quot;: null,
+      &quot;gene_chunk_size&quot;: null,
+      &quot;workers&quot;: 1,
+      &quot;schema_name&quot;: &quot;marker-gene-finder.analysis-config&quot;,
+      &quot;schema_version&quot;: 2
+    },
+    &quot;expression_source&quot;: &quot;AnnData.layers&quot;,
+    &quot;layer&quot;: &quot;log1p_cp10k&quot;,
+    &quot;dependency_versions&quot;: {
+      &quot;python&quot;: &quot;3.12.14&quot;,
+      &quot;numpy&quot;: &quot;2.5.4&quot;,
+      &quot;pandas&quot;: &quot;2.3.3&quot;,
+      &quot;scipy&quot;: &quot;1.18.1&quot;,
+      &quot;anndata&quot;: &quot;0.12.19&quot;,
+      &quot;scanpy&quot;: &quot;1.12.5&quot;
+    },
+    &quot;input_sha256&quot;: &quot;2623fb6b5651e784d4d311a33e6fceb4558d397807b5d7b57a9b69604d8968ab&quot;
+  },
+  &quot;settings&quot;: {
+    &quot;schema_name&quot;: &quot;marker-gene-finder-analysis-settings&quot;,
+    &quot;schema_version&quot;: 2,
+    &quot;app_version&quot;: &quot;3.0.2&quot;,
+    &quot;settings&quot;: {
+      &quot;cluster_column&quot;: &quot;cellular_classification&quot;,
+      &quot;cell_column&quot;: null,
+      &quot;engine&quot;: &quot;scanpy&quot;,
+      &quot;top_n&quot;: 20,
+      &quot;pseudocount&quot;: null,
+      &quot;min_pct&quot;: 0.25,
+      &quot;min_pct_difference&quot;: 0.0,
+      &quot;min_log2fc&quot;: 0.0,
+      &quot;max_p_adj&quot;: 1.0,
+      &quot;max_pct_out&quot;: 1.0,
+      &quot;rank_by&quot;: &quot;log2FC&quot;,
+      &quot;min_cluster_size&quot;: 1,
+      &quot;min_cells_expressing&quot;: 0,
+      &quot;min_cluster_mean&quot;: 0.0,
+      &quot;min_mean_difference&quot;: 0.0,
+      &quot;max_other_mean&quot;: null,
+      &quot;max_cells_expressing_out&quot;: null,
+      &quot;layer&quot;: &quot;log1p_cp10k&quot;,
+      &quot;use_raw&quot;: false,
+      &quot;target_clusters&quot;: [
+        &quot;alpha&quot;,
+        &quot;beta&quot;,
+        &quot;duct&quot;
+      ],
+      &quot;excluded_genes&quot;: [],
+      &quot;excluded_prefixes&quot;: [],
+      &quot;max_dense_memory_mb&quot;: null,
+      &quot;gene_chunk_size&quot;: null,
+      &quot;workers&quot;: 1,
+      &quot;expression_source&quot;: &quot;AnnData.layers&quot;
+    }
+  },
+  &quot;marker_sha256&quot;: &quot;c8c885f1862b6402fef20a4d2a6e7f98374e9e3746fd980c8e237abf34afec79&quot;
+}</pre></details><h2>Settings changed</h2><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>setting</th>
+      <th>A</th>
+      <th>B</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>min_pct</td>
+      <td>0.1</td>
+      <td>0.25</td>
+    </tr>
+  </tbody>
+</table><p>Comparable input/source/engine/dependency provenance: True. Confirmed sole analysis setting change is min_pct: True.</p><h2>Analysis context</h2><p>comparable</p><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+    </tr>
+  </thead>
+  <tbody>
+  </tbody>
+</table><h2>Explainable shortlist changes</h2><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>added</th>
+      <th>removed</th>
+      <th>reranked</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0</td>
+      <td>18</td>
+      <td>40</td>
+    </tr>
+  </tbody>
+</table><h2>Marker changes</h2><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>added</th>
+      <th>removed</th>
+      <th>reranked</th>
+      <th>unchanged</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>18</td>
+      <td>18</td>
+      <td>40</td>
+      <td>2</td>
+    </tr>
+  </tbody>
+</table><h3>Removed</h3><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>cluster</th>
+      <th>gene</th>
+      <th>change</th>
+      <th>rank_A</th>
+      <th>rank_B</th>
+      <th>pct_in_A</th>
+      <th>pct_in_B</th>
+      <th>min_pct_A</th>
+      <th>min_pct_B</th>
+      <th>log2FC_A</th>
+      <th>log2FC_B</th>
+      <th>explainable</th>
+      <th>rank_from_exported_prefix_B</th>
+      <th>evidence</th>
+      <th>explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>alpha</td>
+      <td>F13A1</td>
+      <td>removed</td>
+      <td>2</td>
+      <td>None</td>
+      <td>0.12931</td>
+      <td>None</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.84613</td>
+      <td>None</td>
+      <td>True</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.12931 passes A min_pct=0.1, fails B min_pct=0.25.</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>IRX2-DT</td>
+      <td>removed</td>
+      <td>8</td>
+      <td>None</td>
+      <td>0.137931</td>
+      <td>None</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>5.55577</td>
+      <td>None</td>
+      <td>True</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.137931 passes A min_pct=0.1, fails B min_pct=0.25.</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>TCF24</td>
+      <td>removed</td>
+      <td>17</td>
+      <td>None</td>
+      <td>0.103448</td>
+      <td>None</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>4.60871</td>
+      <td>None</td>
+      <td>True</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.103448 passes A min_pct=0.1, fails B min_pct=0.25.</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>UPB1</td>
+      <td>removed</td>
+      <td>4</td>
+      <td>None</td>
+      <td>0.181034</td>
+      <td>None</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>5.94415</td>
+      <td>None</td>
+      <td>True</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.181034 passes A min_pct=0.1, fails B min_pct=0.25.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>BPIFC</td>
+      <td>removed</td>
+      <td>18</td>
+      <td>None</td>
+      <td>0.234375</td>
+      <td>None</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>5.43726</td>
+      <td>None</td>
+      <td>True</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.234375 passes A min_pct=0.1, fails B min_pct=0.25.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>GREM2</td>
+      <td>removed</td>
+      <td>19</td>
+      <td>None</td>
+      <td>0.194196</td>
+      <td>None</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>5.38181</td>
+      <td>None</td>
+      <td>True</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.194196 passes A min_pct=0.1, fails B min_pct=0.25.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>LRFN2</td>
+      <td>removed</td>
+      <td>4</td>
+      <td>None</td>
+      <td>0.220982</td>
+      <td>None</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.89457</td>
+      <td>None</td>
+      <td>True</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.220982 passes A min_pct=0.1, fails B min_pct=0.25.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>MAMDC2</td>
+      <td>removed</td>
+      <td>11</td>
+      <td>None</td>
+      <td>0.145089</td>
+      <td>None</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.10365</td>
+      <td>None</td>
+      <td>True</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.145089 passes A min_pct=0.1, fails B min_pct=0.25.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>OLIG1</td>
+      <td>removed</td>
+      <td>12</td>
+      <td>None</td>
+      <td>0.180804</td>
+      <td>None</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.0713</td>
+      <td>None</td>
+      <td>True</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.180804 passes A min_pct=0.1, fails B min_pct=0.25.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>PLCH2</td>
+      <td>removed</td>
+      <td>15</td>
+      <td>None</td>
+      <td>0.203125</td>
+      <td>None</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>5.61883</td>
+      <td>None</td>
+      <td>True</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.203125 passes A min_pct=0.1, fails B min_pct=0.25.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>SFTPA1</td>
+      <td>removed</td>
+      <td>14</td>
+      <td>None</td>
+      <td>0.142857</td>
+      <td>None</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>5.66738</td>
+      <td>None</td>
+      <td>True</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.142857 passes A min_pct=0.1, fails B min_pct=0.25.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>SLC27A6</td>
+      <td>removed</td>
+      <td>7</td>
+      <td>None</td>
+      <td>0.180804</td>
+      <td>None</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.36472</td>
+      <td>None</td>
+      <td>True</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.180804 passes A min_pct=0.1, fails B min_pct=0.25.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>ZNF385D</td>
+      <td>removed</td>
+      <td>2</td>
+      <td>None</td>
+      <td>0.196429</td>
+      <td>None</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.97744</td>
+      <td>None</td>
+      <td>True</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.196429 passes A min_pct=0.1, fails B min_pct=0.25.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>ALDH1A2</td>
+      <td>removed</td>
+      <td>14</td>
+      <td>None</td>
+      <td>0.247967</td>
+      <td>None</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.73575</td>
+      <td>None</td>
+      <td>True</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.247967 passes A min_pct=0.1, fails B min_pct=0.25.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>FGFBP1</td>
+      <td>removed</td>
+      <td>6</td>
+      <td>None</td>
+      <td>0.138211</td>
+      <td>None</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>7.28527</td>
+      <td>None</td>
+      <td>True</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.138211 passes A min_pct=0.1, fails B min_pct=0.25.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>FOLR1</td>
+      <td>removed</td>
+      <td>1</td>
+      <td>None</td>
+      <td>0.191057</td>
+      <td>None</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>8.28012</td>
+      <td>None</td>
+      <td>True</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.191057 passes A min_pct=0.1, fails B min_pct=0.25.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>PPP1R1B</td>
+      <td>removed</td>
+      <td>11</td>
+      <td>None</td>
+      <td>0.166667</td>
+      <td>None</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.85786</td>
+      <td>None</td>
+      <td>True</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.166667 passes A min_pct=0.1, fails B min_pct=0.25.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>WNT7A</td>
+      <td>removed</td>
+      <td>9</td>
+      <td>None</td>
+      <td>0.142276</td>
+      <td>None</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.8949</td>
+      <td>None</td>
+      <td>True</td>
+      <td>None</td>
+      <td>threshold crossing supported by same-input/source/engine/config provenance</td>
+      <td>Exported pct_in=0.142276 passes A min_pct=0.1, fails B min_pct=0.25.</td>
+    </tr>
+  </tbody>
+</table><h3>Added</h3><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>cluster</th>
+      <th>gene</th>
+      <th>change</th>
+      <th>rank_A</th>
+      <th>rank_B</th>
+      <th>pct_in_A</th>
+      <th>pct_in_B</th>
+      <th>min_pct_A</th>
+      <th>min_pct_B</th>
+      <th>log2FC_A</th>
+      <th>log2FC_B</th>
+      <th>explainable</th>
+      <th>rank_from_exported_prefix_B</th>
+      <th>evidence</th>
+      <th>explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>alpha</td>
+      <td>GLT1D1</td>
+      <td>added</td>
+      <td>None</td>
+      <td>18</td>
+      <td>None</td>
+      <td>0.520936</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>None</td>
+      <td>4.27098</td>
+      <td>False</td>
+      <td>None</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>PCSK2</td>
+      <td>added</td>
+      <td>None</td>
+      <td>20</td>
+      <td>None</td>
+      <td>1</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>None</td>
+      <td>4.21728</td>
+      <td>False</td>
+      <td>None</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>POPDC3</td>
+      <td>added</td>
+      <td>None</td>
+      <td>19</td>
+      <td>None</td>
+      <td>0.647783</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>None</td>
+      <td>4.25627</td>
+      <td>False</td>
+      <td>None</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>PYROXD2</td>
+      <td>added</td>
+      <td>None</td>
+      <td>17</td>
+      <td>None</td>
+      <td>0.602217</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>None</td>
+      <td>4.43066</td>
+      <td>False</td>
+      <td>None</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>ASB9</td>
+      <td>added</td>
+      <td>None</td>
+      <td>16</td>
+      <td>None</td>
+      <td>0.321429</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>None</td>
+      <td>4.74527</td>
+      <td>False</td>
+      <td>None</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>CDH22</td>
+      <td>added</td>
+      <td>None</td>
+      <td>15</td>
+      <td>None</td>
+      <td>0.301339</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>None</td>
+      <td>4.79511</td>
+      <td>False</td>
+      <td>None</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>CHL1</td>
+      <td>added</td>
+      <td>None</td>
+      <td>20</td>
+      <td>None</td>
+      <td>0.526786</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>None</td>
+      <td>4.59886</td>
+      <td>False</td>
+      <td>None</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>ESR1</td>
+      <td>added</td>
+      <td>None</td>
+      <td>19</td>
+      <td>None</td>
+      <td>0.363839</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>None</td>
+      <td>4.63171</td>
+      <td>False</td>
+      <td>None</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>GLP1R</td>
+      <td>added</td>
+      <td>None</td>
+      <td>12</td>
+      <td>None</td>
+      <td>0.299107</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>None</td>
+      <td>4.90802</td>
+      <td>False</td>
+      <td>None</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>SIX2</td>
+      <td>added</td>
+      <td>None</td>
+      <td>17</td>
+      <td>None</td>
+      <td>0.508929</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>None</td>
+      <td>4.7183</td>
+      <td>False</td>
+      <td>None</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>SLC2A2</td>
+      <td>added</td>
+      <td>None</td>
+      <td>13</td>
+      <td>None</td>
+      <td>0.354911</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>None</td>
+      <td>4.90423</td>
+      <td>False</td>
+      <td>None</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>TGFBR3</td>
+      <td>added</td>
+      <td>None</td>
+      <td>18</td>
+      <td>None</td>
+      <td>0.883929</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>None</td>
+      <td>4.65893</td>
+      <td>False</td>
+      <td>None</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>TRPM3</td>
+      <td>added</td>
+      <td>None</td>
+      <td>14</td>
+      <td>None</td>
+      <td>0.464286</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>None</td>
+      <td>4.81002</td>
+      <td>False</td>
+      <td>None</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>CHST4</td>
+      <td>added</td>
+      <td>None</td>
+      <td>16</td>
+      <td>None</td>
+      <td>0.296748</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>None</td>
+      <td>6.41484</td>
+      <td>False</td>
+      <td>None</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>DEFB1</td>
+      <td>added</td>
+      <td>None</td>
+      <td>19</td>
+      <td>None</td>
+      <td>0.817073</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>None</td>
+      <td>6.14593</td>
+      <td>False</td>
+      <td>None</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>MUC15</td>
+      <td>added</td>
+      <td>None</td>
+      <td>17</td>
+      <td>None</td>
+      <td>0.264228</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>None</td>
+      <td>6.29175</td>
+      <td>False</td>
+      <td>None</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>S100A14</td>
+      <td>added</td>
+      <td>None</td>
+      <td>20</td>
+      <td>None</td>
+      <td>0.666667</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>None</td>
+      <td>6.10447</td>
+      <td>False</td>
+      <td>None</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>TMPRSS3</td>
+      <td>added</td>
+      <td>None</td>
+      <td>18</td>
+      <td>None</td>
+      <td>0.434959</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>None</td>
+      <td>6.15367</td>
+      <td>False</td>
+      <td>None</td>
+      <td>unresolved</td>
+      <td>Present only in B. B statistics are available, but A exports no row: cannot establish A rank/filter outcome from these exports. Top_n slot changes are possible.</td>
+    </tr>
+  </tbody>
+</table><h3>Reranked</h3><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>cluster</th>
+      <th>gene</th>
+      <th>change</th>
+      <th>rank_A</th>
+      <th>rank_B</th>
+      <th>pct_in_A</th>
+      <th>pct_in_B</th>
+      <th>min_pct_A</th>
+      <th>min_pct_B</th>
+      <th>log2FC_A</th>
+      <th>log2FC_B</th>
+      <th>explainable</th>
+      <th>rank_from_exported_prefix_B</th>
+      <th>evidence</th>
+      <th>explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>alpha</td>
+      <td>ABCG2</td>
+      <td>reranked</td>
+      <td>10</td>
+      <td>7</td>
+      <td>0.314039</td>
+      <td>0.314039</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>5.18441</td>
+      <td>5.18441</td>
+      <td>True</td>
+      <td>7</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 7.</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>CRTAC1</td>
+      <td>reranked</td>
+      <td>16</td>
+      <td>13</td>
+      <td>0.435961</td>
+      <td>0.435961</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>4.64013</td>
+      <td>4.64013</td>
+      <td>True</td>
+      <td>13</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 13.</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>CRYBA2</td>
+      <td>reranked</td>
+      <td>18</td>
+      <td>14</td>
+      <td>0.932266</td>
+      <td>0.932266</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>4.55379</td>
+      <td>4.55379</td>
+      <td>True</td>
+      <td>14</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 14.</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>FSTL5</td>
+      <td>reranked</td>
+      <td>19</td>
+      <td>15</td>
+      <td>0.759852</td>
+      <td>0.759852</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>4.5364</td>
+      <td>4.5364</td>
+      <td>True</td>
+      <td>15</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 15.</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>GC</td>
+      <td>reranked</td>
+      <td>7</td>
+      <td>5</td>
+      <td>0.992611</td>
+      <td>0.992611</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>5.60082</td>
+      <td>5.60082</td>
+      <td>True</td>
+      <td>5</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 5.</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>GJA3</td>
+      <td>reranked</td>
+      <td>12</td>
+      <td>9</td>
+      <td>0.264778</td>
+      <td>0.264778</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>5.03669</td>
+      <td>5.03669</td>
+      <td>True</td>
+      <td>9</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 9.</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>IRX1</td>
+      <td>reranked</td>
+      <td>5</td>
+      <td>3</td>
+      <td>0.256158</td>
+      <td>0.256158</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>5.87879</td>
+      <td>5.87879</td>
+      <td>True</td>
+      <td>3</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 3.</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>IRX2</td>
+      <td>reranked</td>
+      <td>3</td>
+      <td>2</td>
+      <td>0.981527</td>
+      <td>0.981527</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.17104</td>
+      <td>6.17104</td>
+      <td>True</td>
+      <td>2</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 2.</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>KLHL41</td>
+      <td>reranked</td>
+      <td>14</td>
+      <td>11</td>
+      <td>0.732759</td>
+      <td>0.732759</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>4.94373</td>
+      <td>4.94373</td>
+      <td>True</td>
+      <td>11</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 11.</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>LOXL4</td>
+      <td>reranked</td>
+      <td>6</td>
+      <td>4</td>
+      <td>0.905172</td>
+      <td>0.905172</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>5.82747</td>
+      <td>5.82747</td>
+      <td>True</td>
+      <td>4</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 4.</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>PAPPA2</td>
+      <td>reranked</td>
+      <td>20</td>
+      <td>16</td>
+      <td>0.580049</td>
+      <td>0.580049</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>4.47274</td>
+      <td>4.47274</td>
+      <td>True</td>
+      <td>16</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 16.</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>PLCE1</td>
+      <td>reranked</td>
+      <td>13</td>
+      <td>10</td>
+      <td>0.827586</td>
+      <td>0.827586</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>4.95051</td>
+      <td>4.95051</td>
+      <td>True</td>
+      <td>10</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 10.</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>SPOCK3</td>
+      <td>reranked</td>
+      <td>11</td>
+      <td>8</td>
+      <td>0.612069</td>
+      <td>0.612069</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>5.15377</td>
+      <td>5.15377</td>
+      <td>True</td>
+      <td>8</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 8.</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>TM4SF4</td>
+      <td>reranked</td>
+      <td>15</td>
+      <td>12</td>
+      <td>0.998768</td>
+      <td>0.998768</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>4.78445</td>
+      <td>4.78445</td>
+      <td>True</td>
+      <td>12</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 12.</td>
+    </tr>
+    <tr>
+      <td>alpha</td>
+      <td>TTR</td>
+      <td>reranked</td>
+      <td>9</td>
+      <td>6</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>5.33636</td>
+      <td>5.33636</td>
+      <td>True</td>
+      <td>6</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 6.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>ADCYAP1</td>
+      <td>reranked</td>
+      <td>10</td>
+      <td>7</td>
+      <td>0.872768</td>
+      <td>0.872768</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.28247</td>
+      <td>6.28247</td>
+      <td>True</td>
+      <td>7</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 7.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>CAPN13</td>
+      <td>reranked</td>
+      <td>16</td>
+      <td>9</td>
+      <td>0.392857</td>
+      <td>0.392857</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>5.57896</td>
+      <td>5.57896</td>
+      <td>True</td>
+      <td>9</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 9.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>HHATL</td>
+      <td>reranked</td>
+      <td>6</td>
+      <td>4</td>
+      <td>0.287946</td>
+      <td>0.287946</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.78871</td>
+      <td>6.78871</td>
+      <td>True</td>
+      <td>4</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 4.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>IAPP</td>
+      <td>reranked</td>
+      <td>8</td>
+      <td>5</td>
+      <td>0.964286</td>
+      <td>0.964286</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.31484</td>
+      <td>6.31484</td>
+      <td>True</td>
+      <td>5</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 5.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>LRRTM3</td>
+      <td>reranked</td>
+      <td>9</td>
+      <td>6</td>
+      <td>0.379464</td>
+      <td>0.379464</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.30651</td>
+      <td>6.30651</td>
+      <td>True</td>
+      <td>6</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 6.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>MAFA</td>
+      <td>reranked</td>
+      <td>5</td>
+      <td>3</td>
+      <td>0.899554</td>
+      <td>0.899554</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.80487</td>
+      <td>6.80487</td>
+      <td>True</td>
+      <td>3</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 3.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>NPTX2</td>
+      <td>reranked</td>
+      <td>17</td>
+      <td>10</td>
+      <td>0.933036</td>
+      <td>0.933036</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>5.51526</td>
+      <td>5.51526</td>
+      <td>True</td>
+      <td>10</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 10.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>SIX3</td>
+      <td>reranked</td>
+      <td>13</td>
+      <td>8</td>
+      <td>0.261161</td>
+      <td>0.261161</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>5.7701</td>
+      <td>5.7701</td>
+      <td>True</td>
+      <td>8</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 8.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>TMEM108</td>
+      <td>reranked</td>
+      <td>20</td>
+      <td>11</td>
+      <td>0.408482</td>
+      <td>0.408482</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>5.09915</td>
+      <td>5.09915</td>
+      <td>True</td>
+      <td>11</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 11.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>WSCD2</td>
+      <td>reranked</td>
+      <td>3</td>
+      <td>2</td>
+      <td>0.569196</td>
+      <td>0.569196</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.91064</td>
+      <td>6.91064</td>
+      <td>True</td>
+      <td>2</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 2.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>ALDH1A3</td>
+      <td>reranked</td>
+      <td>13</td>
+      <td>9</td>
+      <td>0.804878</td>
+      <td>0.804878</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.83469</td>
+      <td>6.83469</td>
+      <td>True</td>
+      <td>9</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 9.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>APCDD1</td>
+      <td>reranked</td>
+      <td>5</td>
+      <td>4</td>
+      <td>0.630081</td>
+      <td>0.630081</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>7.3589</td>
+      <td>7.3589</td>
+      <td>True</td>
+      <td>4</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 4.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>APCS</td>
+      <td>reranked</td>
+      <td>17</td>
+      <td>12</td>
+      <td>0.504065</td>
+      <td>0.504065</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.59104</td>
+      <td>6.59104</td>
+      <td>True</td>
+      <td>12</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 12.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>AQP1</td>
+      <td>reranked</td>
+      <td>16</td>
+      <td>11</td>
+      <td>0.804878</td>
+      <td>0.804878</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.70114</td>
+      <td>6.70114</td>
+      <td>True</td>
+      <td>11</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 11.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>BARX2</td>
+      <td>reranked</td>
+      <td>2</td>
+      <td>1</td>
+      <td>0.284553</td>
+      <td>0.284553</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>7.97829</td>
+      <td>7.97829</td>
+      <td>True</td>
+      <td>1</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 1.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>CEACAM7</td>
+      <td>reranked</td>
+      <td>7</td>
+      <td>5</td>
+      <td>0.577236</td>
+      <td>0.577236</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>7.11255</td>
+      <td>7.11255</td>
+      <td>True</td>
+      <td>5</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 5.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>CFTR</td>
+      <td>reranked</td>
+      <td>4</td>
+      <td>3</td>
+      <td>0.878049</td>
+      <td>0.878049</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>7.62282</td>
+      <td>7.62282</td>
+      <td>True</td>
+      <td>3</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 3.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>FUT3</td>
+      <td>reranked</td>
+      <td>15</td>
+      <td>10</td>
+      <td>0.552846</td>
+      <td>0.552846</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.71376</td>
+      <td>6.71376</td>
+      <td>True</td>
+      <td>10</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 10.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>HSD17B2</td>
+      <td>reranked</td>
+      <td>18</td>
+      <td>13</td>
+      <td>0.617886</td>
+      <td>0.617886</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.58625</td>
+      <td>6.58625</td>
+      <td>True</td>
+      <td>13</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 13.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>PKHD1</td>
+      <td>reranked</td>
+      <td>19</td>
+      <td>14</td>
+      <td>0.662602</td>
+      <td>0.662602</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.50884</td>
+      <td>6.50884</td>
+      <td>True</td>
+      <td>14</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 14.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>SLC34A2</td>
+      <td>reranked</td>
+      <td>3</td>
+      <td>2</td>
+      <td>0.398374</td>
+      <td>0.398374</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>7.69634</td>
+      <td>7.69634</td>
+      <td>True</td>
+      <td>2</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 2.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>SLC3A1</td>
+      <td>reranked</td>
+      <td>10</td>
+      <td>7</td>
+      <td>0.560976</td>
+      <td>0.560976</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.87403</td>
+      <td>6.87403</td>
+      <td>True</td>
+      <td>7</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 7.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>SPP1</td>
+      <td>reranked</td>
+      <td>8</td>
+      <td>6</td>
+      <td>0.861789</td>
+      <td>0.861789</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.89648</td>
+      <td>6.89648</td>
+      <td>True</td>
+      <td>6</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 6.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>VTCN1</td>
+      <td>reranked</td>
+      <td>12</td>
+      <td>8</td>
+      <td>0.776423</td>
+      <td>0.776423</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.84823</td>
+      <td>6.84823</td>
+      <td>True</td>
+      <td>8</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 8.</td>
+    </tr>
+    <tr>
+      <td>duct</td>
+      <td>WDR72</td>
+      <td>reranked</td>
+      <td>20</td>
+      <td>15</td>
+      <td>0.341463</td>
+      <td>0.341463</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>6.43785</td>
+      <td>6.43785</td>
+      <td>True</td>
+      <td>15</td>
+      <td>rank shift established from exported prefix</td>
+      <td>Shared marker moved in the exported ranked list. Unchanged statistics; removing earlier A rows below B min_pct gives exported rank 15.</td>
+    </tr>
+  </tbody>
+</table><h3>Unchanged</h3><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>cluster</th>
+      <th>gene</th>
+      <th>change</th>
+      <th>rank_A</th>
+      <th>rank_B</th>
+      <th>pct_in_A</th>
+      <th>pct_in_B</th>
+      <th>min_pct_A</th>
+      <th>min_pct_B</th>
+      <th>log2FC_A</th>
+      <th>log2FC_B</th>
+      <th>explainable</th>
+      <th>rank_from_exported_prefix_B</th>
+      <th>evidence</th>
+      <th>explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>alpha</td>
+      <td>GCG</td>
+      <td>unchanged</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>7.46303</td>
+      <td>7.46303</td>
+      <td>False</td>
+      <td>1</td>
+      <td>direct export observation</td>
+      <td>No membership/rank change.</td>
+    </tr>
+    <tr>
+      <td>beta</td>
+      <td>INS</td>
+      <td>unchanged</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0.975446</td>
+      <td>0.975446</td>
+      <td>0.1</td>
+      <td>0.25</td>
+      <td>7.22992</td>
+      <td>7.22992</td>
+      <td>False</td>
+      <td>1</td>
+      <td>direct export observation</td>
+      <td>No membership/rank change.</td>
+    </tr>
+  </tbody>
+</table><p>min_pct and pct_in are fractions, not percentages. Log2FC is Scanpy’s approximate fold change. Means/detection use the selected matrix’s existing scale; raw is a storage location, not a preprocessing guarantee. A top_n CSV does not include failed genes or complete prior ranks.</p></body></html>

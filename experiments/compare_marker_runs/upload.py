@@ -97,3 +97,15 @@ def reason_label(row):
     if row['evidence'].startswith('top_n truncation'):return 'Outside the new top N'
     if row['evidence'].startswith('rank shift'):return 'Rank changed after filtering earlier entries'
     return 'No shortlist change'
+
+
+def cluster_overview(report,shared):
+    """Summarize exported entries only; never interpret them as expression change."""
+    rows=[]
+    for cluster in shared:
+        markers=[r for r in report['markers'] if r['cluster']==cluster]
+        counts={k:sum(r['change']==k for r in markers) for k in ['added','removed','reranked']}
+        rows.append({'Cluster':cluster,'Added':counts['added'],'Removed':counts['removed'],
+            'Reranked':counts['reranked'],'Membership changes':counts['added']+counts['removed'],
+            'Changed entries':sum(counts.values())})
+    return sorted(rows,key=lambda r:(-r['Changed entries'],r['Cluster']))

@@ -1,0 +1,179 @@
+{
+  "source_url": "https://datasets.cellxgene.cziscience.com/ac56150b-add4-4336-9059-6d3d3ce17f3b.h5ad",
+  "source_sha256": "183673651cfa8c473a26641d42011d43be44eb2fea44e6e6ab8e2b0065d07483",
+  "source_cells": 2126,
+  "source_features": 15643,
+  "all_source_cells_retained_as_comparisons": true,
+  "groups": [
+    "alpha",
+    "beta",
+    "duct"
+  ],
+  "layer": "log1p_cp10k",
+  "preprocessing": "source raw integer counts; normalize_total(10000), log1p; no scaling or imputation",
+  "summary": [
+    {
+      "cluster": "alpha",
+      "cells": 812,
+      "added": 4,
+      "removed": 4,
+      "reranked": 15,
+      "unchanged": 1,
+      "membership_changes": 8,
+      "total_changed_entries": 23,
+      "explainable": 19
+    },
+    {
+      "cluster": "beta",
+      "cells": 448,
+      "added": 9,
+      "removed": 9,
+      "reranked": 10,
+      "unchanged": 1,
+      "membership_changes": 18,
+      "total_changed_entries": 28,
+      "explainable": 19
+    },
+    {
+      "cluster": "duct",
+      "cells": 246,
+      "added": 5,
+      "removed": 5,
+      "reranked": 15,
+      "unchanged": 0,
+      "membership_changes": 10,
+      "total_changed_entries": 25,
+      "explainable": 20
+    }
+  ],
+  "independent_added_rank_checks": [
+    {
+      "cluster": "alpha",
+      "gene": "GLT1D1",
+      "actual_earlier_postfilter_rank": 22,
+      "report_knows_earlier_rank": false,
+      "verification_only": "Earlier top20 truncation; not supplied to page"
+    },
+    {
+      "cluster": "alpha",
+      "gene": "PCSK2",
+      "actual_earlier_postfilter_rank": 25,
+      "report_knows_earlier_rank": false,
+      "verification_only": "Earlier top20 truncation; not supplied to page"
+    },
+    {
+      "cluster": "alpha",
+      "gene": "POPDC3",
+      "actual_earlier_postfilter_rank": 24,
+      "report_knows_earlier_rank": false,
+      "verification_only": "Earlier top20 truncation; not supplied to page"
+    },
+    {
+      "cluster": "alpha",
+      "gene": "PYROXD2",
+      "actual_earlier_postfilter_rank": 21,
+      "report_knows_earlier_rank": false,
+      "verification_only": "Earlier top20 truncation; not supplied to page"
+    },
+    {
+      "cluster": "beta",
+      "gene": "ASB9",
+      "actual_earlier_postfilter_rank": 28,
+      "report_knows_earlier_rank": false,
+      "verification_only": "Earlier top20 truncation; not supplied to page"
+    },
+    {
+      "cluster": "beta",
+      "gene": "CDH22",
+      "actual_earlier_postfilter_rank": 26,
+      "report_knows_earlier_rank": false,
+      "verification_only": "Earlier top20 truncation; not supplied to page"
+    },
+    {
+      "cluster": "beta",
+      "gene": "CHL1",
+      "actual_earlier_postfilter_rank": 34,
+      "report_knows_earlier_rank": false,
+      "verification_only": "Earlier top20 truncation; not supplied to page"
+    },
+    {
+      "cluster": "beta",
+      "gene": "ESR1",
+      "actual_earlier_postfilter_rank": 33,
+      "report_knows_earlier_rank": false,
+      "verification_only": "Earlier top20 truncation; not supplied to page"
+    },
+    {
+      "cluster": "beta",
+      "gene": "GLP1R",
+      "actual_earlier_postfilter_rank": 22,
+      "report_knows_earlier_rank": false,
+      "verification_only": "Earlier top20 truncation; not supplied to page"
+    },
+    {
+      "cluster": "beta",
+      "gene": "SIX2",
+      "actual_earlier_postfilter_rank": 31,
+      "report_knows_earlier_rank": false,
+      "verification_only": "Earlier top20 truncation; not supplied to page"
+    },
+    {
+      "cluster": "beta",
+      "gene": "SLC2A2",
+      "actual_earlier_postfilter_rank": 23,
+      "report_knows_earlier_rank": false,
+      "verification_only": "Earlier top20 truncation; not supplied to page"
+    },
+    {
+      "cluster": "beta",
+      "gene": "TGFBR3",
+      "actual_earlier_postfilter_rank": 32,
+      "report_knows_earlier_rank": false,
+      "verification_only": "Earlier top20 truncation; not supplied to page"
+    },
+    {
+      "cluster": "beta",
+      "gene": "TRPM3",
+      "actual_earlier_postfilter_rank": 24,
+      "report_knows_earlier_rank": false,
+      "verification_only": "Earlier top20 truncation; not supplied to page"
+    },
+    {
+      "cluster": "duct",
+      "gene": "CHST4",
+      "actual_earlier_postfilter_rank": 21,
+      "report_knows_earlier_rank": false,
+      "verification_only": "Earlier top20 truncation; not supplied to page"
+    },
+    {
+      "cluster": "duct",
+      "gene": "DEFB1",
+      "actual_earlier_postfilter_rank": 24,
+      "report_knows_earlier_rank": false,
+      "verification_only": "Earlier top20 truncation; not supplied to page"
+    },
+    {
+      "cluster": "duct",
+      "gene": "MUC15",
+      "actual_earlier_postfilter_rank": 22,
+      "report_knows_earlier_rank": false,
+      "verification_only": "Earlier top20 truncation; not supplied to page"
+    },
+    {
+      "cluster": "duct",
+      "gene": "S100A14",
+      "actual_earlier_postfilter_rank": 25,
+      "report_knows_earlier_rank": false,
+      "verification_only": "Earlier top20 truncation; not supplied to page"
+    },
+    {
+      "cluster": "duct",
+      "gene": "TMPRSS3",
+      "actual_earlier_postfilter_rank": 23,
+      "report_knows_earlier_rank": false,
+      "verification_only": "Earlier top20 truncation; not supplied to page"
+    }
+  ],
+  "direct_scanpy_statistics_and_order_match": true,
+  "all_reported_threshold_and_rank_explanations_verified": true
+}

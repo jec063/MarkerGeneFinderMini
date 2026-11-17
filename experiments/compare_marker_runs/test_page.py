@@ -98,3 +98,21 @@ def test_plain_language_evidence_matches_engine():
     assert sum(reason_label(r)=='Rank changed after filtering earlier entries' for r in rows)==9
     mismatch,_=compare_uploads(bundle(ROOT/'sample/A'),bundle(ROOT/'extended/context_mismatch/B'))
     assert all(reason_label(r)=='Cause unavailable from these exports' for r in mismatch['markers'] if r['change']!='unchanged')
+
+
+def test_pancreas_overview_and_layer(monkeypatch):
+    paths={'Earlier run':ROOT/'pancreas/results/earlier.zip','Later run':ROOT/'pancreas/results/later.zip'}
+    def uploaded(label,**kwargs):
+        x=io.BytesIO(paths[label].read_bytes());x.name=label+'.zip';return x
+    monkeypatch.setattr(st,'file_uploader',uploaded)
+    page=AppTest.from_file(ROOT/'streamlit_app.py').run(timeout=30)
+    assert not page.exception and not page.error
+    overview=page.table[-2].value
+    assert overview.Cluster.tolist()==['beta','duct','alpha']
+    assert overview['Changed entries'].tolist()==[28,25,23]
+    assert page.table[1].value.Layer.tolist()==['log1p_cp10k','log1p_cp10k']
+    page.selectbox(key='shared_cluster').set_value('beta').run()
+    assert not page.exception
+    assert page.table[-1].value.iloc[0].to_dict()==dict(Added=9,Removed=9,Reranked=10,Unchanged=1)
+    added=page.dataframe[0].value
+    assert len(added)==9 and set(added.Evidence)=={'Cause unavailable from these exports'}

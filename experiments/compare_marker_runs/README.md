@@ -226,3 +226,12 @@ MPLCONFIGDIR=/tmp/mgf-mpl .venv/bin/python -m pytest \
 The browser check uses only committed exports, including synthetic invalid,
 no-shared-cluster and missing-identity variants. Screenshots/downloads go to /tmp,
 not Git. The stable app and CLI are unchanged; no deployment or PR is created.
+
+## Second-dataset workflow check
+
+The [Muraro pancreas QA note](pancreas/QA.md) records three annotated clusters,
+min_pct 0.10 → 0.25, direct Scanpy validation, side-by-side export checks and
+actual browser results. It motivated a shared-cluster change overview and a
+visible named-layer field. Example bundles: `pancreas/results/earlier.zip` and
+`pancreas/results/later.zip`. This is a local workflow check, not a deployment or
+human productivity study.

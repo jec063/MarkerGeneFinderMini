@@ -8,7 +8,7 @@ import pandas as pd
 import streamlit as st
 
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from upload import BundleError,compare_uploads,dataset_notice,reason_label
+from upload import BundleError,compare_uploads,dataset_notice,reason_label,cluster_overview
 
 st.set_page_config(page_title='CellCoPilot · Compare exported runs',layout='wide')
 st.title('CellCoPilot · Compare exported runs')
@@ -45,6 +45,7 @@ if report['config_changes']:
 else:st.info('No exported configuration changes.')
 st.subheader('Selected matrix and engine')
 st.table(pd.DataFrame([{'Run':label,'Matrix':r['provenance'].get('expression_source','Unspecified'),
+    'Layer':r['provenance'].get('layer') or 'None',
     'Engine':r['provenance'].get('resolved_engine','Unspecified'),'Engine version':r['provenance'].get('engine_version','Unspecified')}
     for label,r in zip(['Earlier run','Later run'],report['runs'])]))
 notice=dataset_notice(report)
@@ -64,6 +65,14 @@ shared=st.session_state['shared_clusters']
 if not shared:
     st.warning('These exported shortlists have no shared clusters. No cluster comparison can be shown.')
 else:
+    if len(shared)>1:
+        overview=cluster_overview(report,shared)
+        st.header('Changes across shared clusters')
+        st.table(pd.DataFrame(overview))
+        top=overview[0]['Changed entries']
+        leaders=', '.join(r['Cluster'] for r in overview if r['Changed entries']==top)
+        st.caption(f'Most changed by exported entries: {leaders} ({top}).')
+        st.caption('Changed entries = added + removed + reranked; membership changes = added + removed. Neither measures biological change.')
     cluster=st.selectbox('Shared cluster',shared,key='shared_cluster')
     rows=[r for r in report['markers'] if r['cluster']==cluster]
     counts={k:sum(r['change']==k for r in rows) for k in ['added','removed','reranked','unchanged']}
