@@ -44,6 +44,8 @@ with sync_playwright() as p:
             page.get_by_role('option',name=cluster,exact=True).click()
             page.wait_for_timeout(1000)
         page.wait_for_timeout(700)
+        page.get_by_text('The Earlier run export has no row for these genes',exact=False).wait_for()
+        page.get_by_text('Removed means removed from its exported shortlist, not absence of expression',exact=False).wait_for()
         rows=[r for r in expected['markers'] if r['cluster']==cluster]
         counts={k:sum(r['change']==k for r in rows) for k in ['added','removed','reranked','unchanged']}
         table=page.locator('[data-testid="stTable"]').last.inner_text()

@@ -116,3 +116,9 @@ def test_pancreas_overview_and_layer(monkeypatch):
     assert page.table[-1].value.iloc[0].to_dict()==dict(Added=9,Removed=9,Reranked=10,Unchanged=1)
     added=page.dataframe[0].value
     assert len(added)==9 and set(added.Evidence)=={'Cause unavailable from these exports'}
+    glp1r=added[added.Gene=='GLP1R'].iloc[0]
+    assert glp1r['Earlier rank']=='Unavailable' and glp1r['Later rank']=='12'
+    captions=' '.join(x.value for x in page.caption)
+    assert 'Earlier run export has no row' in captions
+    assert 'earlier ranks and filter outcomes are unavailable' in captions
+    assert 'Removed means removed from its exported shortlist, not absence of expression' in captions

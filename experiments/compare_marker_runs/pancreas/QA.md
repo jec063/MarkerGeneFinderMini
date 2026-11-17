@@ -120,3 +120,29 @@ derived input hash can depend on HDF5 serialization, so use the recorded source
 hash and compare scientific results rather than promising identical file bytes
 across environments. The page remains local and undeployed; stable app/CLI and
 main are untouched.
+
+## PR-instructions walkthrough before merge
+
+Starting head: `5c87369e7316a9f448590b1ffd01ee4eff46432f`.
+Followed PR #76's install and launch commands using the existing virtual environment,
+downloaded both immutable linked Muraro ZIPs, and uploaded them in Chromium. The
+answers were recorded from the page and its JSON download before reopening this
+QA note: min_pct .10 → .25; beta most changed at 28 entries; ZNF385D's 19.64%
+detection fails 25%; GLP1R has later rank 12 but no available earlier rank. Those
+answers agree with this note. The full-results rank 22 was not inferred by the page.
+This is an agent-operated walkthrough with prior project context, not a blinded
+human usability assessment.
+
+The removed-section heading already clearly scoped removal to the exported
+shortlist. At a 1450-pixel viewport the wide table clipped the explanation that
+GLP1R's earlier export lacked a row. Added visible captions next to the tables:
+missing earlier rows leave earlier ranks/filter outcomes unavailable, and removal
+from the later shortlist does not mean absence of expression. No comparator,
+statistics, export or navigation change was needed. The existing Muraro page test
+now checks GLP1R remains unavailable/12 and the qualifying captions; the browser
+check verifies the captions without horizontal scrolling. The refreshed walkthrough
+and experimental tests passed; CI is required on the updated head before merging.
+
+Reproduce using the README's launch command and the two committed Muraro ZIPs,
+then the existing `pancreas/browser.py --expect-overview` browser command. Downloaded
+bundles, browser screenshots and walkthrough scratch files remain outside Git.

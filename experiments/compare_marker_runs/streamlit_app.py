@@ -86,6 +86,10 @@ else:
         st.subheader(label)
         selected=[r for r in rows if r['change']==kind]
         if not selected:st.caption('None.');continue
+        if kind=='added':
+            st.caption('The Earlier run export has no row for these genes, so their earlier ranks and filter outcomes are unavailable. Added does not mean newly expressed.')
+        elif kind=='removed':
+            st.caption('The Later run export has no row for these genes. Removed means removed from its exported shortlist, not absence of expression.')
         display=[]
         for row in selected:
             display.append({'Gene':row['gene'],'Evidence':reason_label(row),
