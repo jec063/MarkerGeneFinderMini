@@ -1,0 +1,33 @@
+{
+  "checks": [
+    {
+      "mode": "sample-beta",
+      "download_matches_comparator": true
+    },
+    {
+      "mode": "sample-duct",
+      "download_matches_comparator": true
+    },
+    {
+      "mode": "uploaded-beta",
+      "download_matches_comparator": true
+    },
+    {
+      "mode": "sample-after-invalid-upload",
+      "download_matches_comparator": true
+    }
+  ],
+  "setting_and_cluster_overview_correct": true,
+  "sample_upload_switch_clears_visible_results": true,
+  "invalid_upload_does_not_reuse_sample": true,
+  "sample_action_recovers_and_resets_cluster": true,
+  "clean_install": {
+    "python": "3.12",
+    "dependencies": "root requirements.txt only",
+    "launch_outside_checkout_without_pythonpath": true,
+    "experiment_tests_passed": 17,
+    "stable_tests_passed": 345
+  },
+  "original_upload_browser_regressions_passed": true,
+  "hosted_verification": "Blocked: Community Cloud requires account sign-in; no authenticated profile or deployment credential is available."
+}

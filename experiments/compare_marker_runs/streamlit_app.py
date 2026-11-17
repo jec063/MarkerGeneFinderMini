@@ -1,4 +1,4 @@
-"""Undeployed, read-only experiment. Run separately from the stable app."""
+"""Read-only experimental demo. Deploy separately from the stable app."""
 from pathlib import Path
 import hashlib
 import json
@@ -7,11 +7,15 @@ import sys
 import pandas as pd
 import streamlit as st
 
-sys.path.insert(0,str(Path(__file__).resolve().parent))
+ROOT=Path(__file__).resolve().parent
+# Community Cloud and local launches need not share a working directory.
+sys.path.insert(0,str(ROOT.parents[1]))
+sys.path.insert(0,str(ROOT))
 from upload import BundleError,compare_uploads,dataset_notice,reason_label,cluster_overview
 
 st.set_page_config(page_title='CellCoPilot · Compare exported runs',layout='wide')
 st.title('CellCoPilot · Compare exported runs')
+st.write('Upload two MarkerGeneFinderMini export bundles to inspect changes in their exported marker shortlists and the evidence explaining them, or try the sample comparison below.')
 st.caption('Experimental · read-only · no expression data upload, reanalysis, or annotation verdict')
 
 
@@ -20,13 +24,30 @@ def clear():
         st.session_state.pop(key,None)
 
 
-earlier=st.file_uploader('Earlier run',type=['zip'],key='earlier',on_change=clear)
-later=st.file_uploader('Later run',type=['zip'],key='later',on_change=clear)
-if earlier is None or later is None:
-    st.info('Upload two existing MarkerGeneFinderMini export bundles to compare.')
-    st.stop()
-a,b=earlier.getvalue(),later.getvalue()
-pair=(hashlib.sha256(a).hexdigest(),hashlib.sha256(b).hexdigest())
+def use_sample():
+    clear()
+    st.session_state['input_mode']='Muraro sample'
+
+
+st.button('Try sample comparison',on_click=use_sample)
+mode=st.radio('Comparison inputs',['Upload my bundles','Muraro sample'],
+              key='input_mode',on_change=clear,horizontal=True)
+if mode=='Muraro sample':
+    st.info('Muraro pancreas sample: alpha, beta and duct versus the rest. Both runs use the same log1p_cp10k layer and Scanpy; min_pct changes from 0.10 to 0.25.')
+    try:
+        a,b=[(ROOT/'pancreas/results'/name).read_bytes() for name in ['earlier.zip','later.zip']]
+    except OSError:
+        clear()
+        st.error('The bundled Muraro sample could not be loaded. Switch to Upload my bundles to compare your own exports.')
+        st.stop()
+else:
+    earlier=st.file_uploader('Earlier run',type=['zip'],key='earlier',on_change=clear)
+    later=st.file_uploader('Later run',type=['zip'],key='later',on_change=clear)
+    if earlier is None or later is None:
+        st.info('Upload two existing MarkerGeneFinderMini export bundles to compare.')
+        st.stop()
+    a,b=earlier.getvalue(),later.getvalue()
+pair=(mode,hashlib.sha256(a).hexdigest(),hashlib.sha256(b).hexdigest())
 if st.session_state.get('upload_pair')!=pair:
     clear()
     try:

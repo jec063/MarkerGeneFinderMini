@@ -4,7 +4,9 @@ A read-only page for two existing MarkerGeneFinderMini export bundles. It shows
 changed settings and recorded matrix/engine context, then additions, removals and
 rank changes **within exported shortlists**. It runs separately from the stable
 app; the stable app, CLI, API, export formats and analysis defaults are unchanged.
-The page is undeployed and makes no annotation verdicts.
+The page makes no annotation verdicts. Separate Community Cloud deployment is
+prepared but blocked on account sign-in; no hosted demo URL is verified. See
+[deployment settings and clean-install instructions](DEPLOYMENT.md).
 
 ## Try it without downloading expression data
 
@@ -15,7 +17,10 @@ PYTHONPATH=. MPLCONFIGDIR=/tmp/mgf-mpl .venv/bin/python -m streamlit run \
   experiments/compare_marker_runs/streamlit_app.py --server.port 8507
 ```
 
-Open http://localhost:8507 and upload an Earlier run and a Later run:
+Open http://localhost:8507 and click **Try sample comparison** to load the Muraro
+bundles immediately. Use **Comparison inputs** to switch between the sample and
+**Upload my bundles**; changing inputs clears the previous results and cluster
+selection. For uploads, choose an Earlier run and a Later run:
 
 | Example | Earlier run | Later run | Expected change |
 | --- | --- | --- | --- |
@@ -40,7 +45,7 @@ contains all clusters; the selector only filters the view.
 
 1. `compare.py`: existing export-only comparison and conservative explanation rules.
 2. `upload.py`: bounded ZIP validation and adapter; `streamlit_app.py`: separate UI.
-3. `test_compare.py`, `test_page.py`: 14 expression-data-free experiment tests.
+3. `test_compare.py`, `test_page.py`: 17 expression-data-free experiment tests, including sample/upload state changes.
 4. [PBMC page verification](PAGE_VERIFICATION.md) and [Muraro QA](pancreas/QA.md):
    browser observations, independent checks, limitations and reproduction commands.
 
@@ -115,7 +120,7 @@ MPLCONFIGDIR=/tmp/mgf-mpl .venv/bin/python -m pytest -v \
 
 The original passing run [44063938885](https://github.com/jec063/MarkerGeneFinderMini/actions/runs/44063938885)
 ran only 345 stable tests: `pytest.ini` defaults to `tests/`. The existing Actions
-workflow now explicitly invokes these two experiment files with verbose output
+workflow explicitly invokes these two experiment files with verbose output
 on Python 3.10, 3.11 and 3.12, separately from the stable suite and wheel checks.
 It needs neither expression downloads nor browser installation.
 
@@ -123,6 +128,8 @@ For real Chromium upload checks, run the local server above, then use a Python
 with Playwright and `/usr/bin/chromium` installed:
 
 ```sh
+python experiments/compare_marker_runs/browser_demo.py \
+  --url http://127.0.0.1:8507 --output /tmp/comparison-demo-browser
 python experiments/compare_marker_runs/browser_page.py \
   --url http://127.0.0.1:8507 --output /tmp/compare-page-verification
 python experiments/compare_marker_runs/pancreas/browser.py \
