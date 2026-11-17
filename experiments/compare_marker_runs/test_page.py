@@ -122,3 +122,57 @@ def test_pancreas_overview_and_layer(monkeypatch):
     assert 'Earlier run export has no row' in captions
     assert 'earlier ranks and filter outcomes are unavailable' in captions
     assert 'Removed means removed from its exported shortlist, not absence of expression' in captions
+
+
+def test_sample_button_uses_upload_comparator():
+    page=AppTest.from_file(ROOT/'streamlit_app.py').run()
+    page.button[0].click().run(timeout=30)
+    assert not page.exception and not page.error
+    assert page.radio(key='input_mode').value=='Muraro sample'
+    expected,shared=compare_uploads((ROOT/'pancreas/results/earlier.zip').read_bytes(),
+                                  (ROOT/'pancreas/results/later.zip').read_bytes())
+    assert page.session_state['comparison']==expected
+    assert page.session_state['shared_clusters']==shared==['alpha','beta','duct']
+    assert page.table[-2].value['Changed entries'].tolist()==[28,25,23]
+    page.selectbox(key='shared_cluster').set_value('beta').run()
+    added=page.dataframe[0].value.set_index('Gene')
+    assert added.loc['GLP1R','Earlier rank']=='Unavailable'
+    removed=page.dataframe[1].value.set_index('Gene')
+    assert removed.loc['ZNF385D','Evidence']=='Below the new expression threshold'
+
+
+def test_switch_sample_uploads_and_invalid_input(monkeypatch):
+    uploads={}
+    def uploaded(label,**kwargs):
+        if label not in uploads:return None
+        item=io.BytesIO(uploads[label]);item.name=label+'.zip';return item
+    monkeypatch.setattr(st,'file_uploader',uploaded)
+    page=AppTest.from_file(ROOT/'streamlit_app.py').run()
+    page.button[0].click().run(timeout=30)
+    page.selectbox(key='shared_cluster').set_value('beta').run()
+    page.radio(key='input_mode').set_value('Upload my bundles').run()
+    assert not page.exception and not page.table and not page.dataframe
+    assert 'comparison' not in page.session_state
+    uploads.update({'Earlier run':bundle(ROOT/'sample/A'),'Later run':bundle(ROOT/'sample/B')})
+    page.run(timeout=30)
+    assert page.selectbox(key='shared_cluster').value=='B cells'
+    assert page.table[-1].value.iloc[0].to_dict()==dict(Added=7,Removed=7,Reranked=12,Unchanged=1)
+    page.button[0].click().run(timeout=30)
+    assert page.selectbox(key='shared_cluster').value=='alpha'
+    uploads['Later run']=b'broken'
+    page.radio(key='input_mode').set_value('Upload my bundles').run()
+    assert not page.exception and page.error and not page.dataframe
+    assert 'comparison' not in page.session_state
+
+
+def test_missing_sample_is_actionable(monkeypatch):
+    original=Path.read_bytes
+    def read(path):
+        if path==ROOT/'pancreas/results/earlier.zip':raise FileNotFoundError(path)
+        return original(path)
+    monkeypatch.setattr(Path,'read_bytes',read)
+    page=AppTest.from_file(ROOT/'streamlit_app.py').run()
+    page.button[0].click().run(timeout=30)
+    assert not page.exception
+    assert any('Switch to Upload my bundles' in error.value for error in page.error)
+    assert not page.table and 'comparison' not in page.session_state
