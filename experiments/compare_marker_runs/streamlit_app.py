@@ -56,6 +56,9 @@ if st.session_state.get('upload_pair')!=pair:
         st.error(str(error));st.stop()
     st.session_state['comparison']=report
     st.session_state['shared_clusters']=shared
+    # Deleting a widget key alone can restore its previous frontend value.
+    # Initialize the new comparison explicitly before rendering the selector.
+    if shared:st.session_state['shared_cluster']=shared[0]
     st.session_state['upload_pair']=pair
 report=st.session_state['comparison']
 
